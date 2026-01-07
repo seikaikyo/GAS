@@ -12,6 +12,21 @@ function doGet() {
 }
 
 /**
+ * 處理 POST 請求（外部 API 呼叫）
+ */
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const result = api(data.action, data.payload);
+    return ContentService.createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ success: false, error: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
  * 載入 HTML 模組 (用於 <?!= include('filename') ?>)
  */
 function include(filename) {
