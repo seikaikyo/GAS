@@ -11,7 +11,7 @@ const DB_CONFIG = {
         'id', 'orderNumber', 'orderType', 'customerName', 'customerSite', 'productModel',
         'quantity', 'completedQty', 'goodQty', 'ngQty', 'status',
         'priority', 'dueDate', 'targetRegenerationCount', 'sourceWorkOrderId', 'sourceOrderNumber',
-        'createdAt', 'updatedAt', 'syncStatus'
+        'reworkCount', 'createdAt', 'updatedAt', 'syncStatus'
       ]
     },
     dispatches: {
@@ -314,6 +314,24 @@ function dbCreateWorkOrder(data) {
     const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
     data.orderNumber = `WO-${dateStr}-${random}`;
   }
+
+  // 重工工單邏輯：檢查來源工單的重工次數
+  if (data.orderType === 'rework' && data.sourceWorkOrderId) {
+    const workOrders = dbGetWorkOrders();
+    const sourceWo = workOrders.find(w => w.id === data.sourceWorkOrderId);
+    if (sourceWo) {
+      const sourceReworkCount = parseInt(sourceWo.reworkCount) || 0;
+      // 重工上限 = 1 次，超過則應報廢
+      if (sourceReworkCount >= 1) {
+        throw new Error('此工單已重工過，重工後仍 NG 應報廢處理');
+      }
+      // 設定新工單的重工次數 = 來源工單重工次數 + 1
+      data.reworkCount = sourceReworkCount + 1;
+    }
+  } else {
+    data.reworkCount = data.reworkCount || 0;
+  }
+
   data.completedQty = 0; data.goodQty = 0; data.ngQty = 0;
   data.status = data.status || 'draft';
   return insertRecord('WorkOrders', data);

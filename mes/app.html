@@ -20,6 +20,10 @@
       // Computed
       const regenerationOrders = Vue.computed(() => workOrders.value.filter(w => w.orderType === 'regeneration'));
       const completedDeglueOrders = Vue.computed(() => workOrders.value.filter(w => w.orderType === 'deglue' && w.status === 'completed'));
+      // 可重工的工單：已完成且尚未重工過的工單（reworkCount = 0 或未設定）
+      const reworkableOrders = Vue.computed(() => workOrders.value.filter(w =>
+        w.status === 'completed' && (!w.reworkCount || parseInt(w.reworkCount) === 0)
+      ));
 
       const customerSites = Vue.computed(() => {
         if (!formWo.value.customerName) return [];
@@ -272,12 +276,13 @@
 
       const submitWorkOrder = async () => {
         if (formWo.value.orderType === 'regeneration' && !formWo.value.sourceWorkOrderId) { alert('再生工單必須選擇來源除膠工單'); return; }
+        if (formWo.value.orderType === 'rework' && !formWo.value.sourceWorkOrderId) { alert('重工工單必須選擇來源工單'); return; }
         if (!formWo.value.customerName) { alert('請選擇客戶'); return; }
         if (!formWo.value.productModel) { alert('請選擇產品'); return; }
         if (!formWo.value.quantity || formWo.value.quantity <= 0) { alert('請輸入有效數量'); return; }
 
         const payload = { ...formWo.value };
-        if (payload.orderType === 'regeneration' && payload.sourceWorkOrderId) {
+        if ((payload.orderType === 'regeneration' || payload.orderType === 'rework') && payload.sourceWorkOrderId) {
           const sourceWo = workOrders.value.find(w => w.id === payload.sourceWorkOrderId);
           if (sourceWo) payload.sourceOrderNumber = sourceWo.orderNumber;
         }
@@ -559,7 +564,7 @@
         selectedWo, selectedDispatch, selectedEpcWo,
         formWo, formDispatch, formReport, formEpc, formOperator, formCustomer, formProduct,
         editingOperatorId, editingCustomerId, editingProductId, editingWorkOrderId,
-        regenerationOrders, completedDeglueOrders, epcHistory, operators, customers, products, customerSites, epcCheckStatus, epcCheckInfo,
+        regenerationOrders, completedDeglueOrders, reworkableOrders, epcHistory, operators, customers, products, customerSites, epcCheckStatus, epcCheckInfo,
         refreshData, submitWorkOrder, openDispatchModal, submitDispatch, openReportModal, submitReport,
         startEditWorkOrder, cancelEditWorkOrder, deleteWorkOrder, deleteDispatch,
         submitEpcChange, onWoSelect, onCustomerSelect, onSourceWorkOrderSelect, checkOldEpc,

@@ -120,6 +120,36 @@
       </div>
     </div>
 
+    <!-- 4.6 Source Work Order (Rework only) -->
+    <div v-if="formWo.orderType === 'rework'" class="form-section" style="margin-bottom: 1rem; background: linear-gradient(135deg, rgba(239,68,68,0.1) 0%, rgba(239,68,68,0.05) 100%);">
+      <label class="input-label" style="color: #dc2626;">選擇來源工單（釋氣 NG 需重烤）</label>
+      <div v-if="reworkableOrders.length === 0" style="color: #dc2626; font-size: 0.875rem;">
+        目前沒有可重工的工單（已完成且未重工過）
+      </div>
+      <div v-else class="wo-card-list" style="max-height: 160px;">
+        <div v-for="swo in reworkableOrders" :key="swo.id"
+             :class="['wo-card', formWo.sourceWorkOrderId === swo.id ? 'selected' : '']"
+             @click="formWo.sourceWorkOrderId = swo.id; onSourceWorkOrderSelect()"
+             style="border-color: #fecaca;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div class="wo-number">{{ swo.orderNumber }}</div>
+              <div class="wo-info">{{ swo.customerName }} / {{ swo.productModel }}</div>
+            </div>
+            <div style="text-align: right;">
+              <sl-badge :variant="swo.orderType === 'regeneration' ? 'warning' : 'primary'" style="font-size: 0.7rem;">
+                {{ { deglue: '除膠', regeneration: '再生' }[swo.orderType] || swo.orderType }}
+              </sl-badge>
+              <div style="color: #16a34a; font-size: 0.75rem; font-weight: 700;">良品: {{ swo.goodQty }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size: 0.75rem; color: #dc2626; margin-top: 0.5rem; background: #fef2f2; padding: 0.5rem; border-radius: 0.25rem;">
+        ⚠️ 重工上限 1 次，重工後仍 NG 須報廢
+      </div>
+    </div>
+
     <!-- 5. Regeneration Count -->
     <div v-if="formWo.orderType === 'regeneration'" style="margin-bottom: 1rem;">
       <label class="input-label">目標再生次數</label>

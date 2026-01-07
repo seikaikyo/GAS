@@ -57,7 +57,7 @@ function api(action, payload) {
     let result;
     switch (action) {
       case 'getVersion':
-        return { success: true, data: '5.1.5' };
+        return { success: true, data: '5.2.0' };
         
       // Work Orders
       case 'getWorkOrders':

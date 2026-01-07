@@ -33,6 +33,9 @@
             <sl-badge :variant="wo.orderType === 'regeneration' ? 'warning' : wo.orderType === 'rework' ? 'danger' : 'primary'">
               {{ { deglue: '除膠', regeneration: '再生', rework: '重工' }[wo.orderType] || wo.orderType }}
             </sl-badge>
+            <sl-badge v-if="wo.orderType === 'rework' && wo.reworkCount" variant="danger" style="margin-left: 0.25rem;">
+              第{{ wo.reworkCount }}次
+            </sl-badge>
           </td>
           <td>
             <span :class="'status-badge status-' + wo.status">
