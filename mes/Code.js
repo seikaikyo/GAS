@@ -26,19 +26,17 @@ function getWebAppUrl() {
 }
 
 /**
- * 產生短網址 (使用 TinyURL API)
+ * 產生短網址 (使用 is.gd API)
  */
 function createShortUrl(longUrl) {
-  // 如果沒有傳入 URL，使用目前的 Web App URL
   if (!longUrl) {
     longUrl = getWebAppUrl();
   }
 
   try {
-    // 使用 TinyURL API (免費、無需驗證)
-    const apiUrl = 'https://tinyurl.com/api-create.php?url=' + encodeURIComponent(longUrl);
+    const apiUrl = 'https://is.gd/create.php?format=simple&url=' + encodeURIComponent(longUrl);
     const response = UrlFetchApp.fetch(apiUrl);
-    const shortUrl = response.getContentText();
+    const shortUrl = response.getContentText().trim();
 
     return {
       longUrl: longUrl,
@@ -47,7 +45,6 @@ function createShortUrl(longUrl) {
     };
   } catch (e) {
     console.error('短網址產生失敗:', e);
-    // 如果 TinyURL 失敗，回傳原始 URL
     return {
       longUrl: longUrl,
       shortUrl: longUrl,
@@ -73,7 +70,7 @@ function api(action, payload) {
     let result;
     switch (action) {
       case 'getVersion':
-        return { success: true, data: '5.1.0' };
+        return { success: true, data: '5.1.2' };
         
       // Work Orders
       case 'getWorkOrders':

@@ -18,7 +18,7 @@ function getWebAppUrl() {
 }
 
 /**
- * 產生短網址 (使用 TinyURL API)
+ * 產生短網址 (使用 is.gd API)
  */
 function createShortUrl(longUrl) {
   if (!longUrl) {
@@ -26,9 +26,9 @@ function createShortUrl(longUrl) {
   }
 
   try {
-    const apiUrl = 'https://tinyurl.com/api-create.php?url=' + encodeURIComponent(longUrl);
+    const apiUrl = 'https://is.gd/create.php?format=simple&url=' + encodeURIComponent(longUrl);
     const response = UrlFetchApp.fetch(apiUrl);
-    const shortUrl = response.getContentText();
+    const shortUrl = response.getContentText().trim();
 
     return {
       longUrl: longUrl,
@@ -61,7 +61,7 @@ function api(action, payload) {
     let result;
     switch (action) {
       case 'getVersion':
-        return { success: true, data: '2.1.0' };
+        return { success: true, data: '2.1.2' };
 
       case 'getShortUrl':
         return { success: true, data: createShortUrl(payload?.url) };
