@@ -98,7 +98,7 @@
           <sl-icon name="person-lock" style="font-size: 1.25rem;"></sl-icon>
           <sl-input size="small" v-model="loginAccount" placeholder="帳號" @keyup.enter="doLogin"></sl-input>
           <sl-input size="small" type="password" v-model="loginPassword" placeholder="密碼" @keyup.enter="doLogin"></sl-input>
-          <sl-button size="small" variant="primary" @click="doLogin" :loading="loginLoading">登入</sl-button>
+          <sl-button size="small" variant="primary" @click="doLogin" :loading.prop="loginLoading">登入</sl-button>
           <span style="font-size: 0.75rem; opacity: 0.8;">登入後可查看/編輯自己的 KPI</span>
         </template>
         <template v-else>
@@ -439,7 +439,7 @@
   <script>
     const { createApp, ref, computed, onMounted } = Vue;
 
-    createApp({
+    const app = createApp({
       setup() {
         const loading = ref(true);
         const loadingMessage = ref('載入中...');
@@ -753,7 +753,10 @@
           saveKpi, deleteKpi, exportExcel, downloadTemplate, triggerImport, handleFileSelect, confirmImport
         };
       }
-    }).mount('#app');
+    });
+
+    app.config.compilerOptions.isCustomElement = tag => tag.startsWith('sl-');
+    app.mount('#app');
   </script>
 </body>
 </html>
