@@ -50,6 +50,16 @@ function setup() {
 }
 
 /**
+ * 設定管理員帳密（在 GAS 編輯器執行一次）
+ */
+function setAdminCredentials(account, password) {
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty('ADMIN_ACCOUNT', account);
+  props.setProperty('ADMIN_PASSWORD', password);
+  return { success: true, message: '管理員帳密已設定' };
+}
+
+/**
  * 統一 API 處理入口
  */
 function api(action, payload) {

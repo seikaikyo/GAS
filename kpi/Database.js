@@ -17,9 +17,14 @@ const DB_CONFIG = {
   }
 };
 
-// 管理員帳號（可看全部資料）
-const ADMIN_ACCOUNT = 'admin';
-const ADMIN_PASSWORD = 'kpi2025';
+// 管理員帳號（從 Script Properties 讀取）
+function getAdminCredentials() {
+  const props = PropertiesService.getScriptProperties();
+  return {
+    account: props.getProperty('ADMIN_ACCOUNT') || 'admin',
+    password: props.getProperty('ADMIN_PASSWORD') || 'changeme'
+  };
+}
 
 /**
  * 取得或建立資料庫 Spreadsheet
@@ -211,7 +216,8 @@ function deleteRecord(tableName, id) {
 // 驗證登入
 function dbVerifyLogin(account, password) {
   // 管理員帳號
-  if (account === ADMIN_ACCOUNT && password === ADMIN_PASSWORD) {
+  const admin = getAdminCredentials();
+  if (account === admin.account && password === admin.password) {
     return { success: true, isAdmin: true };
   }
 
@@ -284,9 +290,10 @@ function maskText(text) {
 // KPI CRUD
 function dbGetKpis(account, password) {
   const allKpis = getTableData('KPIs');
+  const admin = getAdminCredentials();
 
   // 管理員看全部（隱藏密碼欄位）
-  if (account === ADMIN_ACCOUNT && password === ADMIN_PASSWORD) {
+  if (account === admin.account && password === admin.password) {
     return allKpis.map(k => ({ ...k, ownerPassword: '***' }));
   }
 
@@ -307,11 +314,12 @@ function dbUpdateKpi(id, data, account, password) {
   // 驗證權限
   const allKpis = getTableData('KPIs');
   const kpi = allKpis.find(k => k.id === id);
+  const admin = getAdminCredentials();
 
   if (!kpi) return { success: false, error: '找不到此 KPI' };
 
   // 管理員可編輯全部
-  const isAdmin = account === ADMIN_ACCOUNT && password === ADMIN_PASSWORD;
+  const isAdmin = account === admin.account && password === admin.password;
   // 擁有者可編輯自己的
   const isOwner = kpi.ownerAccount === account && kpi.ownerPassword === password;
 
@@ -326,11 +334,12 @@ function dbDeleteKpi(id, account, password) {
   // 驗證權限
   const allKpis = getTableData('KPIs');
   const kpi = allKpis.find(k => k.id === id);
+  const admin = getAdminCredentials();
 
   if (!kpi) return { success: false, error: '找不到此 KPI' };
 
   // 管理員可刪除全部
-  const isAdmin = account === ADMIN_ACCOUNT && password === ADMIN_PASSWORD;
+  const isAdmin = account === admin.account && password === admin.password;
   // 擁有者可刪除自己的
   const isOwner = kpi.ownerAccount === account && kpi.ownerPassword === password;
 
