@@ -165,10 +165,10 @@
     <div style="margin-bottom: 1rem;">
       <label class="input-label">工作站點</label>
       <div class="chip-group">
-        <!-- 重工工單只能選除膠站（再次烘烤） -->
+        <!-- 重工工單只能選再生站（再次烘烤） -->
         <template v-if="selectedWo?.orderType === 'rework'">
-          <div class="chip selected">除膠站</div>
-          <span style="color: #94a3b8; font-size: 0.75rem; margin-left: 0.5rem;">重工僅限除膠站（再次烘烤）</span>
+          <div class="chip selected">再生站</div>
+          <span style="color: #94a3b8; font-size: 0.75rem; margin-left: 0.5rem;">重工僅限再生站（再次烘烤）</span>
         </template>
         <template v-else>
           <div v-for="st in ['除膠站', '檢驗站', '包裝站', '維修站']" :key="st"

@@ -315,7 +315,9 @@
 
       const openDispatchModal = (wo) => {
         selectedWo.value = wo;
-        formDispatch.value = { workOrderId: wo.id, stationName: '除膠站', operatorName: '', quantity: wo.quantity - wo.completedQty };
+        // 重工工單預設站點為「再生站」，其他為「除膠站」
+        const defaultStation = wo.orderType === 'rework' ? '再生站' : '除膠站';
+        formDispatch.value = { workOrderId: wo.id, stationName: defaultStation, operatorName: '', quantity: wo.quantity - wo.completedQty };
         showDispatchModal.value = true;
       };
 
