@@ -1,0 +1,11 @@
+# macOS
+.DS_Store
+
+# 測試檔案
+mes/test.html
+mes/ResultDataCSV.csv
+
+# 編輯器
+*.swp
+*.swo
+*~
