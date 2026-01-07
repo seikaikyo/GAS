@@ -1,0 +1,72 @@
+<!-- Tab: Work Orders -->
+<sl-tab-panel name="work-orders">
+  <div class="section-header">
+    <h2>工單列表</h2>
+    <sl-button variant="success" @click="showCreateWoModal = true">
+      <sl-icon slot="prefix" name="plus-lg"></sl-icon>
+      建立工單
+    </sl-button>
+  </div>
+
+  <div class="scrollable">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>單號</th>
+          <th>產品/客戶</th>
+          <th>類型</th>
+          <th>進度</th>
+          <th>數量 (完工/總數)</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="wo in workOrders" :key="wo.id">
+          <td>
+            <span style="font-family: monospace; font-weight: 600;">{{ wo.orderNumber }}</span>
+          </td>
+          <td>
+            <div style="font-weight: 600;">{{ wo.productModel }}</div>
+            <div style="font-size: 0.75rem; color: #64748b;">{{ wo.customerName }}</div>
+          </td>
+          <td>
+            <sl-badge :variant="wo.orderType === 'regeneration' ? 'warning' : wo.orderType === 'rework' ? 'danger' : 'primary'">
+              {{ { deglue: '除膠', regeneration: '再生', rework: '重工' }[wo.orderType] || wo.orderType }}
+            </sl-badge>
+          </td>
+          <td>
+            <span :class="'status-badge status-' + wo.status">
+              {{ { draft: '草稿', pending: '待處理', in_progress: '進行中', completed: '已完成', paused: '暫停' }[wo.status] || wo.status }}
+            </span>
+          </td>
+          <td>
+            <span style="font-weight: 600;">{{ wo.completedQty }}</span>
+            <span style="color: #94a3b8;"> / {{ wo.quantity }}</span>
+          </td>
+          <td>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+              <sl-button v-if="wo.status !== 'completed'" size="small" variant="primary" @click="openDispatchModal(wo)">
+                派工
+              </sl-button>
+              <sl-button v-if="wo.status === 'draft'" size="small" variant="neutral" @click="startEditWorkOrder(wo)">
+                編輯
+              </sl-button>
+              <sl-button v-if="wo.status === 'draft' || wo.status === 'pending'" size="small" variant="danger" outline @click="deleteWorkOrder(wo.id)">
+                取消
+              </sl-button>
+              <sl-badge v-if="wo.status === 'completed'" variant="success">已完成</sl-badge>
+            </div>
+          </td>
+        </tr>
+        <tr v-if="workOrders.length === 0" class="empty-row">
+          <td colspan="6">
+            <div class="empty-state">
+              <sl-icon name="inbox"></sl-icon>
+              <div>暫無工單資料</div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</sl-tab-panel>

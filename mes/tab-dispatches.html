@@ -1,0 +1,63 @@
+<!-- Tab: Dispatches -->
+<sl-tab-panel name="dispatches">
+  <div class="section-header">
+    <h2>現場派工任務</h2>
+  </div>
+
+  <div class="card-grid">
+    <div v-for="d in dispatches" :key="d.id" class="dispatch-card">
+      <div class="card-header">
+        <div>
+          <div class="dispatch-number">{{ d.dispatchNumber }}</div>
+          <div style="font-size: 0.75rem; color: #94a3b8;">
+            {{ workOrders.find(w => w.id === d.workOrderId)?.orderNumber || '-' }}
+          </div>
+        </div>
+        <span :class="'status-badge status-' + d.status">
+          {{ { pending: '待開始', in_progress: '作業中', completed: '已完成' }[d.status] || d.status }}
+        </span>
+      </div>
+
+      <div class="station-name">{{ d.stationName }}</div>
+      <div class="operator">操作員: {{ d.operatorName }}</div>
+
+      <div class="progress-section">
+        <div class="progress-info">
+          <span>目標: {{ d.quantity }}</span>
+          <span>良品: {{ d.goodQty }}</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" :style="{ width: Math.min((d.completedQty / d.quantity) * 100, 100) + '%' }"></div>
+        </div>
+        <div v-if="d.actualStartAt" style="margin-top: 0.5rem; font-size: 0.75rem; color: #667eea; font-family: monospace;">
+          開始: {{ new Date(d.actualStartAt).toLocaleString('zh-TW', {hour:'2-digit', minute:'2-digit'}) }}
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+        <sl-button v-if="d.status === 'pending'" variant="primary" @click="startJob(d)" style="width: 100%;">
+          <sl-icon slot="prefix" name="play-fill"></sl-icon>
+          開始作業
+        </sl-button>
+
+        <sl-button v-if="d.status === 'in_progress'" variant="success" @click="completeJob(d)" style="width: 100%;">
+          <sl-icon slot="prefix" name="check-lg"></sl-icon>
+          完成並報工
+        </sl-button>
+
+        <sl-button v-if="d.status === 'completed'" variant="neutral" disabled style="width: 100%;">
+          已完成
+        </sl-button>
+
+        <sl-button v-if="d.status === 'pending'" variant="danger" outline size="small" @click="deleteDispatch(d.id)" style="width: 100%;">
+          取消派工
+        </sl-button>
+      </div>
+    </div>
+  </div>
+
+  <div v-if="dispatches.length === 0" class="empty-state">
+    <sl-icon name="clipboard-x"></sl-icon>
+    <div>暫無派工任務，請從工單頁面進行派工。</div>
+  </div>
+</sl-tab-panel>

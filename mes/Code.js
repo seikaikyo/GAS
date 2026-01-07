@@ -1,5 +1,6 @@
 /**
  * Code.js - GAS 後端入口
+ * v5.0.0 - 模組化架構 + Shoelace UI
  */
 
 function doGet() {
@@ -8,6 +9,51 @@ function doGet() {
       .setTitle('SMAI - MES 線外表單')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+/**
+ * 載入 HTML 模組 (用於 <?!= include('filename') ?>)
+ */
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+/**
+ * 取得目前部署的 Web App URL
+ */
+function getWebAppUrl() {
+  return ScriptApp.getService().getUrl();
+}
+
+/**
+ * 產生短網址 (使用 TinyURL API)
+ */
+function createShortUrl(longUrl) {
+  // 如果沒有傳入 URL，使用目前的 Web App URL
+  if (!longUrl) {
+    longUrl = getWebAppUrl();
+  }
+
+  try {
+    // 使用 TinyURL API (免費、無需驗證)
+    const apiUrl = 'https://tinyurl.com/api-create.php?url=' + encodeURIComponent(longUrl);
+    const response = UrlFetchApp.fetch(apiUrl);
+    const shortUrl = response.getContentText();
+
+    return {
+      longUrl: longUrl,
+      shortUrl: shortUrl,
+      qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(shortUrl)
+    };
+  } catch (e) {
+    console.error('短網址產生失敗:', e);
+    // 如果 TinyURL 失敗，回傳原始 URL
+    return {
+      longUrl: longUrl,
+      shortUrl: longUrl,
+      qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(longUrl)
+    };
+  }
 }
 
 function setup() {
@@ -19,15 +65,15 @@ function setup() {
  */
 function api(action, payload) {
   try {
-    // 檢查資料庫連結 (除了 getVersion 外都檢查)
-    if (action !== 'getVersion') {
-      getDbSpreadsheet(); 
+    // 檢查資料庫連結 (除了 getVersion 和 getShortUrl 外都檢查)
+    if (action !== 'getVersion' && action !== 'getShortUrl') {
+      getDbSpreadsheet();
     }
 
     let result;
     switch (action) {
       case 'getVersion':
-        return { success: true, data: '4.6.5' };
+        return { success: true, data: '5.1.0' };
         
       // Work Orders
       case 'getWorkOrders':
@@ -162,6 +208,10 @@ function api(action, payload) {
         break;
       case 'fixSignatureData':
         result = dbFixSignatureData();
+        break;
+
+      case 'getShortUrl':
+        result = createShortUrl(payload.url);
         break;
 
       default:

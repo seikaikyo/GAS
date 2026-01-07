@@ -1,0 +1,232 @@
+<!-- Modal: Share -->
+<sl-dialog label="分享此應用程式" :open.prop="showShareModal" @sl-request-close="showShareModal = false">
+  <div v-if="shareLoading" style="text-align: center; padding: 2rem;">
+    <sl-spinner style="font-size: 2rem;"></sl-spinner>
+    <div style="margin-top: 1rem; color: #64748b;">產生短網址中...</div>
+  </div>
+
+  <div v-else-if="shareData" style="text-align: center;">
+    <!-- QR Code -->
+    <div style="margin-bottom: 1.5rem;">
+      <img :src="shareData.qrCodeUrl" alt="QR Code" style="width: 200px; height: 200px; border-radius: 0.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+    </div>
+
+    <!-- Short URL -->
+    <div style="margin-bottom: 1rem;">
+      <label class="input-label">短網址</label>
+      <div style="display: flex; gap: 0.5rem;">
+        <sl-input :value="shareData.shortUrl" readonly style="flex: 1; --sl-input-font-family: monospace;"></sl-input>
+        <sl-button variant="primary" @click="copyShareUrl">
+          <sl-icon name="clipboard"></sl-icon>
+        </sl-button>
+      </div>
+    </div>
+
+    <!-- Copy Success Message -->
+    <sl-alert v-if="shareCopied" variant="success" open style="margin-top: 1rem;">
+      <sl-icon slot="icon" name="check-circle"></sl-icon>
+      已複製到剪貼簿！
+    </sl-alert>
+
+    <!-- Hint -->
+    <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 1rem;">
+      掃描 QR Code 或複製短網址即可分享給同事
+    </p>
+  </div>
+
+  <div slot="footer">
+    <sl-button variant="neutral" @click="showShareModal = false">關閉</sl-button>
+  </div>
+</sl-dialog>
+
+<!-- Modal: Create/Edit Work Order -->
+<sl-dialog :label="editingWorkOrderId ? '編輯工單' : '建立新工單'" :open.prop="showCreateWoModal" @sl-request-close="cancelEditWorkOrder">
+  <form @submit.prevent="submitWorkOrder">
+    <!-- 1. Customer -->
+    <div style="margin-bottom: 1rem;">
+      <label class="input-label">客戶名稱</label>
+      <div class="operator-grid" style="max-height: 160px; overflow-y: auto; padding: 0.5rem; background: #f8fafc; border-radius: 0.5rem;">
+        <div v-for="c in customers" :key="c.id"
+             :class="['operator-chip', formWo.customerName === c.name ? 'selected' : '']"
+             @click="formWo.customerName = c.name; onCustomerSelect()">
+          {{ c.name }}
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Site -->
+    <div v-if="formWo.customerName && customerSites.length > 0" style="margin-bottom: 1rem;">
+      <label class="input-label">廠區</label>
+      <div class="chip-group">
+        <div v-for="site in customerSites" :key="site"
+             :class="['chip', formWo.customerSite === site ? 'selected' : '']"
+             @click="formWo.customerSite = site">{{ site }}</div>
+      </div>
+    </div>
+
+    <!-- 3. Product -->
+    <div style="margin-bottom: 1rem;">
+      <label class="input-label">產品型號</label>
+      <div class="wo-card-list" style="max-height: 160px; padding: 0.5rem; background: #f8fafc; border-radius: 0.5rem;">
+        <div v-for="p in products" :key="p.id"
+             :class="['wo-card', formWo.productModel === p.code ? 'selected' : '']"
+             @click="formWo.productModel = p.code">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div class="wo-number">{{ p.code }}</div>
+              <div class="wo-info">{{ p.name }}</div>
+            </div>
+            <sl-badge variant="neutral">{{ p.type }}</sl-badge>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Order Type -->
+    <div style="margin-bottom: 1rem;">
+      <label class="input-label">工單類型</label>
+      <div class="chip-group">
+        <div :class="['chip', formWo.orderType === 'deglue' ? 'selected' : '']"
+             @click="formWo.orderType = 'deglue'; formWo.sourceWorkOrderId = ''">除膠</div>
+        <div :class="['chip', formWo.orderType === 'regeneration' ? 'selected' : '']"
+             @click="formWo.orderType = 'regeneration'">再生</div>
+        <div :class="['chip', formWo.orderType === 'rework' ? 'selected' : '']"
+             @click="formWo.orderType = 'rework'; formWo.sourceWorkOrderId = ''">重工</div>
+      </div>
+    </div>
+
+    <!-- 4.5 Source Work Order (Regeneration only) -->
+    <div v-if="formWo.orderType === 'regeneration'" class="form-section" style="margin-bottom: 1rem; background: linear-gradient(135deg, rgba(251,146,60,0.1) 0%, rgba(251,146,60,0.05) 100%);">
+      <label class="input-label" style="color: #ea580c;">選擇來源除膠工單</label>
+      <div v-if="completedDeglueOrders.length === 0" style="color: #ea580c; font-size: 0.875rem;">
+        目前沒有已完成的除膠工單可供選擇
+      </div>
+      <div v-else class="wo-card-list" style="max-height: 160px;">
+        <div v-for="swo in completedDeglueOrders" :key="swo.id"
+             :class="['wo-card', formWo.sourceWorkOrderId === swo.id ? 'selected' : '']"
+             @click="formWo.sourceWorkOrderId = swo.id; onSourceWorkOrderSelect()"
+             style="border-color: #fed7aa;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div class="wo-number">{{ swo.orderNumber }}</div>
+              <div class="wo-info">{{ swo.customerName }} / {{ swo.productModel }}</div>
+            </div>
+            <span style="color: #16a34a; font-size: 0.75rem; font-weight: 700;">良品: {{ swo.goodQty }}</span>
+          </div>
+        </div>
+      </div>
+      <div v-if="formWo.sourceWorkOrderId" style="font-size: 0.75rem; color: #64748b; margin-top: 0.5rem;">
+        已選擇來源工單，客戶/產品資訊已自動帶入
+      </div>
+    </div>
+
+    <!-- 5. Regeneration Count -->
+    <div v-if="formWo.orderType === 'regeneration'" style="margin-bottom: 1rem;">
+      <label class="input-label">目標再生次數</label>
+      <div class="r-count-grid">
+        <div v-for="n in 10" :key="n"
+             :class="['r-chip', formWo.targetRegenerationCount === n ? 'selected' : '']"
+             @click="formWo.targetRegenerationCount = n">R{{ n }}</div>
+      </div>
+    </div>
+
+    <!-- 6. Quantity & Priority -->
+    <div class="form-row" style="margin-bottom: 1rem;">
+      <div>
+        <label class="input-label">數量</label>
+        <sl-input v-model.number="formWo.quantity" type="number" required></sl-input>
+      </div>
+      <div>
+        <label class="input-label">優先級</label>
+        <div style="display: flex; gap: 0.5rem;">
+          <div :class="['chip', formWo.priority === 'normal' ? 'selected' : '']"
+               @click="formWo.priority = 'normal'" style="flex: 1; text-align: center;">一般</div>
+          <div :class="['chip', 'chip-ng', formWo.priority === 'urgent' ? 'selected' : '']"
+               @click="formWo.priority = 'urgent'" style="flex: 1; text-align: center;">緊急</div>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <div slot="footer" class="button-group">
+    <sl-button variant="neutral" @click="cancelEditWorkOrder">取消</sl-button>
+    <sl-button variant="primary" @click="submitWorkOrder">
+      {{ editingWorkOrderId ? '更新工單' : '建立工單' }}
+    </sl-button>
+  </div>
+</sl-dialog>
+
+<!-- Modal: Dispatch -->
+<sl-dialog label="新增派工" :open.prop="showDispatchModal" @sl-request-close="showDispatchModal = false">
+  <p style="color: #64748b; font-size: 0.875rem; margin-top: 0;">針對工單: <strong>{{ selectedWo?.orderNumber }}</strong></p>
+
+  <form @submit.prevent="submitDispatch">
+    <!-- Station -->
+    <div style="margin-bottom: 1rem;">
+      <label class="input-label">工作站點</label>
+      <div class="chip-group">
+        <div v-for="st in ['除膠站', '檢驗站', '包裝站', '維修站']" :key="st"
+             :class="['chip', formDispatch.stationName === st ? 'selected' : '']"
+             @click="formDispatch.stationName = st">{{ st }}</div>
+      </div>
+    </div>
+
+    <!-- Operator -->
+    <div style="margin-bottom: 1rem;">
+      <label class="input-label">作業員</label>
+      <div v-if="operators.length > 0 && operators.length <= 12" class="operator-grid">
+        <div v-for="op in operators" :key="op.id"
+             :class="['operator-chip', formDispatch.operatorName === op.name ? 'selected' : '']"
+             @click="formDispatch.operatorName = op.name">
+          {{ op.name }}
+        </div>
+      </div>
+      <sl-select v-else v-model="formDispatch.operatorName" placeholder="-- 請選擇 --" required>
+        <sl-option v-for="op in operators" :key="op.id" :value="op.name">{{ op.name }}</sl-option>
+      </sl-select>
+    </div>
+
+    <!-- Quantity -->
+    <div style="margin-bottom: 1rem;">
+      <label class="input-label">派工數量</label>
+      <sl-input v-model.number="formDispatch.quantity" type="number" required></sl-input>
+    </div>
+  </form>
+
+  <div slot="footer" class="button-group">
+    <sl-button variant="neutral" @click="showDispatchModal = false">取消</sl-button>
+    <sl-button variant="primary" @click="submitDispatch">確認派工</sl-button>
+  </div>
+</sl-dialog>
+
+<!-- Modal: Report -->
+<sl-dialog label="生產回報" :open.prop="showReportModal" @sl-request-close="showReportModal = false">
+  <p style="color: #64748b; font-size: 0.875rem; margin-top: 0;">派工單: <strong>{{ selectedDispatch?.dispatchNumber }}</strong></p>
+
+  <form @submit.prevent="submitReport">
+    <div class="form-row" style="margin-bottom: 1rem;">
+      <div>
+        <label class="input-label" style="color: #16a34a;">良品數量</label>
+        <sl-input v-model.number="formReport.goodQty" type="number" min="0" style="--sl-input-border-color: #22c55e;"></sl-input>
+      </div>
+      <div>
+        <label class="input-label" style="color: #dc2626;">NG 數量</label>
+        <sl-input v-model.number="formReport.ngQty" type="number" min="0" style="--sl-input-border-color: #ef4444;"></sl-input>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 1rem;">
+      <sl-checkbox v-model="formReport.hasAbnormal">發生異常</sl-checkbox>
+    </div>
+
+    <div v-if="formReport.hasAbnormal" style="margin-bottom: 1rem;">
+      <label class="input-label">異常原因</label>
+      <sl-input v-model="formReport.abnormalType"></sl-input>
+    </div>
+  </form>
+
+  <div slot="footer" class="button-group">
+    <sl-button variant="neutral" @click="showReportModal = false">取消</sl-button>
+    <sl-button variant="success" @click="submitReport">提交報工</sl-button>
+  </div>
+</sl-dialog>

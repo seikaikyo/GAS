@@ -1,0 +1,126 @@
+<!-- Tab: RFID Replacement -->
+<sl-tab-panel name="rfid-replace">
+  <div class="split-layout">
+    <!-- Left: Form -->
+    <div>
+      <div class="section-header">
+        <h2>RFID 標籤更換作業</h2>
+      </div>
+
+      <sl-alert variant="primary" open style="margin-bottom: 1rem;">
+        <sl-icon slot="icon" name="info-circle"></sl-icon>
+        請選擇再生工單，並掃描舊標籤與新標籤以進行綁定。此操作將記錄產品的再生履歷。
+      </sl-alert>
+
+      <form @submit.prevent="submitEpcChange">
+        <!-- Work Order Select -->
+        <div style="margin-bottom: 1rem;">
+          <label class="input-label">選擇再生工單</label>
+          <div class="wo-card-list">
+            <div v-if="regenerationOrders.length === 0" class="empty-state" style="padding: 2rem;">
+              <sl-icon name="inbox"></sl-icon>
+              <div>目前無進行中的再生工單</div>
+            </div>
+            <div v-for="wo in regenerationOrders" :key="wo.id"
+                 :class="['wo-card', formEpc.workOrderId === wo.id ? 'selected' : '']"
+                 @click="formEpc.workOrderId = wo.id; onWoSelect()">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div class="wo-number">{{ wo.orderNumber }}</div>
+                  <div class="wo-info">{{ wo.productModel }} ({{ wo.customerName }})</div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.875rem; font-weight: 700; background: #f1f5f9; padding: 0.25rem 0.5rem; border-radius: 0.25rem;">
+                  <span style="color: #64748b;">R{{ (wo.targetRegenerationCount || 1) - 1 }}</span>
+                  <sl-icon name="arrow-right" style="font-size: 0.75rem; color: #94a3b8;"></sl-icon>
+                  <span style="color: #667eea;">R{{ wo.targetRegenerationCount || 1 }}</span>
+                </div>
+              </div>
+              <sl-icon v-if="formEpc.workOrderId === wo.id" name="check-circle-fill" style="position: absolute; top: 50%; right: 1rem; transform: translateY(-50%); color: #667eea; font-size: 1.25rem;"></sl-icon>
+            </div>
+          </div>
+        </div>
+
+        <!-- EPC Input Section -->
+        <div class="form-section" style="margin-bottom: 1rem;">
+          <div style="margin-bottom: 1rem;">
+            <label class="input-label">舊 EPC (Old Tag)</label>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <sl-input v-model="formEpc.oldEpc" @sl-blur="checkOldEpc" placeholder="掃描舊標籤" style="flex: 1;"></sl-input>
+              <sl-spinner v-if="epcCheckStatus === 'checking'" style="font-size: 1.5rem;"></sl-spinner>
+            </div>
+            <div v-if="epcCheckInfo" :style="{ color: epcCheckInfo.found ? '#16a34a' : '#ea580c' }" style="font-size: 0.75rem; font-weight: 600; margin-top: 0.25rem;">
+              {{ epcCheckInfo.message }}
+            </div>
+            <div v-else style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.25rem;">來源產品上的舊標籤</div>
+          </div>
+
+          <div>
+            <label class="input-label" style="color: #667eea;">新 EPC (New Tag)</label>
+            <sl-input v-model="formEpc.newEpc" placeholder="掃描新標籤 (例如: RF...)" required
+                      pattern="^RF[0-9]{13}$" style="--sl-input-border-color: #667eea;"></sl-input>
+            <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.25rem;">格式: RF + 13碼數字 (例: RF2026010100001)</div>
+          </div>
+        </div>
+
+        <!-- Operator -->
+        <div style="margin-bottom: 1rem;">
+          <label class="input-label">操作人員</label>
+          <div v-if="operators.length > 0 && operators.length <= 12" class="operator-grid">
+            <div v-for="op in operators" :key="op.id"
+                 :class="['operator-chip', formEpc.operatorName === op.name ? 'selected' : '']"
+                 @click="formEpc.operatorName = op.name">
+              {{ op.name }}
+            </div>
+          </div>
+          <sl-select v-else v-model="formEpc.operatorName" placeholder="-- 請選擇 --" required>
+            <sl-option v-for="op in operators" :key="op.id" :value="op.name">{{ op.name }}</sl-option>
+          </sl-select>
+        </div>
+
+        <sl-button type="submit" variant="primary" style="width: 100%;">
+          <sl-icon slot="prefix" name="arrow-repeat"></sl-icon>
+          確認更換與綁定
+        </sl-button>
+      </form>
+    </div>
+
+    <!-- Right: History -->
+    <div style="border-left: 1px solid #e2e8f0; padding-left: 1.5rem;">
+      <h3 style="margin: 0 0 1rem; color: #475569;">最近更換紀錄</h3>
+      <div class="scrollable">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>時間</th>
+              <th>舊標籤 -> 新標籤</th>
+              <th>工單</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="h in epcHistory" :key="h.id">
+              <td style="font-size: 0.75rem; color: #64748b;">
+                {{ new Date(h.createdAt).toLocaleString('zh-TW', {hour:'2-digit', minute:'2-digit'}) }}
+              </td>
+              <td>
+                <div class="epc-arrow">
+                  <span class="old">{{ h.oldEpc || '(無)' }}</span>
+                  <sl-icon name="arrow-right"></sl-icon>
+                  <span class="new">{{ h.newEpc }}</span>
+                </div>
+              </td>
+              <td style="font-size: 0.75rem; color: #64748b;">{{ h.orderNumber }}</td>
+            </tr>
+            <tr v-if="epcHistory.length === 0" class="empty-row">
+              <td colspan="3">
+                <div class="empty-state">
+                  <sl-icon name="tag"></sl-icon>
+                  <div>尚無紀錄</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</sl-tab-panel>

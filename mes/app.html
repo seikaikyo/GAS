@@ -1,0 +1,578 @@
+<script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.15.0/cdn/shoelace.js"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script>
+  const { createApp, ref, onMounted } = Vue;
+
+  createApp({
+    setup() {
+      const loading = ref(false);
+      const loadingCount = ref(0);
+      const version = ref('');
+      const currentTab = ref('work-orders');
+      const workOrders = ref([]);
+      const dispatches = ref([]);
+      const epcHistory = ref([]);
+      const reports = ref([]);
+      const operators = ref([]);
+      const customers = ref([]);
+      const products = ref([]);
+
+      // Computed
+      const regenerationOrders = Vue.computed(() => workOrders.value.filter(w => w.orderType === 'regeneration'));
+      const completedDeglueOrders = Vue.computed(() => workOrders.value.filter(w => w.orderType === 'deglue' && w.status === 'completed'));
+
+      const customerSites = Vue.computed(() => {
+        if (!formWo.value.customerName) return [];
+        const cust = customers.value.find(c => c.name === formWo.value.customerName);
+        if (!cust || !cust.sites) return [];
+        try { return JSON.parse(cust.sites); } catch { return []; }
+      });
+
+      const filteredOutgassingTests = Vue.computed(() => {
+        if (!formOutgassing.value.workOrderId) return outgassingTests.value;
+        return outgassingTests.value.filter(t => t.workOrderId === formOutgassing.value.workOrderId);
+      });
+
+      // Modals
+      const showCreateWoModal = ref(false);
+      const showDispatchModal = ref(false);
+      const showReportModal = ref(false);
+      const showShareModal = ref(false);
+
+      // Share
+      const shareLoading = ref(false);
+      const shareData = ref(null);
+      const shareCopied = ref(false);
+
+      const selectedWo = ref(null);
+      const selectedDispatch = ref(null);
+      const selectedEpcWo = ref(null);
+
+      // Forms
+      const formWo = ref({ customerName: '', customerSite: '', productModel: '', quantity: 10, orderType: 'deglue', priority: 'normal', targetRegenerationCount: 1, sourceWorkOrderId: '' });
+      const formDispatch = ref({ stationName: '除膠站', operatorName: '', quantity: 0 });
+      const formReport = ref({ goodQty: 0, ngQty: 0, hasAbnormal: false, abnormalType: '' });
+      const formEpc = ref({ workOrderId: '', oldEpc: '', newEpc: '', operatorName: '' });
+      const formOperator = ref({ name: '', code: '' });
+      const formCustomer = ref({ name: '', code: '', sitesInput: '' });
+      const formProduct = ref({ name: '', code: '', type: '10cm' });
+
+      // Outgassing
+      const outgassingTests = ref([]);
+      const outgassingSampleInfo = ref(null);
+      const formOutgassing = ref({ workOrderId: '', rfidCode: '', result: '', operatorName: '', notes: '', signature: '' });
+
+      // Signature Pad
+      const signaturePadOutgassing = ref(null);
+      const signaturePadAoi = ref(null);
+      const isDrawing = ref(false);
+      const lastPos = ref({ x: 0, y: 0 });
+
+      // AOI
+      const aoiInspections = ref([]);
+      const aoiCsvPreview = ref([]);
+      const formAoi = ref({ workOrderId: '', operatorName: '' });
+      const formAoiSingle = ref({ rfidCode: '', result: '', defectType: '' });
+
+      // Editing State
+      const editingOperatorId = ref(null);
+      const editingCustomerId = ref(null);
+      const editingProductId = ref(null);
+      const editingWorkOrderId = ref(null);
+
+      // EPC Check
+      const epcCheckStatus = ref('idle');
+      const epcCheckInfo = ref(null);
+
+      // Admin
+      const adminLoading = ref(false);
+      const adminMessage = ref('');
+      const adminMessageType = ref('success');
+      const systemVersion = ref('5.1.0');
+
+      // Event Handlers
+      const onWoSelect = () => {
+        const wo = workOrders.value.find(w => w.id === formEpc.value.workOrderId);
+        selectedEpcWo.value = wo;
+      };
+
+      const onCustomerSelect = () => { formWo.value.customerSite = ''; };
+
+      const onSourceWorkOrderSelect = () => {
+        const sourceWo = workOrders.value.find(w => w.id === formWo.value.sourceWorkOrderId);
+        if (sourceWo) {
+          formWo.value.customerName = sourceWo.customerName;
+          formWo.value.customerSite = sourceWo.customerSite || '';
+          formWo.value.productModel = sourceWo.productModel;
+          formWo.value.quantity = sourceWo.goodQty || sourceWo.quantity;
+        }
+      };
+
+      // Edit Handlers
+      const startEditOperator = (op) => { editingOperatorId.value = op.id; formOperator.value = { name: op.name, code: op.code }; };
+      const cancelEditOperator = () => { editingOperatorId.value = null; formOperator.value = { name: '', code: '' }; };
+
+      const startEditCustomer = (c) => {
+        editingCustomerId.value = c.id;
+        let sites = []; try { sites = JSON.parse(c.sites); } catch {}
+        formCustomer.value = { name: c.name, code: c.code, sitesInput: sites.join(', ') };
+      };
+      const cancelEditCustomer = () => { editingCustomerId.value = null; formCustomer.value = { name: '', code: '', sitesInput: '' }; };
+
+      const startEditProduct = (p) => { editingProductId.value = p.id; formProduct.value = { name: p.name, code: p.code, type: p.type }; };
+      const cancelEditProduct = () => { editingProductId.value = null; formProduct.value = { name: '', code: '', type: '10cm' }; };
+
+      const checkOldEpc = async () => {
+        const epc = formEpc.value.oldEpc;
+        if (!epc) return;
+        epcCheckStatus.value = 'checking';
+        epcCheckInfo.value = null;
+        try {
+          const record = await callApi('checkEpc', { epc });
+          epcCheckInfo.value = record
+            ? { found: true, message: `[已找到] ${record.productModel} (來自工單 ${record.orderNumber})` }
+            : { found: false, message: `[注意] 系統無此 EPC 紀錄 (將視為首次入站)` };
+        } catch (e) { console.error(e); }
+        finally { epcCheckStatus.value = 'idle'; }
+      };
+
+      // API Wrapper
+      const callApi = (action, payload) => {
+        loadingCount.value++;
+        loading.value = true;
+        return new Promise((resolve, reject) => {
+          google.script.run
+            .withSuccessHandler(res => {
+              loadingCount.value--;
+              if (loadingCount.value <= 0) loading.value = false;
+              if (res.success) resolve(res.data);
+              else reject(res.error);
+            })
+            .withFailureHandler(err => {
+              loadingCount.value--;
+              if (loadingCount.value <= 0) loading.value = false;
+              reject(err);
+            })
+            .api(action, payload);
+        });
+      };
+
+      window.onerror = () => { loading.value = false; loadingCount.value = 0; };
+
+      const refreshData = async () => {
+        try {
+          const ver = await callApi('getVersion');
+          version.value = ver;
+          const [wos, ds, eh, rps, ops, custs, prods, ogTests, aoiRecs] = await Promise.all([
+            callApi('getWorkOrders'), callApi('getDispatches'), callApi('getEpcHistory'),
+            callApi('getReports'), callApi('getOperators'), callApi('getCustomers'),
+            callApi('getProducts'), callApi('getOutgassingTests'), callApi('getAoiInspections')
+          ]);
+          workOrders.value = wos; dispatches.value = ds; epcHistory.value = eh;
+          reports.value = rps; operators.value = ops; customers.value = custs;
+          products.value = prods; outgassingTests.value = ogTests; aoiInspections.value = aoiRecs;
+        } catch (e) { alert('載入失敗: ' + e); }
+      };
+
+      // Share Functions
+      const openShareModal = async () => {
+        showShareModal.value = true;
+        shareLoading.value = true;
+        shareData.value = null;
+        shareCopied.value = false;
+        try {
+          shareData.value = await callApi('getShortUrl', {});
+        } catch (e) {
+          console.error('產生短網址失敗:', e);
+          // 使用 fallback
+          const currentUrl = window.location.href;
+          shareData.value = {
+            shortUrl: currentUrl,
+            qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(currentUrl)
+          };
+        } finally {
+          shareLoading.value = false;
+        }
+      };
+
+      const copyShareUrl = async () => {
+        if (!shareData.value?.shortUrl) return;
+        try {
+          await navigator.clipboard.writeText(shareData.value.shortUrl);
+          shareCopied.value = true;
+          setTimeout(() => { shareCopied.value = false; }, 3000);
+        } catch (e) {
+          // Fallback for older browsers
+          const textArea = document.createElement('textarea');
+          textArea.value = shareData.value.shortUrl;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
+          shareCopied.value = true;
+          setTimeout(() => { shareCopied.value = false; }, 3000);
+        }
+      };
+
+      // CRUD Operations
+      const submitOperator = async () => {
+        try {
+          if (editingOperatorId.value) await callApi('updateOperator', { id: editingOperatorId.value, data: { ...formOperator.value } });
+          else await callApi('createOperator', { ...formOperator.value });
+          cancelEditOperator();
+          await refreshData();
+        } catch (e) { alert(e); }
+      };
+
+      const deleteOperator = async (id) => {
+        if (!confirm('確定要刪除此人員嗎？')) return;
+        try { await callApi('deleteOperator', { id }); await refreshData(); } catch (e) { alert(e); }
+      };
+
+      const submitCustomer = async () => {
+        try {
+          const sites = formCustomer.value.sitesInput.split(/[,，\n]+/).map(s => s.trim()).filter(s => s);
+          if (editingCustomerId.value) await callApi('updateCustomer', { id: editingCustomerId.value, data: { name: formCustomer.value.name, code: formCustomer.value.code, sites } });
+          else await callApi('createCustomer', { ...formCustomer.value, sites });
+          cancelEditCustomer();
+          await refreshData();
+        } catch (e) { alert(e); }
+      };
+
+      const deleteCustomer = async (id) => {
+        if (!confirm('確定要刪除此客戶嗎？')) return;
+        try { await callApi('deleteCustomer', { id }); await refreshData(); } catch (e) { alert(e); }
+      };
+
+      const submitProduct = async () => {
+        try {
+          if (editingProductId.value) await callApi('updateProduct', { id: editingProductId.value, data: { ...formProduct.value } });
+          else await callApi('createProduct', { ...formProduct.value });
+          cancelEditProduct();
+          await refreshData();
+        } catch (e) { alert(e); }
+      };
+
+      const deleteProduct = async (id) => {
+        if (!confirm('確定要刪除此產品嗎？')) return;
+        try { await callApi('deleteProduct', { id }); await refreshData(); } catch (e) { alert(e); }
+      };
+
+      const submitEpcChange = async () => {
+        try {
+          if (!formEpc.value.workOrderId || !formEpc.value.newEpc || !formEpc.value.operatorName) {
+            alert('請填寫所有必要欄位'); return;
+          }
+          await callApi('createEpcHistory', { ...formEpc.value });
+          alert('綁定成功！');
+          formEpc.value.oldEpc = ''; formEpc.value.newEpc = ''; epcCheckInfo.value = null;
+          await refreshData();
+        } catch (e) { alert(e); }
+      };
+
+      const submitWorkOrder = async () => {
+        if (formWo.value.orderType === 'regeneration' && !formWo.value.sourceWorkOrderId) { alert('再生工單必須選擇來源除膠工單'); return; }
+        if (!formWo.value.customerName) { alert('請選擇客戶'); return; }
+        if (!formWo.value.productModel) { alert('請選擇產品'); return; }
+        if (!formWo.value.quantity || formWo.value.quantity <= 0) { alert('請輸入有效數量'); return; }
+
+        const payload = { ...formWo.value };
+        if (payload.orderType === 'regeneration' && payload.sourceWorkOrderId) {
+          const sourceWo = workOrders.value.find(w => w.id === payload.sourceWorkOrderId);
+          if (sourceWo) payload.sourceOrderNumber = sourceWo.orderNumber;
+        }
+
+        try {
+          if (editingWorkOrderId.value) await callApi('updateWorkOrder', { id: editingWorkOrderId.value, data: payload });
+          else await callApi('createWorkOrder', payload);
+          showCreateWoModal.value = false;
+          formWo.value = { customerName: '', customerSite: '', productModel: '', quantity: 10, orderType: 'deglue', priority: 'normal', targetRegenerationCount: 1, sourceWorkOrderId: '' };
+          editingWorkOrderId.value = null;
+          await refreshData();
+        } catch (e) { alert(e); }
+      };
+
+      const startEditWorkOrder = (wo) => {
+        editingWorkOrderId.value = wo.id;
+        formWo.value = {
+          customerName: wo.customerName, customerSite: wo.customerSite || '', productModel: wo.productModel,
+          quantity: wo.quantity, orderType: wo.orderType, priority: wo.priority,
+          targetRegenerationCount: wo.targetRegenerationCount || 1, sourceWorkOrderId: wo.sourceWorkOrderId || ''
+        };
+        showCreateWoModal.value = true;
+      };
+
+      const cancelEditWorkOrder = () => {
+        editingWorkOrderId.value = null;
+        formWo.value = { customerName: '', customerSite: '', productModel: '', quantity: 10, orderType: 'deglue', priority: 'normal', targetRegenerationCount: 1, sourceWorkOrderId: '' };
+        showCreateWoModal.value = false;
+      };
+
+      const deleteWorkOrder = async (id) => {
+        if (!confirm('確定要取消此工單嗎？')) return;
+        try { await callApi('deleteWorkOrder', { id }); await refreshData(); } catch (e) { alert(e); }
+      };
+
+      const openDispatchModal = (wo) => {
+        selectedWo.value = wo;
+        formDispatch.value = { workOrderId: wo.id, stationName: '除膠站', operatorName: '', quantity: wo.quantity - wo.completedQty };
+        showDispatchModal.value = true;
+      };
+
+      const submitDispatch = async () => {
+        if (!formDispatch.value.operatorName) { alert('請選擇作業員'); return; }
+        if (!formDispatch.value.quantity || formDispatch.value.quantity <= 0) { alert('請輸入有效數量'); return; }
+        try {
+          await callApi('createDispatch', { ...formDispatch.value });
+          showDispatchModal.value = false;
+          await refreshData();
+          currentTab.value = 'dispatches';
+        } catch (e) { alert(e); }
+      };
+
+      const deleteDispatch = async (id) => {
+        if (!confirm('確定要取消此派工嗎？')) return;
+        try { await callApi('deleteDispatch', { id }); await refreshData(); } catch (e) { alert(e); }
+      };
+
+      const startJob = async (d) => {
+        try { await callApi('startDispatch', { id: d.id }); await refreshData(); } catch (e) { alert(e); }
+      };
+
+      const completeJob = async (d) => {
+        try {
+          await callApi('completeDispatch', { id: d.id });
+          await refreshData();
+          const updatedD = dispatches.value.find(x => x.id === d.id);
+          openReportModal(updatedD);
+        } catch (e) { alert(e); }
+      };
+
+      const openReportModal = (d) => {
+        selectedDispatch.value = d;
+        formReport.value = {
+          dispatchId: d.id, goodQty: 0, ngQty: 0, hasAbnormal: false, abnormalType: '',
+          operatorName: d.operatorName, stationName: d.stationName,
+          startTime: d.actualStartAt || new Date().toISOString(),
+          endTime: d.actualEndAt || new Date().toISOString()
+        };
+        showReportModal.value = true;
+      };
+
+      const submitReport = async () => {
+        try {
+          formReport.value.endTime = new Date().toISOString();
+          formReport.value.quantity = formReport.value.goodQty + formReport.value.ngQty;
+          await callApi('createReport', { ...formReport.value });
+          showReportModal.value = false;
+          await refreshData();
+        } catch (e) { alert(e); }
+      };
+
+      const getStatusClass = (status) => {
+        return { draft: 'bg-gray-200', pending: 'bg-yellow-100', in_progress: 'bg-blue-100', completed: 'bg-green-100', paused: 'bg-red-100' }[status] || '';
+      };
+
+      // Signature Pad
+      const getSignatureCanvas = (type) => type === 'outgassing' ? signaturePadOutgassing.value : signaturePadAoi.value;
+
+      const startSign = (e, type) => {
+        const canvas = getSignatureCanvas(type);
+        if (!canvas) return;
+        isDrawing.value = true;
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches ? e.touches[0] : e;
+        lastPos.value = { x: (touch.clientX - rect.left) * (canvas.width / rect.width), y: (touch.clientY - rect.top) * (canvas.height / rect.height) };
+      };
+
+      const drawSign = (e, type) => {
+        if (!isDrawing.value) return;
+        const canvas = getSignatureCanvas(type);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches ? e.touches[0] : e;
+        const pos = { x: (touch.clientX - rect.left) * (canvas.width / rect.width), y: (touch.clientY - rect.top) * (canvas.height / rect.height) };
+        ctx.beginPath(); ctx.moveTo(lastPos.value.x, lastPos.value.y); ctx.lineTo(pos.x, pos.y);
+        ctx.strokeStyle = '#1e3a5f'; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.stroke();
+        lastPos.value = pos;
+      };
+
+      const endSign = (type) => {
+        isDrawing.value = false;
+        const canvas = getSignatureCanvas(type);
+        if (canvas) {
+          const dataUrl = canvas.toDataURL('image/png');
+          if (type === 'outgassing') formOutgassing.value.signature = dataUrl;
+          else formAoiSingle.value.signature = dataUrl;
+        }
+      };
+
+      const clearSignature = (type) => {
+        const canvas = getSignatureCanvas(type);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (type === 'outgassing') formOutgassing.value.signature = '';
+        else formAoiSingle.value.signature = '';
+      };
+
+      // Outgassing
+      const loadOutgassingSampleInfo = async () => {
+        if (!formOutgassing.value.workOrderId) { outgassingSampleInfo.value = null; return; }
+        try { outgassingSampleInfo.value = await callApi('getOutgassingSampleInfo', { workOrderId: formOutgassing.value.workOrderId }); }
+        catch (e) { console.error(e); }
+      };
+
+      const submitOutgassingTest = async () => {
+        if (!formOutgassing.value.workOrderId) { alert('請選擇工單'); return; }
+        if (!formOutgassing.value.result) { alert('請選擇檢驗結果'); return; }
+        if (!formOutgassing.value.operatorName) { alert('請選擇檢驗員'); return; }
+        try {
+          await callApi('createOutgassingTest', { ...formOutgassing.value });
+          if (formOutgassing.value.result === 'NG') alert('檢驗結果: NG\n\n依規定需加抽 2 片再測，若仍超標則回爐重烤。');
+          formOutgassing.value.rfidCode = ''; formOutgassing.value.result = ''; formOutgassing.value.notes = ''; formOutgassing.value.signature = '';
+          clearSignature('outgassing');
+          await refreshData(); await loadOutgassingSampleInfo();
+        } catch (e) { alert(e); }
+      };
+
+      const generateOutgassingReport = () => {
+        if (!formOutgassing.value.workOrderId) { alert('請先選擇工單'); return; }
+        const wo = workOrders.value.find(w => w.id === formOutgassing.value.workOrderId);
+        const tests = outgassingTests.value.filter(t => t.workOrderId === formOutgassing.value.workOrderId);
+        const info = outgassingSampleInfo.value;
+        if (!wo || tests.length === 0) { alert('無檢驗資料可產生報告'); return; }
+        const lastTestWithSig = [...tests].reverse().find(t => t.signature);
+        const lastSignature = lastTestWithSig?.signature || '';
+        const reportHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>釋氣檢驗報告 - ${wo.orderNumber}</title><style>body{font-family:'Microsoft JhengHei',sans-serif;padding:20px;max-width:800px;margin:0 auto}.header{text-align:center;border-bottom:2px solid #333;padding-bottom:15px;margin-bottom:20px}.header h1{margin:0;font-size:24px}.header p{margin:5px 0;color:#666}.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}.info-item{padding:8px;background:#f5f5f5;border-radius:4px}.info-item label{font-size:12px;color:#666;display:block}.info-item span{font-weight:bold}table{width:100%;border-collapse:collapse;margin:20px 0}th,td{border:1px solid #ddd;padding:10px;text-align:left}th{background:#f0f0f0;font-weight:bold}.pass{color:green;font-weight:bold}.ng{color:red;font-weight:bold}.summary{background:#e8f5e9;padding:15px;border-radius:8px;margin:20px 0}.summary.warning{background:#fff3e0}.signature-section{margin-top:30px;display:flex;justify-content:flex-end}.signature-box{text-align:center}.signature-box img{max-height:80px;border-bottom:1px solid #333}.signature-box p{margin:5px 0 0;font-size:12px}.footer{margin-top:40px;text-align:center;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:10px}@media print{body{padding:0}.no-print{display:none}}</style></head><body><div class="header"><h1>釋氣檢驗報告</h1><p>Outgassing Inspection Report</p></div><div class="info-grid"><div class="info-item"><label>工單編號</label><span>${wo.orderNumber}</span></div><div class="info-item"><label>客戶</label><span>${wo.customerName} / ${wo.customerSite||'-'}</span></div><div class="info-item"><label>產品型號</label><span>${wo.productModel}</span></div><div class="info-item"><label>工單數量</label><span>${info?.totalQty||wo.quantity} 片</span></div><div class="info-item"><label>抽樣規則</label><span>18 抽 1 (5.56%)</span></div><div class="info-item"><label>報告日期</label><span>${new Date().toLocaleDateString('zh-TW')}</span></div></div><h3>檢驗結果明細</h3><table><thead><tr><th>序號</th><th>檢驗單號</th><th>條碼</th><th>結果</th><th>備註</th><th>檢驗員</th><th>時間</th></tr></thead><tbody>${tests.map((t,i)=>`<tr><td>${i+1}</td><td>${t.testNumber||'-'}</td><td>${t.rfidCode||'-'}</td><td class="${t.result==='PASS'?'pass':'ng'}">${t.result}</td><td>${t.notes||'-'}</td><td>${t.operatorName||'-'}</td><td>${t.testedAt?new Date(t.testedAt).toLocaleString('zh-TW'):'-'}</td></tr>`).join('')}</tbody></table><div class="summary ${info?.passRate<100?'warning':''}"><strong>檢驗摘要</strong><br>已檢驗: ${info?.testedCount||tests.length} 片 / 需抽樣: ${info?.requiredSamples||'-'} 片<br>合格: ${info?.passCount||tests.filter(t=>t.result==='PASS').length} 片 | 不合格: ${info?.failCount||tests.filter(t=>t.result==='NG').length} 片<br><strong>合格率: ${info?.passRate||Math.round(tests.filter(t=>t.result==='PASS').length/tests.length*100)}%</strong></div><div class="signature-section"><div class="signature-box">${lastSignature?`<img src="${lastSignature}" alt="簽名">`:'<div style="width:150px;height:60px;border-bottom:1px solid #333;"></div>'}<p>品檢人員簽名</p></div></div><div class="footer">SMAI-MES 品質管理系統 | 報告產生時間: ${new Date().toLocaleString('zh-TW')} | v${systemVersion.value}</div><div class="no-print" style="margin-top:20px;text-align:center;"><button onclick="window.print()" style="padding:10px 30px;font-size:16px;cursor:pointer;">列印報告</button></div></body></html>`;
+        const reportWindow = window.open('', '_blank');
+        reportWindow.document.write(reportHtml);
+        reportWindow.document.close();
+      };
+
+      // AOI
+      const handleAoiCsvFile = (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const text = e.target.result;
+          const lines = text.split('\n').filter(l => l.trim());
+          if (lines.length < 2) { alert('CSV 檔案格式錯誤或無資料'); return; }
+          const headers = lines[0].split(',').map(h => h.trim());
+          const rows = [];
+          for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(',').map(v => v.trim());
+            const row = {};
+            headers.forEach((h, idx) => {
+              if (h.toLowerCase().includes('barcode') || h.toLowerCase().includes('rfid') || h === '條碼' || h === '條碼編號') row.rfidCode = values[idx];
+              else if (h.toLowerCase().includes('result') || h === '結果') row.result = (values[idx] || '').toUpperCase() === 'PASS' ? 'PASS' : 'NG';
+              else if (h.toLowerCase().includes('defect') && h.toLowerCase().includes('type') || h === '缺陷類型') row.defectType = values[idx];
+              else if (h.toLowerCase().includes('defect') && h.toLowerCase().includes('count') || h === '缺陷數量') row.defectCount = Number(values[idx]) || 0;
+            });
+            if (row.rfidCode) rows.push(row);
+          }
+          aoiCsvPreview.value = rows;
+        };
+        reader.readAsText(file);
+      };
+
+      const submitAoiImport = async () => {
+        if (!formAoi.value.workOrderId) { alert('請選擇工單'); return; }
+        if (!formAoi.value.operatorName) { alert('請選擇匯入人員'); return; }
+        if (aoiCsvPreview.value.length === 0) { alert('請先選擇 CSV 檔案'); return; }
+        try {
+          const result = await callApi('importAoiCsv', { workOrderId: formAoi.value.workOrderId, csvRows: aoiCsvPreview.value, operatorName: formAoi.value.operatorName });
+          alert(`匯入完成！\n成功: ${result.success} 筆\n失敗: ${result.failed} 筆`);
+          aoiCsvPreview.value = [];
+          await refreshData();
+        } catch (e) { alert(e); }
+      };
+
+      const submitSingleAoi = async () => {
+        if (!formAoi.value.workOrderId) { alert('請先在上方選擇工單'); return; }
+        if (!formAoiSingle.value.rfidCode) { alert('請輸入條碼編號'); return; }
+        if (!formAoiSingle.value.result) { alert('請選擇檢驗結果'); return; }
+        try {
+          await callApi('createAoiInspection', { workOrderId: formAoi.value.workOrderId, operatorName: formAoi.value.operatorName || '系統', ...formAoiSingle.value });
+          if (formAoiSingle.value.result === 'NG' && (formAoiSingle.value.defectType || '').includes('破洞')) alert('嚴重瑕疵: 破洞\n此件須直接報廢處理。');
+          formAoiSingle.value = { rfidCode: '', result: '', defectType: '' };
+          await refreshData();
+        } catch (e) { alert(e); }
+      };
+
+      // Admin Functions
+      const adminSyncDatabase = async () => {
+        adminLoading.value = true; adminMessage.value = '';
+        try {
+          const result = await callApi('syncDatabase');
+          adminMessageType.value = 'success'; adminMessage.value = `資料庫同步完成！${result.message || ''}`;
+        } catch (e) { adminMessageType.value = 'error'; adminMessage.value = '同步失敗: ' + e; }
+        finally { adminLoading.value = false; }
+      };
+
+      const adminFixColumnOrder = async () => {
+        adminLoading.value = true; adminMessage.value = '';
+        try {
+          const result = await callApi('fixColumnOrder');
+          adminMessageType.value = 'success';
+          const fixed = result.fixed || [];
+          adminMessage.value = fixed.length > 0 ? `已修復欄位順序: ${fixed.join(', ')}` : '所有資料表欄位順序正確，無需修復';
+          await refreshData();
+        } catch (e) { adminMessageType.value = 'error'; adminMessage.value = '修復失敗: ' + e; }
+        finally { adminLoading.value = false; }
+      };
+
+      const adminFixSignatureData = async () => {
+        adminLoading.value = true; adminMessage.value = '';
+        try {
+          const result = await callApi('fixSignatureData');
+          adminMessageType.value = 'success';
+          const tables = result.tables || [];
+          adminMessage.value = result.fixed > 0 ? `已修復簽名資料: ${tables.join(', ')}` : '所有簽名資料位置正確，無需修復';
+          await refreshData();
+        } catch (e) { adminMessageType.value = 'error'; adminMessage.value = '修復失敗: ' + e; }
+        finally { adminLoading.value = false; }
+      };
+
+      const adminGenerateTestData = async () => {
+        if (!confirm('確定要產生測試資料嗎？')) return;
+        adminLoading.value = true; adminMessage.value = '';
+        try {
+          const result = await callApi('generateTestData');
+          adminMessageType.value = 'success';
+          adminMessage.value = `測試資料產生完成！新增 ${result.customers} 個客戶、${result.products} 個產品、${result.operators} 個作業員、${result.workOrders} 張工單`;
+          await refreshData();
+        } catch (e) { adminMessageType.value = 'error'; adminMessage.value = '產生失敗: ' + e; }
+        finally { adminLoading.value = false; }
+      };
+
+      onMounted(() => { refreshData(); });
+
+      return {
+        loading, version, currentTab, workOrders, dispatches, reports,
+        showCreateWoModal, showDispatchModal, showReportModal, showShareModal,
+        shareLoading, shareData, shareCopied, openShareModal, copyShareUrl,
+        selectedWo, selectedDispatch, selectedEpcWo,
+        formWo, formDispatch, formReport, formEpc, formOperator, formCustomer, formProduct,
+        editingOperatorId, editingCustomerId, editingProductId, editingWorkOrderId,
+        regenerationOrders, completedDeglueOrders, epcHistory, operators, customers, products, customerSites, epcCheckStatus, epcCheckInfo,
+        refreshData, submitWorkOrder, openDispatchModal, submitDispatch, openReportModal, submitReport,
+        startEditWorkOrder, cancelEditWorkOrder, deleteWorkOrder, deleteDispatch,
+        submitEpcChange, onWoSelect, onCustomerSelect, onSourceWorkOrderSelect, checkOldEpc,
+        submitOperator, deleteOperator, startEditOperator, cancelEditOperator,
+        submitCustomer, deleteCustomer, startEditCustomer, cancelEditCustomer,
+        submitProduct, deleteProduct, startEditProduct, cancelEditProduct,
+        startJob, completeJob, getStatusClass,
+        signaturePadOutgassing, signaturePadAoi, startSign, drawSign, endSign, clearSignature,
+        outgassingTests, outgassingSampleInfo, formOutgassing, filteredOutgassingTests,
+        loadOutgassingSampleInfo, submitOutgassingTest, generateOutgassingReport,
+        aoiInspections, aoiCsvPreview, formAoi, formAoiSingle,
+        handleAoiCsvFile, submitAoiImport, submitSingleAoi,
+        adminLoading, adminMessage, adminMessageType, systemVersion,
+        adminGenerateTestData, adminSyncDatabase, adminFixColumnOrder, adminFixSignatureData
+      };
+    }
+  }).mount('#app');
+</script>

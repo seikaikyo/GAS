@@ -1,0 +1,171 @@
+<!-- Tab: Outgassing Test -->
+<sl-tab-panel name="outgassing">
+  <div class="section-header">
+    <h2>釋氣檢驗 (18抽1)</h2>
+  </div>
+
+  <div class="split-layout">
+    <!-- Left: Form -->
+    <div>
+      <sl-alert variant="primary" open style="margin-bottom: 1rem;">
+        <sl-icon slot="icon" name="info-circle"></sl-icon>
+        <strong>抽樣規則</strong><br>
+        每批 18 片抽檢 1 片，抽樣率 5.56%
+      </sl-alert>
+
+      <form @submit.prevent="submitOutgassingTest" class="form-section">
+        <!-- Work Order Select -->
+        <div style="margin-bottom: 1rem;">
+          <label class="input-label">選擇工單</label>
+          <sl-select v-model="formOutgassing.workOrderId" @sl-change="loadOutgassingSampleInfo" placeholder="-- 請選擇 --" required>
+            <sl-option v-for="wo in workOrders.filter(w => w.status !== 'completed' && w.status !== 'cancelled')" :key="wo.id" :value="wo.id">
+              {{ wo.orderNumber }} - {{ wo.productModel }}
+            </sl-option>
+          </sl-select>
+        </div>
+
+        <!-- Sample Info -->
+        <div v-if="outgassingSampleInfo" class="info-grid" style="margin-bottom: 1rem;">
+          <div class="info-item">
+            <label>工單數量</label>
+            <span>{{ outgassingSampleInfo.totalQty }} 片</span>
+          </div>
+          <div class="info-item">
+            <label>需抽樣數</label>
+            <span>{{ outgassingSampleInfo.requiredSamples }} 片</span>
+          </div>
+          <div class="info-item">
+            <label>已檢驗</label>
+            <span>{{ outgassingSampleInfo.testedCount }} 片</span>
+          </div>
+          <div class="info-item">
+            <label>合格率</label>
+            <span :style="{ color: outgassingSampleInfo.passRate >= 100 ? '#16a34a' : '#ea580c', fontWeight: '700' }">
+              {{ outgassingSampleInfo.passRate }}%
+            </span>
+          </div>
+          <div v-if="!outgassingSampleInfo.isComplete" class="info-item" style="grid-column: span 2; background: linear-gradient(135deg, rgba(102,126,234,0.1) 0%, rgba(118,75,162,0.1) 100%);">
+            <label>下一抽樣</label>
+            <span style="color: #667eea;">第 {{ outgassingSampleInfo.nextSampleIndex }} 片 (批次 {{ outgassingSampleInfo.nextBatchRange }})</span>
+          </div>
+          <div v-else class="info-item" style="grid-column: span 2; background: #dcfce7; text-align: center;">
+            <sl-badge variant="success" style="font-size: 1rem;">抽樣完成</sl-badge>
+          </div>
+        </div>
+
+        <!-- Barcode -->
+        <div style="margin-bottom: 1rem;">
+          <label class="input-label">條碼編號</label>
+          <sl-input v-model="formOutgassing.rfidCode" placeholder="掃描條碼"></sl-input>
+        </div>
+
+        <!-- Result -->
+        <div style="margin-bottom: 1rem;">
+          <label class="input-label">檢驗結果</label>
+          <div style="display: flex; gap: 0.75rem;">
+            <div :class="['chip', 'chip-pass', formOutgassing.result === 'PASS' ? 'selected' : '']"
+                 @click="formOutgassing.result = 'PASS'" style="flex: 1; text-align: center; padding: 0.75rem; font-weight: 700;">
+              PASS
+            </div>
+            <div :class="['chip', 'chip-ng', formOutgassing.result === 'NG' ? 'selected' : '']"
+                 @click="formOutgassing.result = 'NG'" style="flex: 1; text-align: center; padding: 0.75rem; font-weight: 700;">
+              NG
+            </div>
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div style="margin-bottom: 1rem;">
+          <label class="input-label">備註</label>
+          <sl-input v-model="formOutgassing.notes" placeholder="選填：檢測數值或說明"></sl-input>
+        </div>
+
+        <!-- Operator -->
+        <div style="margin-bottom: 1rem;">
+          <label class="input-label">檢驗員</label>
+          <div class="operator-grid">
+            <div v-for="op in operators" :key="op.id"
+                 :class="['operator-chip', formOutgassing.operatorName === op.name ? 'selected' : '']"
+                 @click="formOutgassing.operatorName = op.name">
+              {{ op.name }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Signature Pad -->
+        <div style="margin-bottom: 1rem;">
+          <label class="input-label">品檢簽名</label>
+          <div class="signature-pad-container">
+            <canvas ref="signaturePadOutgassing" width="300" height="120"
+              @mousedown="startSign($event, 'outgassing')" @mousemove="drawSign($event, 'outgassing')" @mouseup="endSign('outgassing')" @mouseleave="endSign('outgassing')"
+              @touchstart.prevent="startSign($event, 'outgassing')" @touchmove.prevent="drawSign($event, 'outgassing')" @touchend="endSign('outgassing')">
+            </canvas>
+            <sl-icon-button class="signature-clear-btn" name="x-lg" label="清除" @click="clearSignature('outgassing')"></sl-icon-button>
+          </div>
+          <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.25rem;">請在上方區域簽名</p>
+        </div>
+
+        <sl-button type="submit" variant="primary" style="width: 100%;">
+          <sl-icon slot="prefix" name="clipboard-check"></sl-icon>
+          記錄檢驗結果
+        </sl-button>
+      </form>
+    </div>
+
+    <!-- Right: Records -->
+    <div>
+      <h3 style="margin: 0 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        檢驗紀錄
+        <span v-if="formOutgassing.workOrderId" style="font-size: 0.875rem; font-weight: 400; color: #667eea;">
+          ({{ workOrders.find(w => w.id === formOutgassing.workOrderId)?.orderNumber }})
+        </span>
+        <span v-else style="font-size: 0.875rem; font-weight: 400; color: #94a3b8;">(全部)</span>
+      </h3>
+
+      <div class="scrollable">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>單號</th>
+              <th>工單</th>
+              <th>條碼</th>
+              <th>結果</th>
+              <th>檢驗員</th>
+              <th>時間</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="t in filteredOutgassingTests" :key="t.id">
+              <td style="font-family: monospace; font-size: 0.875rem;">{{ t.testNumber }}</td>
+              <td style="font-size: 0.875rem;">{{ t.orderNumber }}</td>
+              <td style="font-family: monospace; font-size: 0.875rem; color: #64748b;">{{ t.rfidCode || '-' }}</td>
+              <td>
+                <sl-badge :variant="t.result === 'PASS' ? 'success' : 'danger'">{{ t.result }}</sl-badge>
+              </td>
+              <td style="font-size: 0.875rem;">{{ t.operatorName }}</td>
+              <td style="font-size: 0.75rem; color: #64748b;">
+                {{ t.testedAt ? new Date(t.testedAt).toLocaleString('zh-TW') : '-' }}
+              </td>
+            </tr>
+            <tr v-if="formOutgassing.workOrderId && filteredOutgassingTests.length > 0" style="background: #f8fafc;">
+              <td colspan="6" style="text-align: center; padding: 1rem;">
+                <sl-button variant="neutral" @click="generateOutgassingReport">
+                  <sl-icon slot="prefix" name="file-earmark-pdf"></sl-icon>
+                  產生品檢報告
+                </sl-button>
+              </td>
+            </tr>
+            <tr v-if="filteredOutgassingTests.length === 0" class="empty-row">
+              <td colspan="6">
+                <div class="empty-state">
+                  <sl-icon name="clipboard2"></sl-icon>
+                  <div>{{ formOutgassing.workOrderId ? '此工單尚無檢驗紀錄' : '請選擇工單查看紀錄' }}</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</sl-tab-panel>

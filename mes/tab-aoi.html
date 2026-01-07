@@ -1,0 +1,135 @@
+<!-- Tab: AOI Inspection -->
+<sl-tab-panel name="aoi">
+  <div class="section-header">
+    <h2>AOI 自動光學檢驗</h2>
+  </div>
+
+  <div class="split-layout">
+    <!-- Left: Import -->
+    <div>
+      <sl-alert variant="primary" open style="margin-bottom: 1rem;">
+        <sl-icon slot="icon" name="file-earmark-spreadsheet"></sl-icon>
+        <strong>CSV 匯入格式</strong>
+        <div style="font-family: monospace; font-size: 0.75rem; background: white; padding: 0.5rem; border-radius: 0.25rem; margin-top: 0.5rem;">
+          Barcode, Result, DefectType, DefectCount<br>
+          BC001, PASS, , 0<br>
+          BC002, NG, 刮傷, 2
+        </div>
+      </sl-alert>
+
+      <form @submit.prevent="submitAoiImport" class="form-section">
+        <!-- Work Order Select -->
+        <div style="margin-bottom: 1rem;">
+          <label class="input-label">選擇工單</label>
+          <sl-select v-model="formAoi.workOrderId" placeholder="-- 請選擇 --" required>
+            <sl-option v-for="wo in workOrders.filter(w => w.status !== 'completed' && w.status !== 'cancelled')" :key="wo.id" :value="wo.id">
+              {{ wo.orderNumber }} - {{ wo.productModel }}
+            </sl-option>
+          </sl-select>
+        </div>
+
+        <!-- Operator -->
+        <div style="margin-bottom: 1rem;">
+          <label class="input-label">匯入人員</label>
+          <div class="operator-grid">
+            <div v-for="op in operators" :key="op.id"
+                 :class="['operator-chip', formAoi.operatorName === op.name ? 'selected' : '']"
+                 @click="formAoi.operatorName = op.name">
+              {{ op.name }}
+            </div>
+          </div>
+        </div>
+
+        <!-- CSV File -->
+        <div style="margin-bottom: 1rem;">
+          <label class="input-label">CSV 檔案</label>
+          <input type="file" accept=".csv" @change="handleAoiCsvFile" ref="aoiFileInput"
+                 style="display: block; width: 100%; padding: 0.75rem; border: 2px dashed #e2e8f0; border-radius: 0.5rem; background: #f8fafc; cursor: pointer;">
+        </div>
+
+        <!-- Preview -->
+        <div v-if="aoiCsvPreview.length > 0" class="csv-preview" style="margin-bottom: 1rem;">
+          <div style="font-weight: 500; margin-bottom: 0.5rem;">預覽 (前 5 筆)</div>
+          <div v-for="(row, i) in aoiCsvPreview.slice(0, 5)" :key="i" class="csv-preview-row">
+            <span class="barcode">{{ row.rfidCode }}</span>
+            <sl-badge :variant="row.result === 'PASS' ? 'success' : 'danger'" size="small">{{ row.result }}</sl-badge>
+            <span style="color: #94a3b8;">{{ row.defectType || '-' }}</span>
+          </div>
+          <div style="margin-top: 0.5rem; font-size: 0.75rem; color: #64748b;">共 {{ aoiCsvPreview.length }} 筆資料</div>
+        </div>
+
+        <sl-button type="submit" :disabled="aoiCsvPreview.length === 0" :variant="aoiCsvPreview.length > 0 ? 'primary' : 'neutral'" style="width: 100%;">
+          <sl-icon slot="prefix" name="upload"></sl-icon>
+          匯入 AOI 結果
+        </sl-button>
+      </form>
+
+      <!-- Single Entry -->
+      <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
+        <h4 style="margin: 0 0 1rem; color: #475569;">單筆輸入</h4>
+        <form @submit.prevent="submitSingleAoi" class="form-section">
+          <div style="margin-bottom: 0.75rem;">
+            <sl-input v-model="formAoiSingle.rfidCode" placeholder="條碼編號" size="small"></sl-input>
+          </div>
+          <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+            <div :class="['chip', 'chip-pass', formAoiSingle.result === 'PASS' ? 'selected' : '']"
+                 @click="formAoiSingle.result = 'PASS'" style="flex: 1; text-align: center; padding: 0.5rem; font-size: 0.875rem; font-weight: 600;">
+              PASS
+            </div>
+            <div :class="['chip', 'chip-ng', formAoiSingle.result === 'NG' ? 'selected' : '']"
+                 @click="formAoiSingle.result = 'NG'" style="flex: 1; text-align: center; padding: 0.5rem; font-size: 0.875rem; font-weight: 600;">
+              NG
+            </div>
+          </div>
+          <div v-if="formAoiSingle.result === 'NG'" style="margin-bottom: 0.75rem;">
+            <sl-input v-model="formAoiSingle.defectType" placeholder="缺陷類型" size="small"></sl-input>
+          </div>
+          <sl-button type="submit" variant="neutral" size="small" style="width: 100%;">
+            新增單筆
+          </sl-button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Right: Records -->
+    <div>
+      <h3 style="margin: 0 0 1rem;">檢驗紀錄</h3>
+      <div class="scrollable">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>單號</th>
+              <th>工單</th>
+              <th>條碼</th>
+              <th>結果</th>
+              <th>缺陷</th>
+              <th>時間</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="a in aoiInspections" :key="a.id">
+              <td style="font-family: monospace; font-size: 0.875rem;">{{ a.inspectionNumber }}</td>
+              <td style="font-size: 0.875rem;">{{ a.orderNumber }}</td>
+              <td style="font-family: monospace; font-size: 0.875rem; color: #64748b;">{{ a.rfidCode || '-' }}</td>
+              <td>
+                <sl-badge :variant="a.result === 'PASS' ? 'success' : 'danger'">{{ a.result }}</sl-badge>
+              </td>
+              <td style="font-size: 0.875rem; color: #64748b;">{{ a.defectType || '-' }}</td>
+              <td style="font-size: 0.75rem; color: #64748b;">
+                {{ a.inspectedAt ? new Date(a.inspectedAt).toLocaleString('zh-TW') : '-' }}
+              </td>
+            </tr>
+            <tr v-if="aoiInspections.length === 0" class="empty-row">
+              <td colspan="6">
+                <div class="empty-state">
+                  <sl-icon name="eye"></sl-icon>
+                  <div>暫無檢驗紀錄</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</sl-tab-panel>

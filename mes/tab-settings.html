@@ -1,0 +1,203 @@
+<!-- Tab: Settings -->
+<sl-tab-panel name="settings">
+
+  <!-- 1. Operators -->
+  <div class="settings-section">
+    <div class="settings-form">
+      <h3>人員管理</h3>
+      <form @submit.prevent="submitOperator">
+        <div style="margin-bottom: 0.75rem;">
+          <label class="input-label">姓名</label>
+          <sl-input v-model="formOperator.name" required></sl-input>
+        </div>
+        <div style="margin-bottom: 1rem;">
+          <label class="input-label">編號/代號</label>
+          <sl-input v-model="formOperator.code"></sl-input>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <sl-button type="submit" :variant="editingOperatorId ? 'warning' : 'neutral'" style="flex: 1;">
+            {{ editingOperatorId ? '更新人員' : '新增人員' }}
+          </sl-button>
+          <sl-button v-if="editingOperatorId" variant="neutral" outline @click="cancelEditOperator">取消</sl-button>
+        </div>
+      </form>
+    </div>
+    <div>
+      <div class="scrollable" style="max-height: 250px; border: 1px solid #e2e8f0; border-radius: 0.5rem;">
+        <table class="data-table">
+          <thead>
+            <tr><th>姓名</th><th>編號</th><th style="text-align: right;">操作</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="op in operators" :key="op.id">
+              <td>{{ op.name }}</td>
+              <td style="color: #64748b;">{{ op.code }}</td>
+              <td style="text-align: right;">
+                <sl-button-group>
+                  <sl-button size="small" @click="startEditOperator(op)">編輯</sl-button>
+                  <sl-button size="small" variant="danger" outline @click="deleteOperator(op.id)">刪除</sl-button>
+                </sl-button-group>
+              </td>
+            </tr>
+            <tr v-if="operators.length === 0" class="empty-row"><td colspan="3">尚無資料</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Customers -->
+  <div class="settings-section">
+    <div class="settings-form" style="background: linear-gradient(135deg, rgba(102,126,234,0.1) 0%, rgba(102,126,234,0.05) 100%);">
+      <h3 style="color: #4f46e5;">客戶管理</h3>
+      <form @submit.prevent="submitCustomer">
+        <div style="margin-bottom: 0.75rem;">
+          <label class="input-label">客戶名稱</label>
+          <sl-input v-model="formCustomer.name" required placeholder="例如: 台積電 (TSMC)"></sl-input>
+        </div>
+        <div style="margin-bottom: 1rem;">
+          <label class="input-label">廠區列表 (用逗號分隔)</label>
+          <sl-textarea v-model="formCustomer.sitesInput" rows="3" placeholder="例如: F12, F18P5, F18P7"></sl-textarea>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <sl-button type="submit" :variant="editingCustomerId ? 'warning' : 'primary'" style="flex: 1;">
+            {{ editingCustomerId ? '更新客戶' : '新增客戶' }}
+          </sl-button>
+          <sl-button v-if="editingCustomerId" variant="neutral" outline @click="cancelEditCustomer">取消</sl-button>
+        </div>
+      </form>
+    </div>
+    <div>
+      <div class="scrollable" style="max-height: 250px; border: 1px solid #e2e8f0; border-radius: 0.5rem;">
+        <table class="data-table">
+          <thead>
+            <tr><th>客戶</th><th>廠區</th><th style="text-align: right;">操作</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="c in customers" :key="c.id">
+              <td style="font-weight: 500;">{{ c.name }}</td>
+              <td style="font-size: 0.75rem; color: #64748b; max-width: 200px;">
+                {{ (() => { try { return JSON.parse(c.sites).join(', '); } catch { return '-'; } })() }}
+              </td>
+              <td style="text-align: right;">
+                <sl-button-group>
+                  <sl-button size="small" @click="startEditCustomer(c)">編輯</sl-button>
+                  <sl-button size="small" variant="danger" outline @click="deleteCustomer(c.id)">刪除</sl-button>
+                </sl-button-group>
+              </td>
+            </tr>
+            <tr v-if="customers.length === 0" class="empty-row"><td colspan="3">尚無資料</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Products -->
+  <div class="settings-section" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
+    <div class="settings-form" style="background: linear-gradient(135deg, rgba(34,197,94,0.1) 0%, rgba(34,197,94,0.05) 100%);">
+      <h3 style="color: #16a34a;">產品管理</h3>
+      <form @submit.prevent="submitProduct">
+        <div style="margin-bottom: 0.75rem;">
+          <label class="input-label">產品名稱</label>
+          <sl-input v-model="formProduct.name" required placeholder="例如: HEPA濾網"></sl-input>
+        </div>
+        <div style="margin-bottom: 0.75rem;">
+          <label class="input-label">產品編號/型號</label>
+          <sl-input v-model="formProduct.code" required placeholder="例如: HEPA-300"></sl-input>
+        </div>
+        <div style="margin-bottom: 1rem;">
+          <label class="input-label">產品類型</label>
+          <div class="chip-group">
+            <div v-for="t in ['6cm', '10cm', '20cm']" :key="t"
+                 :class="['chip', formProduct.type === t ? 'selected' : '']"
+                 @click="formProduct.type = t">{{ t }}</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <sl-button type="submit" :variant="editingProductId ? 'warning' : 'success'" style="flex: 1;">
+            {{ editingProductId ? '更新產品' : '新增產品' }}
+          </sl-button>
+          <sl-button v-if="editingProductId" variant="neutral" outline @click="cancelEditProduct">取消</sl-button>
+        </div>
+      </form>
+    </div>
+    <div>
+      <div class="scrollable" style="max-height: 250px; border: 1px solid #e2e8f0; border-radius: 0.5rem;">
+        <table class="data-table">
+          <thead>
+            <tr><th>型號</th><th>名稱</th><th>類型</th><th style="text-align: right;">操作</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="p in products" :key="p.id">
+              <td style="font-weight: 700;">{{ p.code }}</td>
+              <td>{{ p.name }}</td>
+              <td><sl-badge variant="success">{{ p.type }}</sl-badge></td>
+              <td style="text-align: right;">
+                <sl-button-group>
+                  <sl-button size="small" @click="startEditProduct(p)">編輯</sl-button>
+                  <sl-button size="small" variant="danger" outline @click="deleteProduct(p.id)">刪除</sl-button>
+                </sl-button-group>
+              </td>
+            </tr>
+            <tr v-if="products.length === 0" class="empty-row"><td colspan="4">尚無資料</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Admin Tools -->
+  <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
+    <h3 style="margin: 0 0 1rem; color: #1e293b;">系統工具</h3>
+    <div class="admin-grid">
+      <div class="admin-card blue">
+        <h4>同步資料庫</h4>
+        <p>新增缺少的欄位（如簽名欄）</p>
+        <sl-button variant="primary" :disabled="adminLoading" @click="adminSyncDatabase" style="width: 100%;">
+          {{ adminLoading ? '同步中...' : '同步資料庫' }}
+        </sl-button>
+      </div>
+
+      <div class="admin-card orange">
+        <h4>修復欄位順序</h4>
+        <p>修正欄位順序錯亂導致的資料問題</p>
+        <sl-button variant="warning" :disabled="adminLoading" @click="adminFixColumnOrder" style="width: 100%;">
+          {{ adminLoading ? '修復中...' : '修復欄位順序' }}
+        </sl-button>
+      </div>
+
+      <div class="admin-card pink">
+        <h4>修復簽名資料</h4>
+        <p>修復簽名資料儲存位置錯誤問題</p>
+        <sl-button variant="danger" outline :disabled="adminLoading" @click="adminFixSignatureData" style="width: 100%;">
+          {{ adminLoading ? '修復中...' : '修復簽名資料' }}
+        </sl-button>
+      </div>
+
+      <div class="admin-card purple">
+        <h4>產生測試資料</h4>
+        <p>產生測試資料驗證系統完整度</p>
+        <sl-button variant="neutral" :disabled="adminLoading" @click="adminGenerateTestData" style="width: 100%;">
+          {{ adminLoading ? '產生中...' : '產生測試資料' }}
+        </sl-button>
+      </div>
+
+      <div class="admin-card gray">
+        <h4>系統資訊</h4>
+        <p style="font-family: monospace; margin-bottom: 0.5rem;">
+          版本: <strong>{{ systemVersion }}</strong>
+        </p>
+        <p style="margin-bottom: 0;">
+          資料庫: Google Sheets<br>
+          部署: Google Apps Script
+        </p>
+      </div>
+    </div>
+
+    <div v-if="adminMessage" :class="['alert-message', adminMessageType]" style="margin-top: 1rem;">
+      {{ adminMessage }}
+    </div>
+  </div>
+
+</sl-tab-panel>

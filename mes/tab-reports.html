@@ -1,0 +1,59 @@
+<!-- Tab: Reports -->
+<sl-tab-panel name="reports">
+  <div class="section-header">
+    <h2>報工紀錄</h2>
+  </div>
+
+  <div class="scrollable">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>報工單號</th>
+          <th>派工單號</th>
+          <th>站點/人員</th>
+          <th>良品</th>
+          <th>NG</th>
+          <th>異常</th>
+          <th>時間</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="r in reports" :key="r.id">
+          <td>
+            <span style="font-family: monospace;">{{ r.reportNumber }}</span>
+          </td>
+          <td style="color: #64748b; font-size: 0.875rem;">
+            {{ dispatches.find(d => d.id === r.dispatchId)?.dispatchNumber || '-' }}
+          </td>
+          <td>
+            <div style="font-weight: 500;">{{ r.stationName }}</div>
+            <div style="font-size: 0.75rem; color: #64748b;">{{ r.operatorName }}</div>
+          </td>
+          <td>
+            <span style="color: #16a34a; font-weight: 700;">{{ r.goodQty }}</span>
+          </td>
+          <td>
+            <span style="color: #dc2626; font-weight: 700;">{{ r.ngQty }}</span>
+          </td>
+          <td>
+            <sl-badge v-if="r.hasAbnormal === true || r.hasAbnormal === 'TRUE'" variant="danger">
+              {{ r.abnormalType || '異常' }}
+            </sl-badge>
+            <span v-else style="color: #94a3b8;">-</span>
+          </td>
+          <td style="font-size: 0.75rem; color: #64748b;">
+            {{ r.createdAt ? new Date(r.createdAt).toLocaleString('zh-TW') : '-' }}
+          </td>
+        </tr>
+        <tr v-if="reports.length === 0" class="empty-row">
+          <td colspan="7">
+            <div class="empty-state">
+              <sl-icon name="file-earmark-text"></sl-icon>
+              <div>暫無報工紀錄</div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</sl-tab-panel>

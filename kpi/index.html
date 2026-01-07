@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.15.0/cdn/themes/light.css" />
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.15.0/cdn/shoelace-autoloader.js"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --sl-color-primary-600: #6366f1;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f8fafc;
+      margin: 0;
+      padding: 1rem;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    .header-card {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: white;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .header-card h1 { margin: 0 0 0.25rem 0; font-size: 1.5rem; }
+    .header-card p { margin: 0; opacity: 0.9; font-size: 0.875rem; }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .stat-card {
+      background: white;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .stat-card .value { font-size: 2rem; font-weight: 700; }
+    .stat-card .label { font-size: 0.75rem; color: #64748b; margin-top: 0.25rem; }
+    .table-card {
+      background: white;
+      border-radius: 0.75rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #f1f5f9; padding: 0.75rem 1rem; text-align: left; font-size: 0.75rem; color: #64748b; text-transform: uppercase; }
+    td { padding: 0.75rem 1rem; border-top: 1px solid #e2e8f0; }
+    tr:hover { background: #f8fafc; }
+    .btn-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .chip-group { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .chip {
+      padding: 0.5rem 1rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: white;
+      font-size: 0.875rem;
+    }
+    .chip:hover { border-color: #6366f1; }
+    .chip.selected { background: #6366f1; color: white; border-color: #6366f1; }
+    .chip.selected-green { background: #10b981; color: white; border-color: #10b981; }
+    .chip.selected-purple { background: #8b5cf6; color: white; border-color: #8b5cf6; }
+    .chip.selected-orange { background: #f59e0b; color: white; border-color: #f59e0b; }
+    .form-section { border-top: 1px solid #e2e8f0; padding-top: 1rem; margin-top: 1rem; }
+    .form-section h4 { margin: 0 0 1rem 0; font-size: 0.875rem; color: #64748b; }
+    .form-grid { display: grid; gap: 1rem; }
+    .form-grid-2 { grid-template-columns: repeat(2, 1fr); }
+    .form-grid-3 { grid-template-columns: repeat(3, 1fr); }
+    @media (max-width: 768px) {
+      .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    .loading-overlay {
+      position: fixed; inset: 0; background: rgba(255,255,255,0.9);
+      display: flex; justify-content: center; align-items: center; z-index: 1000;
+    }
+    .empty-state { text-align: center; padding: 3rem; color: #94a3b8; }
+    sl-dialog::part(panel) { max-width: 800px; }
+    sl-dialog::part(body) { padding: 1.5rem; }
+    .view-section { margin-bottom: 1rem; }
+    .view-label { font-size: 0.75rem; color: #64748b; margin-bottom: 0.25rem; }
+    .view-value { background: #f8fafc; padding: 0.75rem; border-radius: 0.5rem; }
+    .view-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+    .badge-type {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 1rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .badge-製造 { background: #dbeafe; color: #1e40af; }
+    .badge-品質 { background: #f3e8ff; color: #7c3aed; }
+    .badge-交期 { background: #ffedd5; color: #c2410c; }
+    .badge-人效 { background: #fce7f3; color: #be185d; }
+    .badge-財務 { background: #dcfce7; color: #166534; }
+    .badge-營運 { background: #e0f2fe; color: #0369a1; }
+    .badge-其他 { background: #f1f5f9; color: #475569; }
+    .freq-badge { padding: 0.25rem 0.5rem; border-radius: 1rem; font-size: 0.7rem; }
+    .freq-每月 { background: #dcfce7; color: #166534; }
+    .freq-每季 { background: #ffedd5; color: #c2410c; }
+    .freq-每年 { background: #f3e8ff; color: #7c3aed; }
+    .freq-累計 { background: #dbeafe; color: #1e40af; }
+  </style>
+</head>
+<body>
+  <div id="app" class="container">
+
+    <!-- Header -->
+    <div class="header-card">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <h1>KPI 管理定義盤點</h1>
+          <p>再生部 - Phase I <sl-badge v-if="version" variant="neutral" style="margin-left: 0.5rem;">v{{ version }}</sl-badge></p>
+        </div>
+        <div class="btn-group">
+          <sl-button size="small" variant="neutral" @click="openShareModal">
+            <sl-icon slot="prefix" name="share"></sl-icon>
+            分享
+          </sl-button>
+          <sl-button size="small" @click="refreshData">
+            <sl-icon slot="prefix" name="arrow-clockwise"></sl-icon>
+            重新整理
+          </sl-button>
+          <sl-button size="small" variant="neutral" @click="downloadTemplate">
+            <sl-icon slot="prefix" name="download"></sl-icon>
+            下載範本
+          </sl-button>
+          <sl-button size="small" variant="warning" @click="triggerImport">
+            <sl-icon slot="prefix" name="upload"></sl-icon>
+            匯入
+          </sl-button>
+          <input type="file" ref="fileInput" @change="handleFileSelect" accept=".xlsx,.xls" style="display:none">
+          <sl-button size="small" variant="success" @click="exportExcel">
+            <sl-icon slot="prefix" name="file-earmark-excel"></sl-icon>
+            匯出
+          </sl-button>
+          <sl-button size="small" variant="primary" @click="openCreateModal">
+            <sl-icon slot="prefix" name="plus-lg"></sl-icon>
+            新增 KPI
+          </sl-button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div v-if="loading" class="loading-overlay">
+      <div style="text-align: center;">
+        <sl-spinner style="font-size: 2rem; --track-width: 4px;"></sl-spinner>
+        <div style="margin-top: 1rem; color: #64748b;">{{ loadingMessage }}</div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="value" style="color: #6366f1;">{{ kpis.length }}</div>
+        <div class="label">KPI 總數</div>
+      </div>
+      <div v-for="type in kpiTypes.slice(0, 4)" :key="type" class="stat-card">
+        <div class="value" :style="{ color: typeColors[type] }">{{ kpis.filter(k => k.kpiType === type).length }}</div>
+        <div class="label">{{ type }}</div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>類型</th>
+            <th>KPI 名稱</th>
+            <th style="display: none;" class="md-show">管理目的</th>
+            <th>頻率</th>
+            <th>目標值</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-if="kpis.length === 0">
+            <td colspan="6" class="empty-state">
+              <sl-icon name="inbox" style="font-size: 3rem; margin-bottom: 1rem;"></sl-icon>
+              <div>尚無 KPI 資料，點擊「新增 KPI」開始建立</div>
+            </td>
+          </tr>
+          <tr v-for="kpi in kpis" :key="kpi.id">
+            <td><span :class="'badge-type badge-' + kpi.kpiType">{{ kpi.kpiType }}</span></td>
+            <td>
+              <div style="font-weight: 500;">{{ kpi.name }}</div>
+              <div style="font-size: 0.75rem; color: #94a3b8;">{{ kpi.author }}</div>
+            </td>
+            <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ kpi.purpose }}</td>
+            <td><span :class="'freq-badge freq-' + kpi.frequency">{{ kpi.frequency }}</span></td>
+            <td>{{ kpi.targetValue || '-' }}</td>
+            <td>
+              <sl-button-group>
+                <sl-button size="small" @click="viewKpi(kpi)">
+                  <sl-icon name="eye"></sl-icon>
+                </sl-button>
+                <sl-button size="small" @click="editKpi(kpi)">
+                  <sl-icon name="pencil"></sl-icon>
+                </sl-button>
+                <sl-button size="small" variant="danger" @click="confirmDelete(kpi)">
+                  <sl-icon name="trash"></sl-icon>
+                </sl-button>
+              </sl-button-group>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Create/Edit Dialog -->
+    <sl-dialog :label="isEditing ? '編輯 KPI' : '新增 KPI'" :open.prop="showModal" @sl-request-close="closeModal" style="--width: 800px;">
+      <div class="form-grid">
+        <!-- 基本資訊 -->
+        <div class="form-grid form-grid-2">
+          <sl-input label="部門名稱" v-model="form.department" readonly></sl-input>
+          <sl-input label="填表人 *" v-model="form.author" placeholder="姓名 / 職稱"></sl-input>
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem;">KPI 類型 *</label>
+          <div class="chip-group">
+            <div v-for="type in kpiTypes" :key="type"
+              :class="['chip', form.kpiType === type ? 'selected' : '']"
+              @click="form.kpiType = type">{{ type }}</div>
+          </div>
+        </div>
+
+        <div class="form-grid form-grid-2">
+          <sl-input label="KPI 名稱 *" v-model="form.name" placeholder="管理上實際使用的指標名稱"></sl-input>
+          <div>
+            <label style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem;">統計頻率 *</label>
+            <div class="chip-group">
+              <div v-for="f in frequencies" :key="f"
+                :class="['chip', form.frequency === f ? 'selected-green' : '']"
+                @click="form.frequency = f">{{ f }}</div>
+            </div>
+          </div>
+        </div>
+
+        <sl-textarea label="KPI 管理目的 *" v-model="form.purpose" placeholder="此 KPI 用來看什麼、改善什麼" rows="2"></sl-textarea>
+
+        <!-- 計算邏輯 -->
+        <div class="form-section">
+          <h4>計算邏輯</h4>
+          <div class="form-grid">
+            <sl-textarea label="計算方式說明" v-model="form.calcDescription" placeholder="文字描述計算邏輯，例如 A / B" rows="2"></sl-textarea>
+            <div class="form-grid form-grid-2">
+              <sl-textarea label="分子定義" v-model="form.numerator" placeholder="分子代表的數值與條件" rows="2"></sl-textarea>
+              <sl-textarea label="分母定義" v-model="form.denominator" placeholder="分母代表的數值與條件" rows="2"></sl-textarea>
+            </div>
+            <div class="form-grid form-grid-2">
+              <sl-textarea label="納入條件" v-model="form.includeConditions" placeholder="哪些資料會被納入計算" rows="2"></sl-textarea>
+              <sl-textarea label="排除條件" v-model="form.excludeConditions" placeholder="哪些情況需要排除" rows="2"></sl-textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- 目標與管理 -->
+        <div class="form-section">
+          <h4>目標與管理</h4>
+          <div class="form-grid form-grid-3">
+            <sl-input label="KPI 目標值" v-model="form.targetValue" placeholder="年度或期間目標"></sl-input>
+            <div>
+              <label style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem;">達標判斷方式</label>
+              <div class="chip-group">
+                <div v-for="c in achievementCriterias" :key="c"
+                  :class="['chip', form.achievementCriteria === c ? 'selected-purple' : '']"
+                  @click="form.achievementCriteria = c">{{ c }}</div>
+              </div>
+            </div>
+            <sl-input label="管理使用方式" v-model="form.usageMethod" placeholder="例會檢討 / 績效 / 預警"></sl-input>
+          </div>
+        </div>
+
+        <!-- 資料來源 -->
+        <div class="form-section">
+          <h4>資料來源</h4>
+          <div class="form-grid form-grid-2">
+            <sl-input label="主要資料來源系統" v-model="form.dataSource" placeholder="ERP / MES / CRM / 其他"></sl-input>
+            <div>
+              <label style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem;">是否需人工補資料</label>
+              <div class="chip-group">
+                <div :class="['chip', form.needManualData === '是' ? 'selected-orange' : '']"
+                  @click="form.needManualData = '是'">是</div>
+                <div :class="['chip', form.needManualData === '否' ? 'selected' : '']"
+                  @click="form.needManualData = '否'">否</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <sl-textarea label="補充說明" v-model="form.notes" placeholder="其他補充說明" rows="2"></sl-textarea>
+      </div>
+
+      <div slot="footer" style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+        <sl-button @click="closeModal">取消</sl-button>
+        <sl-button variant="primary" @click="saveKpi" :disabled="!isFormValid">
+          {{ isEditing ? '更新' : '建立' }}
+        </sl-button>
+      </div>
+    </sl-dialog>
+
+    <!-- View Dialog -->
+    <sl-dialog label="KPI 詳情" :open.prop="showViewModal" @sl-request-close="showViewModal = false" style="--width: 700px;">
+      <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+        <span :class="'badge-type badge-' + viewItem.kpiType">{{ viewItem.kpiType }}</span>
+        <span style="font-size: 1.25rem; font-weight: 600;">{{ viewItem.name }}</span>
+      </div>
+
+      <div class="view-grid" style="margin-bottom: 1rem;">
+        <div><span class="view-label">部門</span><div>{{ viewItem.department }}</div></div>
+        <div><span class="view-label">填表人</span><div>{{ viewItem.author }}</div></div>
+        <div><span class="view-label">頻率</span><div>{{ viewItem.frequency }}</div></div>
+        <div><span class="view-label">目標值</span><div>{{ viewItem.targetValue || '-' }}</div></div>
+      </div>
+
+      <div class="view-section">
+        <div class="view-label">KPI 管理目的</div>
+        <div class="view-value">{{ viewItem.purpose }}</div>
+      </div>
+
+      <div v-if="viewItem.calcDescription || viewItem.numerator" class="view-section">
+        <div class="view-label">計算邏輯</div>
+        <div v-if="viewItem.calcDescription" class="view-value" style="margin-bottom: 0.5rem;">{{ viewItem.calcDescription }}</div>
+        <div class="view-grid">
+          <div v-if="viewItem.numerator"><div class="view-label">分子</div><div class="view-value">{{ viewItem.numerator }}</div></div>
+          <div v-if="viewItem.denominator"><div class="view-label">分母</div><div class="view-value">{{ viewItem.denominator }}</div></div>
+        </div>
+      </div>
+
+      <div v-if="viewItem.includeConditions || viewItem.excludeConditions" class="view-section view-grid">
+        <div v-if="viewItem.includeConditions"><div class="view-label">納入條件</div><div class="view-value">{{ viewItem.includeConditions }}</div></div>
+        <div v-if="viewItem.excludeConditions"><div class="view-label">排除條件</div><div class="view-value">{{ viewItem.excludeConditions }}</div></div>
+      </div>
+
+      <div v-if="viewItem.notes" class="view-section">
+        <div class="view-label">補充說明</div>
+        <div class="view-value">{{ viewItem.notes }}</div>
+      </div>
+
+      <div slot="footer" style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+        <sl-button variant="success" @click="editKpi(viewItem); showViewModal = false">編輯</sl-button>
+        <sl-button @click="showViewModal = false">關閉</sl-button>
+      </div>
+    </sl-dialog>
+
+    <!-- Delete Dialog -->
+    <sl-dialog label="確認刪除" :open.prop="showDeleteModal" @sl-request-close="showDeleteModal = false">
+      <sl-icon name="exclamation-triangle" style="font-size: 3rem; color: #ef4444; display: block; margin: 0 auto 1rem;"></sl-icon>
+      <p style="text-align: center;">確定要刪除 KPI「<strong>{{ deleteItem?.name }}</strong>」嗎？<br>此操作無法復原。</p>
+      <div slot="footer" style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+        <sl-button @click="showDeleteModal = false">取消</sl-button>
+        <sl-button variant="danger" @click="deleteKpi">確定刪除</sl-button>
+      </div>
+    </sl-dialog>
+
+    <!-- Import Dialog -->
+    <sl-dialog label="匯入預覽" :open.prop="showImportModal" @sl-request-close="showImportModal = false" style="--width: 900px;">
+      <sl-alert variant="primary" open style="margin-bottom: 1rem;">
+        <sl-icon slot="icon" name="info-circle"></sl-icon>
+        共 {{ importData.length }} 筆資料，請確認後點擊「確定匯入」
+      </sl-alert>
+      <div style="max-height: 400px; overflow: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>類型</th>
+              <th>KPI 名稱</th>
+              <th>管理目的</th>
+              <th>頻率</th>
+              <th>填表人</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(row, idx) in importData" :key="idx">
+              <td>{{ idx + 1 }}</td>
+              <td>{{ row.kpiType }}</td>
+              <td style="font-weight: 500;">{{ row.name }}</td>
+              <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">{{ row.purpose }}</td>
+              <td>{{ row.frequency }}</td>
+              <td>{{ row.author }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div slot="footer" style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+        <sl-button @click="showImportModal = false">取消</sl-button>
+        <sl-button variant="warning" @click="confirmImport">確定匯入 ({{ importData.length }} 筆)</sl-button>
+      </div>
+    </sl-dialog>
+
+    <!-- Share Dialog -->
+    <sl-dialog label="分享此應用程式" :open.prop="showShareModal" @sl-request-close="showShareModal = false">
+      <div v-if="shareLoading" style="text-align: center; padding: 2rem;">
+        <sl-spinner style="font-size: 2rem;"></sl-spinner>
+        <div style="margin-top: 1rem; color: #64748b;">產生短網址中...</div>
+      </div>
+
+      <div v-else-if="shareData" style="text-align: center;">
+        <div style="margin-bottom: 1.5rem;">
+          <img :src="shareData.qrCodeUrl" alt="QR Code" style="width: 200px; height: 200px; border-radius: 0.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        </div>
+        <div style="margin-bottom: 1rem;">
+          <label style="display: block; font-size: 0.875rem; color: #64748b; margin-bottom: 0.5rem;">短網址</label>
+          <div style="display: flex; gap: 0.5rem;">
+            <sl-input :value="shareData.shortUrl" readonly style="flex: 1; --sl-input-font-family: monospace;"></sl-input>
+            <sl-button variant="primary" @click="copyShareUrl">
+              <sl-icon name="clipboard"></sl-icon>
+            </sl-button>
+          </div>
+        </div>
+        <sl-alert v-if="shareCopied" variant="success" open style="margin-top: 1rem;">
+          <sl-icon slot="icon" name="check-circle"></sl-icon>
+          已複製到剪貼簿！
+        </sl-alert>
+        <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 1rem;">
+          掃描 QR Code 或複製短網址即可分享給同事
+        </p>
+      </div>
+
+      <div slot="footer">
+        <sl-button @click="showShareModal = false">關閉</sl-button>
+      </div>
+    </sl-dialog>
+
+    <!-- Toast -->
+    <sl-alert :variant="toast.type === 'success' ? 'success' : 'danger'" :open.prop="toast.show" closable duration="3000"
+      style="position: fixed; bottom: 1rem; right: 1rem; z-index: 1000;">
+      <sl-icon :name="toast.type === 'success' ? 'check-circle' : 'exclamation-circle'" slot="icon"></sl-icon>
+      {{ toast.message }}
+    </sl-alert>
+
+  </div>
+
+  <script>
+    const { createApp, ref, computed, onMounted } = Vue;
+
+    createApp({
+      setup() {
+        const loading = ref(true);
+        const loadingMessage = ref('載入中...');
+        const version = ref('');
+        const kpis = ref([]);
+
+        // Options
+        const kpiTypes = ['製造', '品質', '交期', '人效', '財務', '營運', '其他'];
+        const frequencies = ['每月', '每季', '每年', '累計'];
+        const achievementCriterias = ['>=', '<=', '區間', '趨勢'];
+        const typeColors = {
+          '製造': '#1e40af', '品質': '#7c3aed', '交期': '#c2410c',
+          '人效': '#be185d', '財務': '#166534', '營運': '#0369a1', '其他': '#475569'
+        };
+
+        // Modals
+        const showModal = ref(false);
+        const showViewModal = ref(false);
+        const showDeleteModal = ref(false);
+        const showImportModal = ref(false);
+        const showShareModal = ref(false);
+        const isEditing = ref(false);
+        const viewItem = ref({});
+        const deleteItem = ref(null);
+        const importData = ref([]);
+        const fileInput = ref(null);
+
+        // Share
+        const shareLoading = ref(false);
+        const shareData = ref(null);
+        const shareCopied = ref(false);
+
+        // Form
+        const emptyForm = {
+          id: '', department: '再生部', author: '', kpiType: '', name: '', purpose: '',
+          frequency: '', calcDescription: '', numerator: '', denominator: '',
+          includeConditions: '', excludeConditions: '', targetValue: '',
+          achievementCriteria: '', usageMethod: '', dataSource: '', needManualData: '', notes: ''
+        };
+        const form = ref({ ...emptyForm });
+
+        // Toast
+        const toast = ref({ show: false, message: '', type: 'success' });
+
+        const isFormValid = computed(() => {
+          return form.value.author && form.value.kpiType && form.value.name && form.value.purpose && form.value.frequency;
+        });
+
+        function showToast(message, type = 'success') {
+          toast.value = { show: true, message, type };
+          setTimeout(() => { toast.value.show = false; }, 3000);
+        }
+
+        function callApi(action, payload = null) {
+          return new Promise((resolve, reject) => {
+            google.script.run
+              .withSuccessHandler(resolve)
+              .withFailureHandler(reject)
+              .api(action, payload);
+          });
+        }
+
+        async function refreshData() {
+          loading.value = true;
+          loadingMessage.value = '載入資料中...';
+          try {
+            const res = await callApi('getKpis');
+            if (res.success) kpis.value = res.data;
+            else showToast('載入失敗: ' + res.error, 'error');
+          } catch (e) {
+            showToast('載入錯誤: ' + e, 'error');
+          }
+          loading.value = false;
+        }
+
+        // Share Functions
+        async function openShareModal() {
+          showShareModal.value = true;
+          shareLoading.value = true;
+          shareData.value = null;
+          shareCopied.value = false;
+          try {
+            const res = await callApi('getShortUrl', {});
+            if (res.success) shareData.value = res.data;
+            else throw res.error;
+          } catch (e) {
+            console.error('產生短網址失敗:', e);
+            const currentUrl = window.location.href;
+            shareData.value = {
+              shortUrl: currentUrl,
+              qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(currentUrl)
+            };
+          } finally {
+            shareLoading.value = false;
+          }
+        }
+
+        async function copyShareUrl() {
+          if (!shareData.value?.shortUrl) return;
+          try {
+            await navigator.clipboard.writeText(shareData.value.shortUrl);
+            shareCopied.value = true;
+            setTimeout(() => { shareCopied.value = false; }, 3000);
+          } catch (e) {
+            const textArea = document.createElement('textarea');
+            textArea.value = shareData.value.shortUrl;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            shareCopied.value = true;
+            setTimeout(() => { shareCopied.value = false; }, 3000);
+          }
+        }
+
+        function openCreateModal() {
+          isEditing.value = false;
+          form.value = { ...emptyForm };
+          showModal.value = true;
+        }
+
+        function editKpi(kpi) {
+          isEditing.value = true;
+          form.value = { ...emptyForm, ...kpi };
+          showModal.value = true;
+        }
+
+        function viewKpi(kpi) {
+          viewItem.value = kpi;
+          showViewModal.value = true;
+        }
+
+        function confirmDelete(kpi) {
+          deleteItem.value = kpi;
+          showDeleteModal.value = true;
+        }
+
+        function closeModal() { showModal.value = false; }
+
+        async function saveKpi() {
+          loading.value = true;
+          loadingMessage.value = isEditing.value ? '更新中...' : '建立中...';
+          try {
+            let res;
+            if (isEditing.value) {
+              res = await callApi('updateKpi', { id: form.value.id, data: form.value });
+            } else {
+              res = await callApi('createKpi', form.value);
+            }
+            if (res.success) {
+              showToast(isEditing.value ? 'KPI 已更新' : 'KPI 已建立');
+              closeModal();
+              await refreshData();
+            } else {
+              showToast('操作失敗: ' + res.error, 'error');
+            }
+          } catch (e) {
+            showToast('錯誤: ' + e, 'error');
+          }
+          loading.value = false;
+        }
+
+        async function deleteKpi() {
+          loading.value = true;
+          loadingMessage.value = '刪除中...';
+          try {
+            const res = await callApi('deleteKpi', { id: deleteItem.value.id });
+            if (res.success) {
+              showToast('KPI 已刪除');
+              showDeleteModal.value = false;
+              await refreshData();
+            } else {
+              showToast('刪除失敗: ' + res.error, 'error');
+            }
+          } catch (e) {
+            showToast('錯誤: ' + e, 'error');
+          }
+          loading.value = false;
+        }
+
+        // 欄位對應表
+        const fieldMapping = {
+          '部門名稱': 'department', '填表人': 'author', 'KPI類型': 'kpiType',
+          'KPI名稱': 'name', 'KPI管理目的': 'purpose', '統計頻率': 'frequency',
+          '計算方式說明': 'calcDescription', '分子定義': 'numerator', '分母定義': 'denominator',
+          '納入條件': 'includeConditions', '排除條件': 'excludeConditions',
+          'KPI目標值': 'targetValue', '達標判斷方式': 'achievementCriteria',
+          '管理使用方式': 'usageMethod', '主要資料來源系統': 'dataSource',
+          '是否需人工補資料': 'needManualData', '補充說明': 'notes'
+        };
+
+        function exportExcel() {
+          if (kpis.value.length === 0) { showToast('沒有資料可匯出', 'error'); return; }
+          const headers = Object.entries(fieldMapping).map(([label, key]) => ({ key, label }));
+          const data = kpis.value.map(kpi => {
+            const row = {};
+            headers.forEach(h => { row[h.label] = kpi[h.key] || ''; });
+            return row;
+          });
+          const ws = XLSX.utils.json_to_sheet(data);
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, 'KPI定義填寫表');
+          ws['!cols'] = headers.map(() => ({ wch: 20 }));
+          const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+          XLSX.writeFile(wb, `KPI定義填寫表_再生部_${today}.xlsx`);
+          showToast('匯出成功');
+        }
+
+        function downloadTemplate() {
+          const exampleRow = {
+            '部門名稱': '再生部', '填表人': '王小明 / 課長', 'KPI類型': '製造',
+            'KPI名稱': '產能利用率', 'KPI管理目的': '監控產線稼動率，優化生產排程',
+            '統計頻率': '每月', '計算方式說明': '實際產出時間 / 可用生產時間 x 100%',
+            '分子定義': '實際生產的有效工時', '分母定義': '總可用生產工時（扣除計畫停機）',
+            '納入條件': '所有正式生產工單', '排除條件': '設備保養、計畫停機時間',
+            'KPI目標值': '>=85%', '達標判斷方式': '>=', '管理使用方式': '月會檢討、產能規劃',
+            '主要資料來源系統': 'MES', '是否需人工補資料': '否', '補充說明': ''
+          };
+          const ws = XLSX.utils.json_to_sheet([exampleRow]);
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, 'KPI定義填寫表');
+          ws['!cols'] = Object.keys(exampleRow).map(() => ({ wch: 22 }));
+          XLSX.writeFile(wb, 'KPI定義填寫範本_再生部.xlsx');
+          showToast('範本下載成功');
+        }
+
+        function triggerImport() { fileInput.value.click(); }
+
+        function handleFileSelect(event) {
+          const file = event.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            try {
+              const data = new Uint8Array(e.target.result);
+              const workbook = XLSX.read(data, { type: 'array' });
+              const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+              const jsonData = XLSX.utils.sheet_to_json(worksheet);
+              if (jsonData.length === 0) { showToast('Excel 檔案沒有資料', 'error'); return; }
+              importData.value = jsonData.map(row => {
+                const converted = { department: '再生部' };
+                Object.keys(row).forEach(key => {
+                  const dbField = fieldMapping[key];
+                  if (dbField) converted[dbField] = row[key] || '';
+                });
+                return converted;
+              }).filter(row => row.name);
+              if (importData.value.length === 0) { showToast('沒有有效的 KPI 資料', 'error'); return; }
+              showImportModal.value = true;
+            } catch (err) { showToast('讀取 Excel 失敗: ' + err, 'error'); }
+          };
+          reader.readAsArrayBuffer(file);
+          event.target.value = '';
+        }
+
+        async function confirmImport() {
+          loading.value = true;
+          loadingMessage.value = '匯入中...';
+          showImportModal.value = false;
+          let successCount = 0, failCount = 0;
+          for (const row of importData.value) {
+            try {
+              const res = await callApi('createKpi', row);
+              if (res.success) successCount++; else failCount++;
+            } catch (e) { failCount++; }
+          }
+          showToast(failCount === 0 ? `成功匯入 ${successCount} 筆 KPI` : `匯入完成：成功 ${successCount} 筆，失敗 ${failCount} 筆`, failCount === 0 ? 'success' : 'error');
+          await refreshData();
+          loading.value = false;
+        }
+
+        onMounted(async () => {
+          try {
+            const vRes = await callApi('getVersion');
+            if (vRes.success) version.value = vRes.data;
+          } catch (e) {}
+          await refreshData();
+        });
+
+        return {
+          loading, loadingMessage, version, kpis, kpiTypes, frequencies, achievementCriterias, typeColors,
+          showModal, showViewModal, showDeleteModal, showImportModal, showShareModal, isEditing,
+          shareLoading, shareData, shareCopied, openShareModal, copyShareUrl,
+          form, viewItem, deleteItem, importData, fileInput, toast, isFormValid,
+          refreshData, openCreateModal, editKpi, viewKpi, confirmDelete, closeModal,
+          saveKpi, deleteKpi, exportExcel, downloadTemplate, triggerImport, handleFileSelect, confirmImport
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
