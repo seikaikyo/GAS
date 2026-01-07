@@ -26,31 +26,18 @@ function getWebAppUrl() {
 }
 
 /**
- * 產生短網址 (使用 is.gd API)
+ * 產生分享資訊（QR Code）
  */
 function createShortUrl(longUrl) {
   if (!longUrl) {
     longUrl = getWebAppUrl();
   }
 
-  try {
-    const apiUrl = 'https://is.gd/create.php?format=simple&url=' + encodeURIComponent(longUrl);
-    const response = UrlFetchApp.fetch(apiUrl);
-    const shortUrl = response.getContentText().trim();
-
-    return {
-      longUrl: longUrl,
-      shortUrl: shortUrl,
-      qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(shortUrl)
-    };
-  } catch (e) {
-    console.error('短網址產生失敗:', e);
-    return {
-      longUrl: longUrl,
-      shortUrl: longUrl,
-      qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(longUrl)
-    };
-  }
+  return {
+    longUrl: longUrl,
+    shortUrl: longUrl,
+    qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(longUrl)
+  };
 }
 
 function setup() {
