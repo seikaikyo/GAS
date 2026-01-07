@@ -9,11 +9,9 @@
     <div>
       <sl-alert variant="primary" open style="margin-bottom: 1rem;">
         <sl-icon slot="icon" name="file-earmark-spreadsheet"></sl-icon>
-        <strong>CSV 匯入格式</strong>
-        <div style="font-family: monospace; font-size: 0.75rem; background: white; padding: 0.5rem; border-radius: 0.25rem; margin-top: 0.5rem;">
-          Barcode, Result, DefectType, DefectCount<br>
-          BC001, PASS, , 0<br>
-          BC002, NG, 刮傷, 2
+        <strong>支援 AOI 機台匯出 CSV</strong>
+        <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem;">
+          自動解析 AOI 格式，按序號彙整缺陷數量
         </div>
       </sl-alert>
 
@@ -21,7 +19,7 @@
         <!-- Work Order Select -->
         <div style="margin-bottom: 1rem;">
           <label class="input-label">選擇工單</label>
-          <sl-select v-model="formAoi.workOrderId" placeholder="-- 請選擇 --" required>
+          <sl-select :value="formAoi.workOrderId" @sl-change="e => formAoi.workOrderId = e.target.value" placeholder="-- 請選擇 --" required>
             <sl-option v-for="wo in workOrders.filter(w => w.status !== 'completed' && w.status !== 'cancelled')" :key="wo.id" :value="wo.id">
               {{ wo.orderNumber }} - {{ wo.productModel }}
             </sl-option>
@@ -69,7 +67,7 @@
         <h4 style="margin: 0 0 1rem; color: #475569;">單筆輸入</h4>
         <form @submit.prevent="submitSingleAoi" class="form-section">
           <div style="margin-bottom: 0.75rem;">
-            <sl-input v-model="formAoiSingle.rfidCode" placeholder="條碼編號" size="small"></sl-input>
+            <sl-input :value="formAoiSingle.rfidCode" @sl-input="e => formAoiSingle.rfidCode = e.target.value" placeholder="條碼編號" size="small"></sl-input>
           </div>
           <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
             <div :class="['chip', 'chip-pass', formAoiSingle.result === 'PASS' ? 'selected' : '']"
@@ -82,7 +80,7 @@
             </div>
           </div>
           <div v-if="formAoiSingle.result === 'NG'" style="margin-bottom: 0.75rem;">
-            <sl-input v-model="formAoiSingle.defectType" placeholder="缺陷類型" size="small"></sl-input>
+            <sl-input :value="formAoiSingle.defectType" @sl-input="e => formAoiSingle.defectType = e.target.value" placeholder="缺陷類型" size="small"></sl-input>
           </div>
           <sl-button type="submit" variant="neutral" size="small" style="width: 100%;">
             新增單筆
@@ -107,7 +105,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="a in aoiInspections" :key="a.id">
+            <tr v-for="a in aoiInspections" :key="a.id" @click="viewInspectionDetail(a, 'aoi')" style="cursor: pointer;" class="clickable-row">
               <td style="font-family: monospace; font-size: 0.875rem;">{{ a.inspectionNumber }}</td>
               <td style="font-size: 0.875rem;">{{ a.orderNumber }}</td>
               <td style="font-family: monospace; font-size: 0.875rem; color: #64748b;">{{ a.rfidCode || '-' }}</td>

@@ -45,7 +45,7 @@
           <div style="margin-bottom: 1rem;">
             <label class="input-label">舊 EPC (Old Tag)</label>
             <div style="display: flex; gap: 0.5rem; align-items: center;">
-              <sl-input v-model="formEpc.oldEpc" @sl-blur="checkOldEpc" placeholder="掃描舊標籤" style="flex: 1;"></sl-input>
+              <sl-input :value="formEpc.oldEpc" @sl-input="e => formEpc.oldEpc = e.target.value" @sl-blur="checkOldEpc" placeholder="掃描舊標籤" style="flex: 1;"></sl-input>
               <sl-spinner v-if="epcCheckStatus === 'checking'" style="font-size: 1.5rem;"></sl-spinner>
             </div>
             <div v-if="epcCheckInfo" :style="{ color: epcCheckInfo.found ? '#16a34a' : '#ea580c' }" style="font-size: 0.75rem; font-weight: 600; margin-top: 0.25rem;">
@@ -56,7 +56,7 @@
 
           <div>
             <label class="input-label" style="color: #667eea;">新 EPC (New Tag)</label>
-            <sl-input v-model="formEpc.newEpc" placeholder="掃描新標籤 (例如: RF...)" required
+            <sl-input :value="formEpc.newEpc" @sl-input="e => formEpc.newEpc = e.target.value" placeholder="掃描新標籤 (例如: RF...)" required
                       pattern="^RF[0-9]{13}$" style="--sl-input-border-color: #667eea;"></sl-input>
             <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.25rem;">格式: RF + 13碼數字 (例: RF2026010100001)</div>
           </div>
@@ -72,7 +72,7 @@
               {{ op.name }}
             </div>
           </div>
-          <sl-select v-else v-model="formEpc.operatorName" placeholder="-- 請選擇 --" required>
+          <sl-select v-else :value="formEpc.operatorName" @sl-change="e => formEpc.operatorName = e.target.value" placeholder="-- 請選擇 --" required>
             <sl-option v-for="op in operators" :key="op.id" :value="op.name">{{ op.name }}</sl-option>
           </sl-select>
         </div>

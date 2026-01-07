@@ -8,11 +8,11 @@
       <form @submit.prevent="submitOperator">
         <div style="margin-bottom: 0.75rem;">
           <label class="input-label">姓名</label>
-          <sl-input v-model="formOperator.name" required></sl-input>
+          <sl-input :value="formOperator.name" @sl-input="e => formOperator.name = e.target.value" required></sl-input>
         </div>
         <div style="margin-bottom: 1rem;">
           <label class="input-label">編號/代號</label>
-          <sl-input v-model="formOperator.code"></sl-input>
+          <sl-input :value="formOperator.code" @sl-input="e => formOperator.code = e.target.value"></sl-input>
         </div>
         <div style="display: flex; gap: 0.5rem;">
           <sl-button type="submit" :variant="editingOperatorId ? 'warning' : 'neutral'" style="flex: 1;">
@@ -53,11 +53,11 @@
       <form @submit.prevent="submitCustomer">
         <div style="margin-bottom: 0.75rem;">
           <label class="input-label">客戶名稱</label>
-          <sl-input v-model="formCustomer.name" required placeholder="例如: 台積電 (TSMC)"></sl-input>
+          <sl-input :value="formCustomer.name" @sl-input="e => formCustomer.name = e.target.value" required placeholder="例如: 台積電 (TSMC)"></sl-input>
         </div>
         <div style="margin-bottom: 1rem;">
           <label class="input-label">廠區列表 (用逗號分隔)</label>
-          <sl-textarea v-model="formCustomer.sitesInput" rows="3" placeholder="例如: F12, F18P5, F18P7"></sl-textarea>
+          <sl-textarea :value="formCustomer.sitesInput" @sl-input="e => formCustomer.sitesInput = e.target.value" rows="3" placeholder="例如: F12, F18P5, F18P7"></sl-textarea>
         </div>
         <div style="display: flex; gap: 0.5rem;">
           <sl-button type="submit" :variant="editingCustomerId ? 'warning' : 'primary'" style="flex: 1;">
@@ -100,11 +100,11 @@
       <form @submit.prevent="submitProduct">
         <div style="margin-bottom: 0.75rem;">
           <label class="input-label">產品名稱</label>
-          <sl-input v-model="formProduct.name" required placeholder="例如: HEPA濾網"></sl-input>
+          <sl-input :value="formProduct.name" @sl-input="e => formProduct.name = e.target.value" required placeholder="例如: HEPA濾網"></sl-input>
         </div>
         <div style="margin-bottom: 0.75rem;">
           <label class="input-label">產品編號/型號</label>
-          <sl-input v-model="formProduct.code" required placeholder="例如: HEPA-300"></sl-input>
+          <sl-input :value="formProduct.code" @sl-input="e => formProduct.code = e.target.value" required placeholder="例如: HEPA-300"></sl-input>
         </div>
         <div style="margin-bottom: 1rem;">
           <label class="input-label">產品類型</label>

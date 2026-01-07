@@ -72,7 +72,7 @@ function api(action, payload) {
     let result;
     switch (action) {
       case 'getVersion':
-        return { success: true, data: '5.2.0' };
+        return { success: true, data: '5.2.8' };
         
       // Work Orders
       case 'getWorkOrders':

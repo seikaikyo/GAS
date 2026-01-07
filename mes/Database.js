@@ -535,33 +535,91 @@ function dbCreateAoiInspection(data) {
 }
 
 // 批次匯入 AOI CSV 資料
+// AOI CSV 格式: 日期,MeasureID,工單號碼,序號,配方,方向,Position_X,Position_Y,Width,Height,辨識結果,儲存路徑,User
+// 注意: AOI 軟體輸出的 CSV 格式異常，所有資料可能被包在第一欄的引號內
 function dbImportAoiCsv(workOrderId, csvRows, operatorName) {
   const importBatch = Utilities.getUuid();
   const results = [];
 
+  // 解析並彙整缺陷資料 (按序號分組)
+  const defectsBySerial = {};
+
   csvRows.forEach((row, index) => {
-    // 預期 CSV 欄位: rfidCode, result, defectType, defectCount
+    let parsedRow = row;
+
+    // 處理 AOI CSV 異常格式: 所有資料被包在第一欄
+    if (row['日期'] && row['日期'].includes(',')) {
+      const parts = row['日期'].split(', ');
+      if (parts.length >= 11) {
+        parsedRow = {
+          date: parts[0],
+          measureId: parts[1],
+          orderNumber: parts[2],
+          serialNumber: parts[3],
+          recipe: parts[4],
+          direction: parts[5],
+          posX: parts[6],
+          posY: parts[7],
+          width: parts[8],
+          height: parts[9],
+          result: parts[10],
+          path: parts[11] || '',
+          user: parts[12] || ''
+        };
+      }
+    }
+
+    // 取得序號 (RFID)
+    const serial = parsedRow.serialNumber || parsedRow['序號'] || parsedRow.rfidCode || parsedRow.RFID || '';
+    if (!serial) return;
+
+    // 取得檢測結果
+    const result = (parsedRow.result || parsedRow['辨識結果'] || '').toLowerCase();
+    const isDefect = result === 'damage' || result === 'ng' || result === 'fail';
+
+    // 彙整缺陷
+    if (!defectsBySerial[serial]) {
+      defectsBySerial[serial] = {
+        serial,
+        defectCount: 0,
+        defectTypes: [],
+        positions: []
+      };
+    }
+
+    if (isDefect) {
+      defectsBySerial[serial].defectCount++;
+      defectsBySerial[serial].positions.push({
+        x: parsedRow.posX || parsedRow['Position_X'],
+        y: parsedRow.posY || parsedRow['Position_Y']
+      });
+    }
+  });
+
+  // 為每個序號建立 AOI 檢驗紀錄
+  Object.values(defectsBySerial).forEach((item, index) => {
     const data = {
       workOrderId,
-      rfidCode: row.rfidCode || row.RFID || row['RFID編號'] || '',
-      result: (row.result || row.Result || row['結果'] || '').toUpperCase() === 'PASS' ? 'PASS' : 'NG',
-      defectType: row.defectType || row.DefectType || row['缺陷類型'] || '',
-      defectCount: Number(row.defectCount || row.DefectCount || row['缺陷數量'] || 0),
+      rfidCode: item.serial,
+      result: item.defectCount > 0 ? 'NG' : 'PASS',
+      defectType: item.defectCount > 0 ? 'damage' : '',
+      defectCount: item.defectCount,
       operatorName,
       importBatch
     };
 
     try {
       const record = dbCreateAoiInspection(data);
-      results.push({ row: index + 1, success: true, id: record.id });
+      results.push({ row: index + 1, serial: item.serial, success: true, id: record.id, defectCount: item.defectCount });
     } catch (e) {
-      results.push({ row: index + 1, success: false, error: e.toString() });
+      results.push({ row: index + 1, serial: item.serial, success: false, error: e.toString() });
     }
   });
 
   return {
     importBatch,
-    total: csvRows.length,
+    totalRows: csvRows.length,
+    uniqueSerials: Object.keys(defectsBySerial).length,
     success: results.filter(r => r.success).length,
     failed: results.filter(r => !r.success).length,
     details: results

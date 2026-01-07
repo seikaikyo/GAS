@@ -3,7 +3,7 @@
 <script>
   const { createApp, ref, onMounted } = Vue;
 
-  createApp({
+  const app = createApp({
     setup() {
       const loading = ref(false);
       const loadingCount = ref(0);
@@ -77,6 +77,11 @@
       const aoiCsvPreview = ref([]);
       const formAoi = ref({ workOrderId: '', operatorName: '' });
       const formAoiSingle = ref({ rfidCode: '', result: '', defectType: '' });
+
+      // Inspection Detail Modal
+      const showInspectionDetailModal = ref(false);
+      const selectedInspection = ref(null);
+      const inspectionType = ref(''); // 'outgassing' or 'aoi'
 
       // Editing State
       const editingOperatorId = ref(null);
@@ -467,20 +472,76 @@
           const text = e.target.result;
           const lines = text.split('\n').filter(l => l.trim());
           if (lines.length < 2) { alert('CSV 檔案格式錯誤或無資料'); return; }
-          const headers = lines[0].split(',').map(h => h.trim());
+          const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
           const rows = [];
+
+          // 檢查是否為 AOI 實際格式 (欄位包含 日期, 序號, 辨識結果)
+          const isAoiFormat = headers.includes('日期') || headers.includes('序號') || headers.includes('辨識結果');
+
           for (let i = 1; i < lines.length; i++) {
-            const values = lines[i].split(',').map(v => v.trim());
-            const row = {};
-            headers.forEach((h, idx) => {
-              if (h.toLowerCase().includes('barcode') || h.toLowerCase().includes('rfid') || h === '條碼' || h === '條碼編號') row.rfidCode = values[idx];
-              else if (h.toLowerCase().includes('result') || h === '結果') row.result = (values[idx] || '').toUpperCase() === 'PASS' ? 'PASS' : 'NG';
-              else if (h.toLowerCase().includes('defect') && h.toLowerCase().includes('type') || h === '缺陷類型') row.defectType = values[idx];
-              else if (h.toLowerCase().includes('defect') && h.toLowerCase().includes('count') || h === '缺陷數量') row.defectCount = Number(values[idx]) || 0;
-            });
+            let row = {};
+            const line = lines[i].trim();
+            if (!line) continue;
+
+            if (isAoiFormat) {
+              // AOI 格式: 所有資料可能被包在第一欄引號內
+              let values;
+              if (line.startsWith('"')) {
+                // 異常格式: "2026-01-06, 20260106_142553, R12TA225, ..."
+                const content = line.replace(/^"|"$/g, '').split('",')[0];
+                values = content.split(', ');
+              } else {
+                values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+              }
+
+              // AOI 欄位: 日期[0],MeasureID[1],工單號碼[2],序號[3],配方[4],方向[5],X[6],Y[7],W[8],H[9],辨識結果[10],路徑[11],User[12]
+              const serial = values[3] || '';
+              const result = (values[10] || '').toLowerCase();
+
+              if (serial) {
+                row = {
+                  rfidCode: serial,
+                  result: (result === 'damage' || result === 'ng' || result === 'fail') ? 'NG' : 'PASS',
+                  defectType: result === 'damage' ? 'damage' : '',
+                  defectCount: (result === 'damage' || result === 'ng') ? 1 : 0
+                };
+              }
+            } else {
+              // 標準格式
+              const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+              headers.forEach((h, idx) => {
+                const hLower = h.toLowerCase();
+                if (hLower.includes('barcode') || hLower.includes('rfid') || h === '條碼' || h === '序號') row.rfidCode = values[idx];
+                else if (hLower.includes('result') || h === '結果' || h === '辨識結果') {
+                  const val = (values[idx] || '').toLowerCase();
+                  row.result = (val === 'pass' || val === 'ok') ? 'PASS' : 'NG';
+                }
+                else if (hLower.includes('defect') && hLower.includes('type') || h === '缺陷類型') row.defectType = values[idx];
+                else if (hLower.includes('defect') && hLower.includes('count') || h === '缺陷數量') row.defectCount = Number(values[idx]) || 0;
+              });
+            }
+
             if (row.rfidCode) rows.push(row);
           }
-          aoiCsvPreview.value = rows;
+
+          // AOI 格式需彙整同序號的缺陷
+          if (isAoiFormat && rows.length > 0) {
+            const grouped = {};
+            rows.forEach(r => {
+              if (!grouped[r.rfidCode]) {
+                grouped[r.rfidCode] = { rfidCode: r.rfidCode, result: 'PASS', defectType: '', defectCount: 0 };
+              }
+              if (r.result === 'NG') {
+                grouped[r.rfidCode].result = 'NG';
+                grouped[r.rfidCode].defectType = r.defectType || 'damage';
+                grouped[r.rfidCode].defectCount++;
+              }
+            });
+            aoiCsvPreview.value = Object.values(grouped);
+            alert(`已解析 AOI 格式\n原始 ${rows.length} 筆缺陷記錄\n彙整為 ${Object.keys(grouped).length} 個序號`);
+          } else {
+            aoiCsvPreview.value = rows;
+          }
         };
         reader.readAsText(file);
       };
@@ -507,6 +568,13 @@
           formAoiSingle.value = { rfidCode: '', result: '', defectType: '' };
           await refreshData();
         } catch (e) { alert(e); }
+      };
+
+      // View Inspection Detail
+      const viewInspectionDetail = (item, type) => {
+        selectedInspection.value = item;
+        inspectionType.value = type;
+        showInspectionDetailModal.value = true;
       };
 
       // Admin Functions
@@ -577,9 +645,14 @@
         loadOutgassingSampleInfo, submitOutgassingTest, generateOutgassingReport,
         aoiInspections, aoiCsvPreview, formAoi, formAoiSingle,
         handleAoiCsvFile, submitAoiImport, submitSingleAoi,
+        showInspectionDetailModal, selectedInspection, inspectionType, viewInspectionDetail,
         adminLoading, adminMessage, adminMessageType, systemVersion,
         adminGenerateTestData, adminSyncDatabase, adminFixColumnOrder, adminFixSignatureData
       };
     }
-  }).mount('#app');
+  });
+
+  // 設定 Vue 認識 Shoelace 自訂元件
+  app.config.compilerOptions.isCustomElement = tag => tag.startsWith('sl-');
+  app.mount('#app');
 </script>

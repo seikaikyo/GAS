@@ -164,7 +164,7 @@
     <div class="form-row" style="margin-bottom: 1rem;">
       <div>
         <label class="input-label">數量</label>
-        <sl-input v-model.number="formWo.quantity" type="number" required></sl-input>
+        <sl-input :value="formWo.quantity" @sl-input="e => formWo.quantity = Number(e.target.value)" type="number" required></sl-input>
       </div>
       <div>
         <label class="input-label">優先級</label>
@@ -218,7 +218,7 @@
           {{ op.name }}
         </div>
       </div>
-      <sl-select v-else v-model="formDispatch.operatorName" placeholder="-- 請選擇 --" required>
+      <sl-select v-else :value="formDispatch.operatorName" @sl-change="e => formDispatch.operatorName = e.target.value" placeholder="-- 請選擇 --" required>
         <sl-option v-for="op in operators" :key="op.id" :value="op.name">{{ op.name }}</sl-option>
       </sl-select>
     </div>
@@ -226,7 +226,7 @@
     <!-- Quantity -->
     <div style="margin-bottom: 1rem;">
       <label class="input-label">派工數量</label>
-      <sl-input v-model.number="formDispatch.quantity" type="number" required></sl-input>
+      <sl-input :value="formDispatch.quantity" @sl-input="e => formDispatch.quantity = Number(e.target.value)" type="number" required></sl-input>
     </div>
   </form>
 
@@ -244,26 +244,93 @@
     <div class="form-row" style="margin-bottom: 1rem;">
       <div>
         <label class="input-label" style="color: #16a34a;">良品數量</label>
-        <sl-input v-model.number="formReport.goodQty" type="number" min="0" style="--sl-input-border-color: #22c55e;"></sl-input>
+        <sl-input :value="formReport.goodQty" @sl-input="e => formReport.goodQty = Number(e.target.value)" type="number" min="0" style="--sl-input-border-color: #22c55e;"></sl-input>
       </div>
       <div>
         <label class="input-label" style="color: #dc2626;">NG 數量</label>
-        <sl-input v-model.number="formReport.ngQty" type="number" min="0" style="--sl-input-border-color: #ef4444;"></sl-input>
+        <sl-input :value="formReport.ngQty" @sl-input="e => formReport.ngQty = Number(e.target.value)" type="number" min="0" style="--sl-input-border-color: #ef4444;"></sl-input>
       </div>
     </div>
 
     <div style="margin-bottom: 1rem;">
-      <sl-checkbox v-model="formReport.hasAbnormal">發生異常</sl-checkbox>
+      <sl-checkbox :checked="formReport.hasAbnormal" @sl-change="e => formReport.hasAbnormal = e.target.checked">發生異常</sl-checkbox>
     </div>
 
     <div v-if="formReport.hasAbnormal" style="margin-bottom: 1rem;">
       <label class="input-label">異常原因</label>
-      <sl-input v-model="formReport.abnormalType"></sl-input>
+      <sl-input :value="formReport.abnormalType" @sl-input="e => formReport.abnormalType = e.target.value"></sl-input>
     </div>
   </form>
 
   <div slot="footer" class="button-group">
     <sl-button variant="neutral" @click="showReportModal = false">取消</sl-button>
     <sl-button variant="success" @click="submitReport">提交報工</sl-button>
+  </div>
+</sl-dialog>
+
+<!-- Modal: Inspection Detail -->
+<sl-dialog :label="inspectionType === 'outgassing' ? '釋氣檢驗詳情' : 'AOI 檢驗詳情'" :open.prop="showInspectionDetailModal" @sl-request-close="showInspectionDetailModal = false">
+  <div v-if="selectedInspection" style="display: flex; flex-direction: column; gap: 1rem;">
+    <!-- Header Info -->
+    <div class="info-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+      <div class="info-item" style="padding: 0.75rem; background: #f8fafc; border-radius: 0.5rem;">
+        <label style="font-size: 0.75rem; color: #64748b; display: block;">檢驗單號</label>
+        <span style="font-weight: 600; font-family: monospace;">{{ selectedInspection.testNumber || selectedInspection.inspectionNumber }}</span>
+      </div>
+      <div class="info-item" style="padding: 0.75rem; background: #f8fafc; border-radius: 0.5rem;">
+        <label style="font-size: 0.75rem; color: #64748b; display: block;">工單編號</label>
+        <span style="font-weight: 600;">{{ selectedInspection.orderNumber }}</span>
+      </div>
+      <div class="info-item" style="padding: 0.75rem; background: #f8fafc; border-radius: 0.5rem;">
+        <label style="font-size: 0.75rem; color: #64748b; display: block;">條碼/序號</label>
+        <span style="font-family: monospace;">{{ selectedInspection.rfidCode || '-' }}</span>
+      </div>
+      <div class="info-item" style="padding: 0.75rem; border-radius: 0.5rem;" :style="{ background: selectedInspection.result === 'PASS' ? '#dcfce7' : '#fee2e2' }">
+        <label style="font-size: 0.75rem; color: #64748b; display: block;">檢驗結果</label>
+        <span :style="{ fontWeight: 700, color: selectedInspection.result === 'PASS' ? '#16a34a' : '#dc2626' }">{{ selectedInspection.result }}</span>
+      </div>
+    </div>
+
+    <!-- AOI Specific: Defect Info -->
+    <div v-if="inspectionType === 'aoi' && selectedInspection.defectType" style="padding: 0.75rem; background: #fff7ed; border-radius: 0.5rem; border: 1px solid #fed7aa;">
+      <label style="font-size: 0.75rem; color: #9a3412; display: block;">缺陷類型</label>
+      <span style="font-weight: 600; color: #c2410c;">{{ selectedInspection.defectType }}</span>
+      <span v-if="selectedInspection.defectCount" style="margin-left: 0.5rem; color: #9a3412;">({{ selectedInspection.defectCount }} 處)</span>
+    </div>
+
+    <!-- Notes -->
+    <div v-if="selectedInspection.notes" style="padding: 0.75rem; background: #f1f5f9; border-radius: 0.5rem;">
+      <label style="font-size: 0.75rem; color: #64748b; display: block; margin-bottom: 0.25rem;">備註</label>
+      <span>{{ selectedInspection.notes }}</span>
+    </div>
+
+    <!-- Operator & Time -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+      <div>
+        <label style="font-size: 0.75rem; color: #64748b; display: block;">檢驗員</label>
+        <span style="font-weight: 500;">{{ selectedInspection.operatorName }}</span>
+      </div>
+      <div>
+        <label style="font-size: 0.75rem; color: #64748b; display: block;">檢驗時間</label>
+        <span style="font-size: 0.875rem;">{{ (selectedInspection.testedAt || selectedInspection.inspectedAt) ? new Date(selectedInspection.testedAt || selectedInspection.inspectedAt).toLocaleString('zh-TW') : '-' }}</span>
+      </div>
+    </div>
+
+    <!-- Signature -->
+    <div v-if="selectedInspection.signature" style="margin-top: 0.5rem; padding: 1rem; background: #f8fafc; border-radius: 0.5rem; border: 1px solid #e2e8f0;">
+      <label style="font-size: 0.75rem; color: #64748b; display: block; margin-bottom: 0.5rem;">品檢簽名</label>
+      <div style="text-align: center;">
+        <img :src="selectedInspection.signature" alt="簽名" style="max-height: 100px; border-bottom: 1px solid #cbd5e1;">
+      </div>
+    </div>
+
+    <!-- No Signature Notice -->
+    <div v-else-if="inspectionType === 'outgassing'" style="padding: 0.75rem; background: #fef3c7; border-radius: 0.5rem; text-align: center; color: #92400e; font-size: 0.875rem;">
+      此筆檢驗紀錄無簽名資料
+    </div>
+  </div>
+
+  <div slot="footer">
+    <sl-button variant="neutral" @click="showInspectionDetailModal = false">關閉</sl-button>
   </div>
 </sl-dialog>
