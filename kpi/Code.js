@@ -61,7 +61,7 @@ function api(action, payload) {
     let result;
     switch (action) {
       case 'getVersion':
-        return { success: true, data: '2.1.2' };
+        return { success: true, data: '2.1.3' };
 
       case 'getShortUrl':
         return { success: true, data: createShortUrl(payload?.url) };
