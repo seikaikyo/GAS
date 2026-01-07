@@ -61,22 +61,34 @@ function api(action, payload) {
     let result;
     switch (action) {
       case 'getVersion':
-        return { success: true, data: '2.1.3' };
+        return { success: true, data: '2.2.0' };
 
       case 'getShortUrl':
         return { success: true, data: createShortUrl(payload?.url) };
 
+      case 'login':
+        result = dbVerifyLogin(payload.account, payload.password);
+        break;
+
+      case 'getSummary':
+        result = dbGetKpiSummary();
+        break;
+
       case 'getKpis':
-        result = dbGetKpis();
+        result = dbGetKpis(payload?.account, payload?.password);
         break;
       case 'createKpi':
         result = dbCreateKpi(payload);
         break;
       case 'updateKpi':
-        result = dbUpdateKpi(payload.id, payload.data);
+        result = dbUpdateKpi(payload.id, payload.data, payload.account, payload.password);
         break;
       case 'deleteKpi':
-        result = dbDeleteKpi(payload.id);
+        result = dbDeleteKpi(payload.id, payload.account, payload.password);
+        break;
+
+      case 'syncDatabase':
+        result = initDatabase();
         break;
 
       default:

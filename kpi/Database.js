@@ -7,7 +7,7 @@ const DB_CONFIG = {
     kpis: {
       name: 'KPIs',
       headers: [
-        'id', 'department', 'author', 'kpiType', 'name', 'purpose',
+        'id', 'ownerAccount', 'ownerPassword', 'department', 'author', 'kpiType', 'name', 'purpose',
         'frequency', 'calcDescription', 'numerator', 'denominator',
         'includeConditions', 'excludeConditions', 'targetValue',
         'achievementCriteria', 'usageMethod', 'dataSource',
@@ -16,6 +16,10 @@ const DB_CONFIG = {
     }
   }
 };
+
+// 管理員帳號（可看全部資料）
+const ADMIN_ACCOUNT = 'admin';
+const ADMIN_PASSWORD = 'kpi2025';
 
 /**
  * 取得或建立資料庫 Spreadsheet
@@ -204,19 +208,135 @@ function deleteRecord(tableName, id) {
   return false;
 }
 
+// 驗證登入
+function dbVerifyLogin(account, password) {
+  // 管理員帳號
+  if (account === ADMIN_ACCOUNT && password === ADMIN_PASSWORD) {
+    return { success: true, isAdmin: true };
+  }
+
+  // 檢查是否有此帳號的資料
+  const allKpis = getTableData('KPIs');
+  const userKpis = allKpis.filter(k => k.ownerAccount === account && k.ownerPassword === password);
+
+  if (userKpis.length > 0) {
+    return { success: true, isAdmin: false };
+  }
+
+  // 帳號存在但密碼錯誤
+  const accountExists = allKpis.some(k => k.ownerAccount === account);
+  if (accountExists) {
+    return { success: false, error: '密碼錯誤' };
+  }
+
+  // 新帳號（匯入時會建立）
+  return { success: true, isAdmin: false, isNew: true };
+}
+
+// 取得公開摘要（未登入可看，內容馬賽克）
+function dbGetKpiSummary() {
+  const allKpis = getTableData('KPIs');
+
+  // 依帳號分組統計
+  const accountStats = {};
+  allKpis.forEach(k => {
+    const acc = k.ownerAccount || '未設定';
+    if (!accountStats[acc]) {
+      accountStats[acc] = { count: 0, departments: new Set(), types: new Set() };
+    }
+    accountStats[acc].count++;
+    if (k.department) accountStats[acc].departments.add(k.department);
+    if (k.kpiType) accountStats[acc].types.add(k.kpiType);
+  });
+
+  // 轉換為陣列
+  const summary = Object.entries(accountStats).map(([account, stats]) => ({
+    account,
+    count: stats.count,
+    departments: Array.from(stats.departments),
+    types: Array.from(stats.types)
+  }));
+
+  // 馬賽克版 KPI 列表
+  const maskedKpis = allKpis.map(k => ({
+    id: k.id,
+    ownerAccount: k.ownerAccount,
+    department: k.department,
+    kpiType: k.kpiType,
+    name: maskText(k.name),
+    purpose: maskText(k.purpose),
+    frequency: k.frequency,
+    author: maskText(k.author),
+    targetValue: k.targetValue ? '***' : ''
+  }));
+
+  return { summary, maskedKpis };
+}
+
+// 文字馬賽克
+function maskText(text) {
+  if (!text) return '';
+  const str = String(text);
+  if (str.length <= 2) return '**';
+  return str.charAt(0) + '*'.repeat(Math.min(str.length - 2, 6)) + str.charAt(str.length - 1);
+}
+
 // KPI CRUD
-function dbGetKpis() {
-  return getTableData('KPIs');
+function dbGetKpis(account, password) {
+  const allKpis = getTableData('KPIs');
+
+  // 管理員看全部（隱藏密碼欄位）
+  if (account === ADMIN_ACCOUNT && password === ADMIN_PASSWORD) {
+    return allKpis.map(k => ({ ...k, ownerPassword: '***' }));
+  }
+
+  // 一般使用者只看自己的
+  if (account && password) {
+    return allKpis.filter(k => k.ownerAccount === account && k.ownerPassword === password);
+  }
+
+  // 未登入不給資料
+  return [];
 }
 
 function dbCreateKpi(data) {
   return insertRecord('KPIs', data);
 }
 
-function dbUpdateKpi(id, data) {
+function dbUpdateKpi(id, data, account, password) {
+  // 驗證權限
+  const allKpis = getTableData('KPIs');
+  const kpi = allKpis.find(k => k.id === id);
+
+  if (!kpi) return { success: false, error: '找不到此 KPI' };
+
+  // 管理員可編輯全部
+  const isAdmin = account === ADMIN_ACCOUNT && password === ADMIN_PASSWORD;
+  // 擁有者可編輯自己的
+  const isOwner = kpi.ownerAccount === account && kpi.ownerPassword === password;
+
+  if (!isAdmin && !isOwner) {
+    return { success: false, error: '無權限編輯此 KPI' };
+  }
+
   return updateRecord('KPIs', id, data);
 }
 
-function dbDeleteKpi(id) {
+function dbDeleteKpi(id, account, password) {
+  // 驗證權限
+  const allKpis = getTableData('KPIs');
+  const kpi = allKpis.find(k => k.id === id);
+
+  if (!kpi) return { success: false, error: '找不到此 KPI' };
+
+  // 管理員可刪除全部
+  const isAdmin = account === ADMIN_ACCOUNT && password === ADMIN_PASSWORD;
+  // 擁有者可刪除自己的
+  const isOwner = kpi.ownerAccount === account && kpi.ownerPassword === password;
+
+  if (!isAdmin && !isOwner) {
+    return { success: false, error: '無權限刪除此 KPI' };
+  }
+
   return deleteRecord('KPIs', id);
 }
