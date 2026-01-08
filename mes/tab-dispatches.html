@@ -1,5 +1,5 @@
 <!-- Tab: Dispatches -->
-<sl-tab-panel name="dispatches">
+<div v-show="currentTab === 'dispatches'">
   <div class="section-header">
     <h2>現場派工任務</h2>
   </div>
@@ -35,29 +35,29 @@
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-        <sl-button v-if="d.status === 'pending'" variant="primary" @click="startJob(d)" style="width: 100%;">
-          <sl-icon slot="prefix" name="play-fill"></sl-icon>
+        <button v-if="d.status === 'pending'" class="btn btn-primary w-full" @click="startJob(d)">
+          <i data-lucide="play" class="w-4 h-4"></i>
           開始作業
-        </sl-button>
+        </button>
 
-        <sl-button v-if="d.status === 'in_progress'" variant="success" @click="completeJob(d)" style="width: 100%;">
-          <sl-icon slot="prefix" name="check-lg"></sl-icon>
+        <button v-if="d.status === 'in_progress'" class="btn btn-success w-full" @click="completeJob(d)">
+          <i data-lucide="check" class="w-4 h-4"></i>
           完成並報工
-        </sl-button>
+        </button>
 
-        <sl-button v-if="d.status === 'completed'" variant="neutral" disabled style="width: 100%;">
+        <button v-if="d.status === 'completed'" class="btn btn-ghost w-full" disabled>
           已完成
-        </sl-button>
+        </button>
 
-        <sl-button v-if="d.status === 'pending'" variant="danger" outline size="small" @click="deleteDispatch(d.id)" style="width: 100%;">
+        <button v-if="d.status === 'pending'" class="btn btn-sm btn-outline btn-error w-full" @click="deleteDispatch(d.id)">
           取消派工
-        </sl-button>
+        </button>
       </div>
     </div>
   </div>
 
   <div v-if="dispatches.length === 0" class="empty-state">
-    <sl-icon name="clipboard-x"></sl-icon>
+    <i data-lucide="clipboard-x" class="w-12 h-12 mx-auto mb-4 opacity-50"></i>
     <div>暫無派工任務，請從工單頁面進行派工。</div>
   </div>
-</sl-tab-panel>
+</div>

@@ -65,11 +65,71 @@ const DB_CONFIG = {
         'rfidCode', 'result', 'defectType', 'defectCount', 'imagePath',
         'operatorName', 'inspectedAt', 'importBatch', 'signature', 'createdAt', 'syncStatus'
       ]
+    },
+    r0Labels: {
+      name: 'R0Labels',
+      headers: [
+        'id', 'r0Code', 'currentEpc', 'workOrderId', 'orderNumber', 'customerName',
+        'customerCode', 'productModel', 'productCode', 'regenerationStatus', 'regenerationCount',
+        'history', 'createdAt', 'updatedAt'
+      ]
     }
   }
 };
 
-// ... (existing code) ...
+/**
+ * 效能優化：一次取得所有資料（含快取）
+ * 快取時間：5 分鐘
+ */
+function getAllDataWithCache() {
+  const cache = CacheService.getScriptCache();
+  const cacheKey = 'MES_ALL_DATA_V1';
+
+  // 嘗試從快取讀取
+  const cached = cache.get(cacheKey);
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch (e) {
+      // 快取資料損壞，忽略並重新讀取
+    }
+  }
+
+  // 從資料庫讀取所有資料
+  const data = {
+    workOrders: dbGetWorkOrders().filter(w => w.status !== 'cancelled'),
+    dispatches: dbGetDispatches().filter(d => d.status !== 'cancelled'),
+    reports: dbGetReports(),
+    operators: dbGetOperators().filter(o => o.isActive !== 'FALSE' && o.isActive !== false),
+    customers: dbGetCustomers().filter(c => c.isActive !== 'FALSE' && c.isActive !== false),
+    products: dbGetProducts().filter(p => p.isActive !== 'FALSE' && p.isActive !== false),
+    outgassingTests: dbGetOutgassingTests(),
+    aoiInspections: dbGetAoiInspections(),
+    epcHistory: dbGetEpcHistory(),
+    r0Labels: dbGetR0Labels()
+  };
+
+  // 寫入快取（5 分鐘 = 300 秒）
+  try {
+    const jsonData = JSON.stringify(data);
+    // GAS 快取限制 100KB，超過則不快取
+    if (jsonData.length < 100000) {
+      cache.put(cacheKey, jsonData, 300);
+    }
+  } catch (e) {
+    console.warn('Cache write failed:', e);
+  }
+
+  return data;
+}
+
+/**
+ * 清除快取（資料異動時呼叫）
+ */
+function clearDataCache() {
+  const cache = CacheService.getScriptCache();
+  cache.remove('MES_ALL_DATA_V1');
+}
 
 function dbGetOperators() { return getTableData('Operators'); }
 function dbCreateOperator(data) {
@@ -252,6 +312,7 @@ function insertRecord(tableName, record) {
   });
 
   sheet.appendRow(row);
+  clearDataCache(); // 清除快取
   return record;
 }
 
@@ -280,6 +341,7 @@ function updateRecord(tableName, id, updates) {
       if (updatedAtIndex !== -1) {
         sheet.getRange(rowIndex, updatedAtIndex + 1).setValue(new Date().toISOString());
       }
+      clearDataCache(); // 清除快取
       return true;
     }
   }
@@ -299,6 +361,7 @@ function deleteRecord(tableName, id) {
   for (let i = 1; i < data.length; i++) {
     if (data[i][idIndex] === id) {
       sheet.deleteRow(i + 1);
+      clearDataCache(); // 清除快取
       return true;
     }
   }
@@ -882,4 +945,61 @@ function dbFixSignatureData() {
   });
 
   return results;
+}
+
+// ========== R0 標籤 (跨裝置同步) ==========
+
+function dbGetR0Labels() {
+  const labels = getTableData('R0Labels');
+  // 解析 history JSON 字串
+  return labels.map(l => {
+    if (l.history && typeof l.history === 'string') {
+      try { l.history = JSON.parse(l.history); } catch(e) { l.history = []; }
+    }
+    return l;
+  });
+}
+
+function dbCreateR0Label(data) {
+  data.createdAt = data.createdAt || new Date().toISOString();
+  data.updatedAt = new Date().toISOString();
+  if (data.history && typeof data.history === 'object') {
+    data.history = JSON.stringify(data.history);
+  }
+  return insertRecord('R0Labels', data);
+}
+
+function dbUpdateR0Label(id, data) {
+  data.updatedAt = new Date().toISOString();
+  if (data.history && typeof data.history === 'object') {
+    data.history = JSON.stringify(data.history);
+  }
+  return updateRecord('R0Labels', id, data);
+}
+
+function dbDeleteR0Label(id) {
+  return deleteRecord('R0Labels', id);
+}
+
+// 批次同步 R0 標籤
+function dbSyncR0Labels(labels) {
+  const existingLabels = dbGetR0Labels();
+  const existingMap = {};
+  existingLabels.forEach(l => { existingMap[l.r0Code] = l; });
+
+  let created = 0, updated = 0;
+
+  labels.forEach(label => {
+    const existing = existingMap[label.r0Code];
+    if (existing) {
+      dbUpdateR0Label(existing.id, label);
+      updated++;
+    } else {
+      dbCreateR0Label(label);
+      created++;
+    }
+  });
+
+  CacheService.getScriptCache().remove('MES_ALL_DATA_V1');
+  return { created, updated, total: labels.length };
 }

@@ -1,0 +1,206 @@
+<!-- Tab: Oven Monitoring -->
+<div v-show="currentTab === 'oven'">
+  <div class="section-header">
+    <h2>烘箱監控 (再生作業)</h2>
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+      <span :class="['badge', ecuConnected ? 'badge-success' : 'badge-error']">
+        {{ ecuConnected ? 'ECU 已連線' : 'ECU 離線' }}
+      </span>
+      <button class="btn btn-sm btn-ghost" @click="connectAllOvens">
+        <i data-lucide="wifi" class="w-4 h-4"></i>
+        連線
+      </button>
+      <button class="btn btn-sm btn-primary" @click="showOvenSettingsModal = true">
+        <i data-lucide="settings" class="w-4 h-4"></i>
+        設定
+      </button>
+    </div>
+  </div>
+
+  <!-- Oven Grid (10 ovens in 5x2) -->
+  <div class="oven-grid">
+    <div v-for="oven in ovens" :key="oven.id"
+         :class="['oven-card', { 'oven-running': oven.running, 'oven-door-open': oven.doorOpen, 'oven-selected': selectedOvenId === oven.id }]"
+         @click="selectOvenForScan(oven.id)">
+      <div class="oven-header">
+        <span class="oven-name">{{ oven.name }}</span>
+        <span :class="['oven-status-dot', oven.running ? 'running' : (oven.doorOpen ? 'warning' : 'idle')]"></span>
+      </div>
+
+      <div class="oven-body">
+        <div class="oven-icon-container" :class="{ 'door-open': oven.doorOpen }">
+          <i :data-lucide="oven.doorOpen ? 'door-open' : 'box'" class="w-8 h-8"></i>
+        </div>
+
+        <div class="oven-stats">
+          <div class="stat-item">
+            <i data-lucide="thermometer" class="w-3 h-3"></i>
+            <span>{{ oven.temperature }}°C</span>
+          </div>
+          <div class="stat-item">
+            <i data-lucide="scan-barcode" class="w-3 h-3"></i>
+            <span>{{ oven.scannedCodes.length }}/{{ oven.batchQty }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="oven-footer">
+        <span class="oven-state-label">
+          {{ oven.running ? '運行中' : (oven.doorOpen ? '門開啟' : '待機') }}
+        </span>
+        <div class="oven-actions" @click.stop>
+          <button class="btn btn-xs btn-ghost" @click="simulateDoor(oven.id, true)" title="模擬開門">
+            <i data-lucide="door-open" class="w-3 h-3"></i>
+          </button>
+          <button class="btn btn-xs btn-ghost" @click="simulateDoor(oven.id, false)" title="模擬關門">
+            <i data-lucide="door-closed" class="w-3 h-3"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Dispatch binding indicator -->
+      <div v-if="getOvenDispatch(oven.id)" class="oven-dispatch-badge">
+        {{ getOvenDispatch(oven.id).dispatchNumber }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Barcode Scanning Section -->
+  <div class="form-section" style="margin-top: 1.5rem;">
+    <h4 style="margin: 0 0 1rem; color: #475569;">
+      <i data-lucide="scan-barcode" class="w-4 h-4" style="display: inline;"></i>
+      條碼掃描
+    </h4>
+
+    <div v-if="selectedOvenId" class="scan-section">
+      <div class="scan-header">
+        <span class="scan-oven-name">{{ ovens.find(o => o.id === selectedOvenId)?.name }}</span>
+        <span class="scan-count">
+          已掃描 {{ ovens.find(o => o.id === selectedOvenId)?.scannedCodes.length || 0 }} /
+          {{ ovens.find(o => o.id === selectedOvenId)?.batchQty || 18 }} 片
+        </span>
+      </div>
+
+      <div class="scan-input-row">
+        <input type="text" class="input input-bordered flex-1"
+               v-model="ovenScanInput"
+               @keyup.enter="scanOvenBarcode"
+               placeholder="掃描或輸入再生濾網條碼...">
+        <button class="btn btn-primary" @click="scanOvenBarcode">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          新增
+        </button>
+        <button class="btn btn-ghost" @click="clearOvenScannedCodes(selectedOvenId)">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+          清除
+        </button>
+      </div>
+
+      <div class="scanned-codes-list" v-if="ovens.find(o => o.id === selectedOvenId)?.scannedCodes.length">
+        <div class="scanned-code-item" v-for="(code, idx) in ovens.find(o => o.id === selectedOvenId)?.scannedCodes" :key="idx">
+          <span class="code-index">{{ idx + 1 }}</span>
+          <code>{{ code }}</code>
+          <button class="btn btn-xs btn-ghost btn-circle" @click="removeOvenScannedCode(selectedOvenId, code)">
+            <i data-lucide="x" class="w-3 h-3"></i>
+          </button>
+        </div>
+      </div>
+      <div v-else class="empty-state" style="padding: 1rem;">
+        <span style="font-size: 0.875rem; color: #94a3b8;">尚未掃描任何條碼</span>
+      </div>
+    </div>
+
+    <div v-else class="empty-state" style="padding: 2rem;">
+      <i data-lucide="mouse-pointer-click" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+      <div style="font-size: 0.875rem;">請先點選上方烘箱</div>
+    </div>
+  </div>
+
+  <!-- Auto Report Summary -->
+  <div class="form-section" style="margin-top: 1.5rem;">
+    <h4 style="margin: 0 0 1rem; color: #475569;">
+      <i data-lucide="clipboard-list" class="w-4 h-4" style="display: inline;"></i>
+      自動報工綁定
+    </h4>
+    <div class="auto-report-grid">
+      <div v-for="oven in ovens" :key="'bind-'+oven.id" class="auto-report-item">
+        <label class="input-label">{{ oven.name }}</label>
+        <select class="select select-bordered select-sm w-full" v-model="ovenBindings[oven.id]">
+          <option value="">-- 未綁定 --</option>
+          <option v-for="d in dispatches.filter(x => x.status === 'in_progress' && x.stationName === '烘箱站')"
+                  :key="d.id" :value="d.id">
+            {{ d.dispatchNumber }} ({{ d.operatorName }})
+          </option>
+        </select>
+      </div>
+    </div>
+    <div class="alert alert-info" style="margin-top: 1rem; padding: 0.75rem;">
+      <i data-lucide="info" class="w-4 h-4"></i>
+      <span>門關閉時將自動提交報工，每批 {{ ovenBatchQty }} 片</span>
+    </div>
+  </div>
+
+  <!-- Event Log -->
+  <div class="form-section" style="margin-top: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+      <h4 style="margin: 0; color: #475569;">
+        <i data-lucide="scroll-text" class="w-4 h-4" style="display: inline;"></i>
+        事件紀錄
+      </h4>
+      <button class="btn btn-xs btn-ghost" @click="clearOvenLogs">清除</button>
+    </div>
+    <div class="oven-log scrollable" style="max-height: 200px;">
+      <div v-for="(log, i) in ovenEventLogs" :key="i" class="log-item" :class="log.type">
+        <span class="log-time">{{ log.time }}</span>
+        <span class="log-oven">{{ log.ovenName }}</span>
+        <span class="log-message">{{ log.message }}</span>
+      </div>
+      <div v-if="ovenEventLogs.length === 0" class="empty-state" style="padding: 1.5rem;">
+        <i data-lucide="inbox" class="w-6 h-6 mx-auto mb-2 opacity-50"></i>
+        <div style="font-size: 0.875rem;">尚無事件紀錄</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Oven Settings Modal -->
+<div v-if="showOvenSettingsModal" class="modal modal-open">
+  <div class="modal-box" style="max-width: 700px;">
+    <h3 class="font-bold text-lg mb-4">烘箱設定</h3>
+
+    <div style="margin-bottom: 1rem;">
+      <label class="input-label">各烘箱設定</label>
+      <div class="oven-settings-grid">
+        <div v-for="oven in ovens" :key="'setting-'+oven.id" class="oven-setting-item">
+          <span class="oven-setting-label">{{ oven.name }}</span>
+          <div class="oven-setting-inputs">
+            <input type="text" class="input input-bordered input-xs"
+                   style="width: 140px;"
+                   v-model="oven.apiEndpoint" :placeholder="'192.168.1.' + (100 + oven.id)">
+            <input type="number" class="input input-bordered input-xs"
+                   style="width: 50px;"
+                   v-model.number="oven.batchQty" min="1" placeholder="18" title="每批數量">
+          </div>
+        </div>
+      </div>
+      <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 0.5rem;">
+        左: API 端點 / 右: 每批數量
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div style="margin-bottom: 1rem;">
+      <label class="label cursor-pointer justify-start gap-2">
+        <input type="checkbox" class="toggle toggle-primary" v-model="ovenAutoReportEnabled">
+        <span class="label-text">啟用自動報工（門關閉時自動完成報工）</span>
+      </label>
+    </div>
+
+    <div class="modal-action">
+      <button class="btn btn-ghost" @click="showOvenSettingsModal = false">關閉</button>
+      <button class="btn btn-primary" @click="saveOvenSettings">儲存</button>
+    </div>
+  </div>
+  <div class="modal-backdrop" @click="showOvenSettingsModal = false"></div>
+</div>

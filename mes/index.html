@@ -11,7 +11,7 @@
 
     <!-- Loading Overlay -->
     <div v-if="loading" class="loading-overlay">
-      <sl-spinner></sl-spinner>
+      <span class="loading loading-spinner loading-lg text-primary"></span>
       <div style="font-weight: 600; color: #667eea;">載入中...</div>
     </div>
 
@@ -25,36 +25,44 @@
         </p>
       </div>
       <div style="display: flex; gap: 0.5rem;">
-        <sl-button variant="neutral" @click="openShareModal">
-          <sl-icon slot="prefix" name="share"></sl-icon>
+        <button class="btn btn-ghost" @click="openShareModal">
+          <i data-lucide="share-2" class="w-4 h-4"></i>
           分享
-        </sl-button>
-        <sl-button variant="primary" @click="refreshData">
-          <sl-icon slot="prefix" name="arrow-clockwise"></sl-icon>
+        </button>
+        <button class="btn btn-primary" @click="refreshData">
+          <i data-lucide="refresh-cw" class="w-4 h-4"></i>
           重新整理
-        </sl-button>
+        </button>
       </div>
     </header>
 
     <!-- Main Content -->
     <div class="content-card">
-      <sl-tab-group @sl-tab-show="e => currentTab = e.detail.name">
-        <sl-tab slot="nav" panel="work-orders" :active="currentTab === 'work-orders'">工單管理</sl-tab>
-        <sl-tab slot="nav" panel="dispatches" :active="currentTab === 'dispatches'">現場派工</sl-tab>
-        <sl-tab slot="nav" panel="reports" :active="currentTab === 'reports'">報工紀錄</sl-tab>
-        <sl-tab slot="nav" panel="outgassing" :active="currentTab === 'outgassing'">釋氣檢驗</sl-tab>
-        <sl-tab slot="nav" panel="aoi" :active="currentTab === 'aoi'">AOI 檢驗</sl-tab>
-        <sl-tab slot="nav" panel="rfid-replace" :active="currentTab === 'rfid-replace'">RFID 更換</sl-tab>
-        <sl-tab slot="nav" panel="settings" :active="currentTab === 'settings'">設定</sl-tab>
+      <!-- Tabs Navigation -->
+      <div class="tabs-nav">
+        <a href="#" :class="['nav-tab', currentTab === 'work-orders' ? 'active' : '']" @click.prevent="currentTab = 'work-orders'"><span>工單管理</span></a>
+        <a href="#" :class="['nav-tab', currentTab === 'dispatches' ? 'active' : '']" @click.prevent="currentTab = 'dispatches'"><span>現場派工</span></a>
+        <a href="#" :class="['nav-tab', currentTab === 'reports' ? 'active' : '']" @click.prevent="currentTab = 'reports'"><span>報工紀錄</span></a>
+        <a href="#" :class="['nav-tab', currentTab === 'outgassing' ? 'active' : '']" @click.prevent="currentTab = 'outgassing'"><span>釋氣檢驗</span></a>
+        <a href="#" :class="['nav-tab', currentTab === 'aoi' ? 'active' : '']" @click.prevent="currentTab = 'aoi'"><span>AOI 檢驗</span></a>
+        <a href="#" :class="['nav-tab', currentTab === 'r0' ? 'active' : '']" @click.prevent="currentTab = 'r0'"><span>標籤管理</span></a>
+        <a href="#" :class="['nav-tab', currentTab === 'label-editor' ? 'active' : '']" @click.prevent="currentTab = 'label-editor'"><span>樣式設計</span></a>
+        <a href="#" :class="['nav-tab', currentTab === 'oven' ? 'active' : '']" @click.prevent="currentTab = 'oven'"><span>烘箱監控</span></a>
+        <a href="#" :class="['nav-tab', currentTab === 'settings' ? 'active' : '']" @click.prevent="currentTab = 'settings'"><span>設定</span></a>
+      </div>
 
+      <!-- Tab Panels -->
+      <div class="tab-content">
         <?!= include('tab-work-orders'); ?>
         <?!= include('tab-dispatches'); ?>
         <?!= include('tab-reports'); ?>
         <?!= include('tab-outgassing'); ?>
         <?!= include('tab-aoi'); ?>
-        <?!= include('tab-rfid-replace'); ?>
+        <?!= include('tab-r0'); ?>
+        <?!= include('tab-label-editor'); ?>
+        <?!= include('tab-oven'); ?>
         <?!= include('tab-settings'); ?>
-      </sl-tab-group>
+      </div>
     </div>
 
     <!-- Modals -->

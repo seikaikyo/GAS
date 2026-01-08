@@ -3,20 +3,19 @@
 <head>
   <base target="_top">
   <meta charset="UTF-8">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.15.0/cdn/themes/light.css" />
-  <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.15.0/cdn/shoelace-autoloader.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4/dist/full.min.css" rel="stylesheet">
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
   <style>
-    :root { --sl-color-primary-600: #6366f1; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; margin: 0; padding: 1rem; }
     .container { max-width: 1200px; margin: 0 auto; }
     .header-card { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; border-radius: 1rem; padding: 1.5rem; margin-bottom: 1.5rem; }
     .header-card h1 { margin: 0 0 0.25rem 0; font-size: 1.5rem; }
     .header-card p { margin: 0; opacity: 0.9; font-size: 0.875rem; }
     .login-bar { background: rgba(255,255,255,0.15); border-radius: 0.5rem; padding: 0.75rem; margin-top: 1rem; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
-    .login-bar sl-input { --sl-input-background-color: rgba(255,255,255,0.9); flex: 1; min-width: 120px; }
-    .user-info { background: rgba(255,255,255,0.2); padding: 0.5rem 1rem; border-radius: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+    .login-bar input { background: rgba(255,255,255,0.9); flex: 1; min-width: 120px; }
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
     .stat-card { background: white; border-radius: 0.75rem; padding: 1rem; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
     .stat-card .value { font-size: 2rem; font-weight: 700; }
@@ -42,8 +41,6 @@
     @media (max-width: 768px) { .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; } .stats-grid { grid-template-columns: repeat(2, 1fr); } }
     .loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.9); display: flex; justify-content: center; align-items: center; z-index: 1000; }
     .empty-state { text-align: center; padding: 3rem; color: #94a3b8; }
-    sl-dialog::part(panel) { max-width: 800px; }
-    sl-dialog::part(body) { padding: 1.5rem; }
     .view-section { margin-bottom: 1rem; }
     .view-label { font-size: 0.75rem; color: #64748b; margin-bottom: 0.25rem; }
     .view-value { background: #f8fafc; padding: 0.75rem; border-radius: 0.5rem; }
@@ -64,6 +61,8 @@
     .masked { color: #94a3b8; font-style: italic; }
     .account-badge { background: #e0f2fe; color: #0369a1; padding: 0.125rem 0.5rem; border-radius: 0.25rem; font-size: 0.7rem; margin-left: 0.5rem; }
     .admin-badge { background: #fef3c7; color: #92400e; }
+    .form-label { display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500; }
+    .modal-box { max-width: 800px; }
   </style>
 </head>
 <body>
@@ -74,56 +73,58 @@
       <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
         <div>
           <h1>KPI 管理定義盤點</h1>
-          <p>再生部 - Phase I <sl-badge v-if="version" variant="neutral" style="margin-left: 0.5rem;">v{{ version }}</sl-badge></p>
+          <p>再生部 - Phase I <span v-if="version" class="badge badge-ghost ml-2">v{{ version }}</span></p>
         </div>
         <div class="btn-group">
-          <sl-button size="small" variant="neutral" @click="openShareModal">
-            <sl-icon slot="prefix" name="share"></sl-icon>
+          <button class="btn btn-sm btn-ghost" @click="openShareModal">
+            <i data-lucide="share-2" class="w-4 h-4"></i>
             分享
-          </sl-button>
-          <sl-button size="small" @click="refreshData">
-            <sl-icon slot="prefix" name="arrow-clockwise"></sl-icon>
+          </button>
+          <button class="btn btn-sm" @click="refreshData">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
             重新整理
-          </sl-button>
-          <sl-button size="small" variant="neutral" @click="downloadTemplate">
-            <sl-icon slot="prefix" name="download"></sl-icon>
+          </button>
+          <button class="btn btn-sm btn-ghost" @click="downloadTemplate">
+            <i data-lucide="download" class="w-4 h-4"></i>
             下載範本
-          </sl-button>
+          </button>
         </div>
       </div>
 
       <!-- Login Bar -->
       <div class="login-bar">
         <template v-if="!isLoggedIn">
-          <sl-icon name="person-lock" style="font-size: 1.25rem;"></sl-icon>
-          <sl-input size="small" v-model="loginAccount" placeholder="帳號" @keyup.enter="doLogin"></sl-input>
-          <sl-input size="small" type="password" v-model="loginPassword" placeholder="密碼" @keyup.enter="doLogin"></sl-input>
-          <sl-button size="small" variant="primary" @click="doLogin" :loading.prop="loginLoading">登入</sl-button>
+          <i data-lucide="lock" class="w-5 h-5"></i>
+          <input type="text" class="input input-sm input-bordered" v-model="loginAccount" placeholder="帳號" @keyup.enter="doLogin">
+          <input type="password" class="input input-sm input-bordered" v-model="loginPassword" placeholder="密碼" @keyup.enter="doLogin">
+          <button class="btn btn-sm btn-primary" @click="doLogin" :class="{ 'loading': loginLoading }">
+            <span v-if="!loginLoading">登入</span>
+          </button>
           <span style="font-size: 0.75rem; opacity: 0.8;">登入後可查看/編輯自己的 KPI</span>
         </template>
         <template v-else>
-          <div class="user-info">
-            <sl-icon name="person-check"></sl-icon>
+          <div class="user-info flex items-center gap-2 bg-white/20 px-4 py-2 rounded-lg">
+            <i data-lucide="user-check" class="w-4 h-4"></i>
             <span>{{ currentAccount }}</span>
-            <sl-badge v-if="isAdmin" variant="warning">管理員</sl-badge>
+            <span v-if="isAdmin" class="badge badge-warning badge-sm">管理員</span>
           </div>
-          <sl-button size="small" variant="warning" @click="triggerImport">
-            <sl-icon slot="prefix" name="upload"></sl-icon>
+          <button class="btn btn-sm btn-warning" @click="triggerImport">
+            <i data-lucide="upload" class="w-4 h-4"></i>
             匯入
-          </sl-button>
+          </button>
           <input type="file" ref="fileInput" @change="handleFileSelect" accept=".xlsx,.xls" style="display:none">
-          <sl-button size="small" variant="success" @click="exportExcel" :disabled="kpis.length === 0">
-            <sl-icon slot="prefix" name="file-earmark-excel"></sl-icon>
+          <button class="btn btn-sm btn-success" @click="exportExcel" :disabled="kpis.length === 0">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
             匯出
-          </sl-button>
-          <sl-button size="small" variant="primary" @click="openCreateModal">
-            <sl-icon slot="prefix" name="plus-lg"></sl-icon>
+          </button>
+          <button class="btn btn-sm btn-primary" @click="openCreateModal">
+            <i data-lucide="plus" class="w-4 h-4"></i>
             新增 KPI
-          </sl-button>
-          <sl-button size="small" variant="neutral" @click="doLogout">
-            <sl-icon slot="prefix" name="box-arrow-right"></sl-icon>
+          </button>
+          <button class="btn btn-sm btn-ghost" @click="doLogout">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
             登出
-          </sl-button>
+          </button>
         </template>
       </div>
     </div>
@@ -131,7 +132,7 @@
     <!-- Loading -->
     <div v-if="loading" class="loading-overlay">
       <div style="text-align: center;">
-        <sl-spinner style="font-size: 2rem; --track-width: 4px;"></sl-spinner>
+        <span class="loading loading-spinner loading-lg text-primary"></span>
         <div style="margin-top: 1rem; color: #64748b;">{{ loadingMessage }}</div>
       </div>
     </div>
@@ -175,7 +176,7 @@
         <tbody>
           <tr v-if="maskedKpis.length === 0">
             <td colspan="5" class="empty-state">
-              <sl-icon name="inbox" style="font-size: 3rem; margin-bottom: 1rem;"></sl-icon>
+              <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-4 opacity-50"></i>
               <div>尚無 KPI 資料</div>
             </td>
           </tr>
@@ -185,15 +186,15 @@
             <td class="masked">{{ kpi.name }}</td>
             <td><span :class="'freq-badge freq-' + kpi.frequency">{{ kpi.frequency }}</span></td>
             <td>
-              <sl-button size="small" variant="neutral" disabled>
-                <sl-icon name="lock"></sl-icon>
-              </sl-button>
+              <button class="btn btn-sm btn-ghost" disabled>
+                <i data-lucide="lock" class="w-4 h-4"></i>
+              </button>
             </td>
           </tr>
         </tbody>
       </table>
       <div style="padding: 1rem; text-align: center; background: #f8fafc; border-top: 1px solid #e2e8f0;">
-        <sl-icon name="shield-lock" style="font-size: 1.5rem; color: #94a3b8;"></sl-icon>
+        <i data-lucide="shield" class="w-6 h-6 mx-auto text-gray-400"></i>
         <p style="margin: 0.5rem 0 0; color: #64748b; font-size: 0.875rem;">請登入以查看完整內容</p>
       </div>
     </div>
@@ -215,7 +216,7 @@
         <tbody>
           <tr v-if="kpis.length === 0">
             <td :colspan="isAdmin ? 7 : 6" class="empty-state">
-              <sl-icon name="inbox" style="font-size: 3rem; margin-bottom: 1rem;"></sl-icon>
+              <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-4 opacity-50"></i>
               <div>尚無 KPI 資料，點擊「新增 KPI」開始建立</div>
             </td>
           </tr>
@@ -230,17 +231,17 @@
             <td><span :class="'freq-badge freq-' + kpi.frequency">{{ kpi.frequency }}</span></td>
             <td>{{ kpi.targetValue || '-' }}</td>
             <td>
-              <sl-button-group>
-                <sl-button size="small" @click="viewKpi(kpi)">
-                  <sl-icon name="eye"></sl-icon>
-                </sl-button>
-                <sl-button size="small" @click="editKpi(kpi)">
-                  <sl-icon name="pencil"></sl-icon>
-                </sl-button>
-                <sl-button size="small" variant="danger" @click="confirmDelete(kpi)">
-                  <sl-icon name="trash"></sl-icon>
-                </sl-button>
-              </sl-button-group>
+              <div class="join">
+                <button class="btn btn-sm join-item" @click="viewKpi(kpi)">
+                  <i data-lucide="eye" class="w-4 h-4"></i>
+                </button>
+                <button class="btn btn-sm join-item" @click="editKpi(kpi)">
+                  <i data-lucide="pencil" class="w-4 h-4"></i>
+                </button>
+                <button class="btn btn-sm btn-error btn-outline join-item" @click="confirmDelete(kpi)">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -248,196 +249,263 @@
     </div>
 
     <!-- Create/Edit Dialog -->
-    <sl-dialog :label="isEditing ? '編輯 KPI' : '新增 KPI'" :open.prop="showModal" @sl-request-close="closeModal" style="--width: 800px;">
-      <div class="form-grid">
-        <div class="form-grid form-grid-2">
-          <sl-input label="部門名稱" v-model="form.department" readonly></sl-input>
-          <sl-input label="填表人 *" v-model="form.author" placeholder="姓名 / 職稱"></sl-input>
-        </div>
-
-        <div>
-          <label style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem;">KPI 類型 *</label>
-          <div class="chip-group">
-            <div v-for="type in kpiTypes" :key="type" :class="['chip', form.kpiType === type ? 'selected' : '']" @click="form.kpiType = type">{{ type }}</div>
-          </div>
-        </div>
-
-        <div class="form-grid form-grid-2">
-          <sl-input label="KPI 名稱 *" v-model="form.name" placeholder="管理上實際使用的指標名稱"></sl-input>
-          <div>
-            <label style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem;">統計頻率 *</label>
-            <div class="chip-group">
-              <div v-for="f in frequencies" :key="f" :class="['chip', form.frequency === f ? 'selected-green' : '']" @click="form.frequency = f">{{ f }}</div>
-            </div>
-          </div>
-        </div>
-
-        <sl-textarea label="KPI 管理目的 *" v-model="form.purpose" placeholder="此 KPI 用來看什麼、改善什麼" rows="2"></sl-textarea>
-
-        <div class="form-section">
-          <h4>計算邏輯</h4>
-          <div class="form-grid">
-            <sl-textarea label="計算方式說明" v-model="form.calcDescription" placeholder="文字描述計算邏輯" rows="2"></sl-textarea>
-            <div class="form-grid form-grid-2">
-              <sl-textarea label="分子定義" v-model="form.numerator" placeholder="分子代表的數值與條件" rows="2"></sl-textarea>
-              <sl-textarea label="分母定義" v-model="form.denominator" placeholder="分母代表的數值與條件" rows="2"></sl-textarea>
-            </div>
-            <div class="form-grid form-grid-2">
-              <sl-textarea label="納入條件" v-model="form.includeConditions" placeholder="哪些資料會被納入計算" rows="2"></sl-textarea>
-              <sl-textarea label="排除條件" v-model="form.excludeConditions" placeholder="哪些情況需要排除" rows="2"></sl-textarea>
-            </div>
-          </div>
-        </div>
-
-        <div class="form-section">
-          <h4>目標與管理</h4>
-          <div class="form-grid form-grid-3">
-            <sl-input label="KPI 目標值" v-model="form.targetValue" placeholder="年度或期間目標"></sl-input>
-            <div>
-              <label style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem;">達標判斷方式</label>
-              <div class="chip-group">
-                <div v-for="c in achievementCriterias" :key="c" :class="['chip', form.achievementCriteria === c ? 'selected-purple' : '']" @click="form.achievementCriteria = c">{{ c }}</div>
-              </div>
-            </div>
-            <sl-input label="管理使用方式" v-model="form.usageMethod" placeholder="例會檢討 / 績效 / 預警"></sl-input>
-          </div>
-        </div>
-
-        <div class="form-section">
-          <h4>資料來源</h4>
+    <dialog id="modal-edit" class="modal" :class="{ 'modal-open': showModal }">
+      <div class="modal-box max-w-4xl">
+        <h3 class="font-bold text-lg mb-4">{{ isEditing ? '編輯 KPI' : '新增 KPI' }}</h3>
+        <div class="form-grid">
           <div class="form-grid form-grid-2">
-            <sl-input label="主要資料來源系統" v-model="form.dataSource" placeholder="ERP / MES / CRM / 其他"></sl-input>
             <div>
-              <label style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem;">是否需人工補資料</label>
+              <label class="form-label">部門名稱</label>
+              <input type="text" class="input input-bordered w-full" v-model="form.department" readonly>
+            </div>
+            <div>
+              <label class="form-label">填表人 *</label>
+              <input type="text" class="input input-bordered w-full" v-model="form.author" placeholder="姓名 / 職稱">
+            </div>
+          </div>
+
+          <div>
+            <label class="form-label">KPI 類型 *</label>
+            <div class="chip-group">
+              <div v-for="type in kpiTypes" :key="type" :class="['chip', form.kpiType === type ? 'selected' : '']" @click="form.kpiType = type">{{ type }}</div>
+            </div>
+          </div>
+
+          <div class="form-grid form-grid-2">
+            <div>
+              <label class="form-label">KPI 名稱 *</label>
+              <input type="text" class="input input-bordered w-full" v-model="form.name" placeholder="管理上實際使用的指標名稱">
+            </div>
+            <div>
+              <label class="form-label">統計頻率 *</label>
               <div class="chip-group">
-                <div :class="['chip', form.needManualData === '是' ? 'selected-orange' : '']" @click="form.needManualData = '是'">是</div>
-                <div :class="['chip', form.needManualData === '否' ? 'selected' : '']" @click="form.needManualData = '否'">否</div>
+                <div v-for="f in frequencies" :key="f" :class="['chip', form.frequency === f ? 'selected-green' : '']" @click="form.frequency = f">{{ f }}</div>
               </div>
             </div>
           </div>
+
+          <div>
+            <label class="form-label">KPI 管理目的 *</label>
+            <textarea class="textarea textarea-bordered w-full" v-model="form.purpose" placeholder="此 KPI 用來看什麼、改善什麼" rows="2"></textarea>
+          </div>
+
+          <div class="form-section">
+            <h4>計算邏輯</h4>
+            <div class="form-grid">
+              <div>
+                <label class="form-label">計算方式說明</label>
+                <textarea class="textarea textarea-bordered w-full" v-model="form.calcDescription" placeholder="文字描述計算邏輯" rows="2"></textarea>
+              </div>
+              <div class="form-grid form-grid-2">
+                <div>
+                  <label class="form-label">分子定義</label>
+                  <textarea class="textarea textarea-bordered w-full" v-model="form.numerator" placeholder="分子代表的數值與條件" rows="2"></textarea>
+                </div>
+                <div>
+                  <label class="form-label">分母定義</label>
+                  <textarea class="textarea textarea-bordered w-full" v-model="form.denominator" placeholder="分母代表的數值與條件" rows="2"></textarea>
+                </div>
+              </div>
+              <div class="form-grid form-grid-2">
+                <div>
+                  <label class="form-label">納入條件</label>
+                  <textarea class="textarea textarea-bordered w-full" v-model="form.includeConditions" placeholder="哪些資料會被納入計算" rows="2"></textarea>
+                </div>
+                <div>
+                  <label class="form-label">排除條件</label>
+                  <textarea class="textarea textarea-bordered w-full" v-model="form.excludeConditions" placeholder="哪些情況需要排除" rows="2"></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h4>目標與管理</h4>
+            <div class="form-grid form-grid-3">
+              <div>
+                <label class="form-label">KPI 目標值</label>
+                <input type="text" class="input input-bordered w-full" v-model="form.targetValue" placeholder="年度或期間目標">
+              </div>
+              <div>
+                <label class="form-label">達標判斷方式</label>
+                <div class="chip-group">
+                  <div v-for="c in achievementCriterias" :key="c" :class="['chip', form.achievementCriteria === c ? 'selected-purple' : '']" @click="form.achievementCriteria = c">{{ c }}</div>
+                </div>
+              </div>
+              <div>
+                <label class="form-label">管理使用方式</label>
+                <input type="text" class="input input-bordered w-full" v-model="form.usageMethod" placeholder="例會檢討 / 績效 / 預警">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h4>資料來源</h4>
+            <div class="form-grid form-grid-2">
+              <div>
+                <label class="form-label">主要資料來源系統</label>
+                <input type="text" class="input input-bordered w-full" v-model="form.dataSource" placeholder="ERP / MES / CRM / 其他">
+              </div>
+              <div>
+                <label class="form-label">是否需人工補資料</label>
+                <div class="chip-group">
+                  <div :class="['chip', form.needManualData === '是' ? 'selected-orange' : '']" @click="form.needManualData = '是'">是</div>
+                  <div :class="['chip', form.needManualData === '否' ? 'selected' : '']" @click="form.needManualData = '否'">否</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="form-label">補充說明</label>
+            <textarea class="textarea textarea-bordered w-full" v-model="form.notes" placeholder="其他補充說明" rows="2"></textarea>
+          </div>
         </div>
 
-        <sl-textarea label="補充說明" v-model="form.notes" placeholder="其他補充說明" rows="2"></sl-textarea>
+        <div class="modal-action">
+          <button class="btn" @click="closeModal">取消</button>
+          <button class="btn btn-primary" @click="saveKpi" :disabled="!isFormValid">{{ isEditing ? '更新' : '建立' }}</button>
+        </div>
       </div>
-
-      <div slot="footer" style="display: flex; justify-content: flex-end; gap: 0.5rem;">
-        <sl-button @click="closeModal">取消</sl-button>
-        <sl-button variant="primary" @click="saveKpi" :disabled="!isFormValid">{{ isEditing ? '更新' : '建立' }}</sl-button>
-      </div>
-    </sl-dialog>
+      <form method="dialog" class="modal-backdrop" @click="closeModal"><button>close</button></form>
+    </dialog>
 
     <!-- View Dialog -->
-    <sl-dialog label="KPI 詳情" :open.prop="showViewModal" @sl-request-close="showViewModal = false" style="--width: 700px;">
-      <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
-        <span :class="'badge-type badge-' + viewItem.kpiType">{{ viewItem.kpiType }}</span>
-        <span style="font-size: 1.25rem; font-weight: 600;">{{ viewItem.name }}</span>
-      </div>
-      <div class="view-grid" style="margin-bottom: 1rem;">
-        <div><span class="view-label">部門</span><div>{{ viewItem.department }}</div></div>
-        <div><span class="view-label">填表人</span><div>{{ viewItem.author }}</div></div>
-        <div><span class="view-label">頻率</span><div>{{ viewItem.frequency }}</div></div>
-        <div><span class="view-label">目標值</span><div>{{ viewItem.targetValue || '-' }}</div></div>
-      </div>
-      <div class="view-section">
-        <div class="view-label">KPI 管理目的</div>
-        <div class="view-value">{{ viewItem.purpose }}</div>
-      </div>
-      <div v-if="viewItem.calcDescription || viewItem.numerator" class="view-section">
-        <div class="view-label">計算邏輯</div>
-        <div v-if="viewItem.calcDescription" class="view-value" style="margin-bottom: 0.5rem;">{{ viewItem.calcDescription }}</div>
-        <div class="view-grid">
-          <div v-if="viewItem.numerator"><div class="view-label">分子</div><div class="view-value">{{ viewItem.numerator }}</div></div>
-          <div v-if="viewItem.denominator"><div class="view-label">分母</div><div class="view-value">{{ viewItem.denominator }}</div></div>
+    <dialog id="modal-view" class="modal" :class="{ 'modal-open': showViewModal }">
+      <div class="modal-box max-w-3xl">
+        <h3 class="font-bold text-lg mb-4">KPI 詳情</h3>
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+          <span :class="'badge-type badge-' + viewItem.kpiType">{{ viewItem.kpiType }}</span>
+          <span style="font-size: 1.25rem; font-weight: 600;">{{ viewItem.name }}</span>
         </div>
-      </div>
-      <div v-if="viewItem.includeConditions || viewItem.excludeConditions" class="view-section view-grid">
-        <div v-if="viewItem.includeConditions"><div class="view-label">納入條件</div><div class="view-value">{{ viewItem.includeConditions }}</div></div>
-        <div v-if="viewItem.excludeConditions"><div class="view-label">排除條件</div><div class="view-value">{{ viewItem.excludeConditions }}</div></div>
-      </div>
-      <div v-if="viewItem.notes" class="view-section">
-        <div class="view-label">補充說明</div>
-        <div class="view-value">{{ viewItem.notes }}</div>
-      </div>
-      <div slot="footer" style="display: flex; justify-content: flex-end; gap: 0.5rem;">
-        <sl-button variant="success" @click="editKpi(viewItem); showViewModal = false">編輯</sl-button>
-        <sl-button @click="showViewModal = false">關閉</sl-button>
-      </div>
-    </sl-dialog>
-
-    <!-- Delete Dialog -->
-    <sl-dialog label="確認刪除" :open.prop="showDeleteModal" @sl-request-close="showDeleteModal = false">
-      <sl-icon name="exclamation-triangle" style="font-size: 3rem; color: #ef4444; display: block; margin: 0 auto 1rem;"></sl-icon>
-      <p style="text-align: center;">確定要刪除 KPI「<strong>{{ deleteItem?.name }}</strong>」嗎？<br>此操作無法復原。</p>
-      <div slot="footer" style="display: flex; justify-content: flex-end; gap: 0.5rem;">
-        <sl-button @click="showDeleteModal = false">取消</sl-button>
-        <sl-button variant="danger" @click="deleteKpi">確定刪除</sl-button>
-      </div>
-    </sl-dialog>
-
-    <!-- Import Dialog -->
-    <sl-dialog label="匯入 KPI" :open.prop="showImportModal" @sl-request-close="showImportModal = false" style="--width: 900px;">
-      <sl-alert variant="primary" open style="margin-bottom: 1rem;">
-        <sl-icon slot="icon" name="info-circle"></sl-icon>
-        共 {{ importData.length }} 筆資料，將以目前登入帳號「{{ currentAccount }}」匯入
-      </sl-alert>
-      <div style="max-height: 400px; overflow: auto;">
-        <table>
-          <thead>
-            <tr><th>#</th><th>類型</th><th>KPI 名稱</th><th>管理目的</th><th>頻率</th><th>填表人</th></tr>
-          </thead>
-          <tbody>
-            <tr v-for="(row, idx) in importData" :key="idx">
-              <td>{{ idx + 1 }}</td>
-              <td>{{ row.kpiType }}</td>
-              <td style="font-weight: 500;">{{ row.name }}</td>
-              <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">{{ row.purpose }}</td>
-              <td>{{ row.frequency }}</td>
-              <td>{{ row.author }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div slot="footer" style="display: flex; justify-content: flex-end; gap: 0.5rem;">
-        <sl-button @click="showImportModal = false">取消</sl-button>
-        <sl-button variant="warning" @click="confirmImport">確定匯入 ({{ importData.length }} 筆)</sl-button>
-      </div>
-    </sl-dialog>
-
-    <!-- Share Dialog -->
-    <sl-dialog label="分享此應用程式" :open.prop="showShareModal" @sl-request-close="showShareModal = false">
-      <div v-if="shareLoading" style="text-align: center; padding: 2rem;">
-        <sl-spinner style="font-size: 2rem;"></sl-spinner>
-        <div style="margin-top: 1rem; color: #64748b;">產生短網址中...</div>
-      </div>
-      <div v-else-if="shareData" style="text-align: center;">
-        <div style="margin-bottom: 1.5rem;">
-          <img :src="shareData.qrCodeUrl" alt="QR Code" style="width: 200px; height: 200px; border-radius: 0.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        <div class="view-grid" style="margin-bottom: 1rem;">
+          <div><span class="view-label">部門</span><div>{{ viewItem.department }}</div></div>
+          <div><span class="view-label">填表人</span><div>{{ viewItem.author }}</div></div>
+          <div><span class="view-label">頻率</span><div>{{ viewItem.frequency }}</div></div>
+          <div><span class="view-label">目標值</span><div>{{ viewItem.targetValue || '-' }}</div></div>
         </div>
-        <div style="margin-bottom: 1rem;">
-          <label style="display: block; font-size: 0.875rem; color: #64748b; margin-bottom: 0.5rem;">網址</label>
-          <div style="display: flex; gap: 0.5rem;">
-            <sl-input :value="shareData.shortUrl" readonly style="flex: 1; --sl-input-font-family: monospace;"></sl-input>
-            <sl-button variant="primary" @click="copyShareUrl"><sl-icon name="clipboard"></sl-icon></sl-button>
+        <div class="view-section">
+          <div class="view-label">KPI 管理目的</div>
+          <div class="view-value">{{ viewItem.purpose }}</div>
+        </div>
+        <div v-if="viewItem.calcDescription || viewItem.numerator" class="view-section">
+          <div class="view-label">計算邏輯</div>
+          <div v-if="viewItem.calcDescription" class="view-value" style="margin-bottom: 0.5rem;">{{ viewItem.calcDescription }}</div>
+          <div class="view-grid">
+            <div v-if="viewItem.numerator"><div class="view-label">分子</div><div class="view-value">{{ viewItem.numerator }}</div></div>
+            <div v-if="viewItem.denominator"><div class="view-label">分母</div><div class="view-value">{{ viewItem.denominator }}</div></div>
           </div>
         </div>
-        <sl-alert v-if="shareCopied" variant="success" open style="margin-top: 1rem;">
-          <sl-icon slot="icon" name="check-circle"></sl-icon>
-          已複製到剪貼簿！
-        </sl-alert>
+        <div v-if="viewItem.includeConditions || viewItem.excludeConditions" class="view-section view-grid">
+          <div v-if="viewItem.includeConditions"><div class="view-label">納入條件</div><div class="view-value">{{ viewItem.includeConditions }}</div></div>
+          <div v-if="viewItem.excludeConditions"><div class="view-label">排除條件</div><div class="view-value">{{ viewItem.excludeConditions }}</div></div>
+        </div>
+        <div v-if="viewItem.notes" class="view-section">
+          <div class="view-label">補充說明</div>
+          <div class="view-value">{{ viewItem.notes }}</div>
+        </div>
+        <div class="modal-action">
+          <button class="btn btn-success" @click="editKpi(viewItem); showViewModal = false">編輯</button>
+          <button class="btn" @click="showViewModal = false">關閉</button>
+        </div>
       </div>
-      <div slot="footer"><sl-button @click="showShareModal = false">關閉</sl-button></div>
-    </sl-dialog>
+      <form method="dialog" class="modal-backdrop" @click="showViewModal = false"><button>close</button></form>
+    </dialog>
+
+    <!-- Delete Dialog -->
+    <dialog id="modal-delete" class="modal" :class="{ 'modal-open': showDeleteModal }">
+      <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">確認刪除</h3>
+        <div class="text-center py-4">
+          <i data-lucide="alert-triangle" class="w-12 h-12 mx-auto text-error mb-4"></i>
+          <p>確定要刪除 KPI「<strong>{{ deleteItem?.name }}</strong>」嗎？<br>此操作無法復原。</p>
+        </div>
+        <div class="modal-action">
+          <button class="btn" @click="showDeleteModal = false">取消</button>
+          <button class="btn btn-error" @click="deleteKpi">確定刪除</button>
+        </div>
+      </div>
+      <form method="dialog" class="modal-backdrop" @click="showDeleteModal = false"><button>close</button></form>
+    </dialog>
+
+    <!-- Import Dialog -->
+    <dialog id="modal-import" class="modal" :class="{ 'modal-open': showImportModal }">
+      <div class="modal-box max-w-4xl">
+        <h3 class="font-bold text-lg mb-4">匯入 KPI</h3>
+        <div class="alert alert-info mb-4">
+          <i data-lucide="info" class="w-5 h-5"></i>
+          <span>共 {{ importData.length }} 筆資料，將以目前登入帳號「{{ currentAccount }}」匯入</span>
+        </div>
+        <div style="max-height: 400px; overflow: auto;">
+          <table>
+            <thead>
+              <tr><th>#</th><th>類型</th><th>KPI 名稱</th><th>管理目的</th><th>頻率</th><th>填表人</th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row, idx) in importData" :key="idx">
+                <td>{{ idx + 1 }}</td>
+                <td>{{ row.kpiType }}</td>
+                <td style="font-weight: 500;">{{ row.name }}</td>
+                <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">{{ row.purpose }}</td>
+                <td>{{ row.frequency }}</td>
+                <td>{{ row.author }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="modal-action">
+          <button class="btn" @click="showImportModal = false">取消</button>
+          <button class="btn btn-warning" @click="confirmImport">確定匯入 ({{ importData.length }} 筆)</button>
+        </div>
+      </div>
+      <form method="dialog" class="modal-backdrop" @click="showImportModal = false"><button>close</button></form>
+    </dialog>
+
+    <!-- Share Dialog -->
+    <dialog id="modal-share" class="modal" :class="{ 'modal-open': showShareModal }">
+      <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">分享此應用程式</h3>
+        <div v-if="shareLoading" style="text-align: center; padding: 2rem;">
+          <span class="loading loading-spinner loading-lg"></span>
+          <div style="margin-top: 1rem; color: #64748b;">產生短網址中...</div>
+        </div>
+        <div v-else-if="shareData" style="text-align: center;">
+          <div style="margin-bottom: 1.5rem;">
+            <img :src="shareData.qrCodeUrl" alt="QR Code" style="width: 200px; height: 200px; border-radius: 0.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+          </div>
+          <div style="margin-bottom: 1rem;">
+            <label class="form-label">網址</label>
+            <div class="join w-full">
+              <input type="text" class="input input-bordered join-item flex-1 font-mono" :value="shareData.shortUrl" readonly>
+              <button class="btn btn-primary join-item" @click="copyShareUrl">
+                <i data-lucide="clipboard" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+          <div v-if="shareCopied" class="alert alert-success mt-4">
+            <i data-lucide="check-circle" class="w-5 h-5"></i>
+            <span>已複製到剪貼簿！</span>
+          </div>
+        </div>
+        <div class="modal-action">
+          <button class="btn" @click="showShareModal = false">關閉</button>
+        </div>
+      </div>
+      <form method="dialog" class="modal-backdrop" @click="showShareModal = false"><button>close</button></form>
+    </dialog>
 
     <!-- Toast -->
-    <sl-alert :variant="toast.type === 'success' ? 'success' : 'danger'" :open.prop="toast.show" closable duration="3000" style="position: fixed; bottom: 1rem; right: 1rem; z-index: 1000;">
-      <sl-icon :name="toast.type === 'success' ? 'check-circle' : 'exclamation-circle'" slot="icon"></sl-icon>
-      {{ toast.message }}
-    </sl-alert>
+    <div v-if="toast.show" class="toast toast-end toast-bottom z-50">
+      <div :class="['alert', toast.type === 'success' ? 'alert-success' : 'alert-error']">
+        <i :data-lucide="toast.type === 'success' ? 'check-circle' : 'alert-circle'" class="w-5 h-5"></i>
+        <span>{{ toast.message }}</span>
+      </div>
+    </div>
 
   </div>
 
   <script>
-    const { createApp, ref, computed, onMounted } = Vue;
+    const { createApp, ref, computed, onMounted, nextTick, watch } = Vue;
 
     const app = createApp({
       setup() {
@@ -488,6 +556,16 @@
         const toast = ref({ show: false, message: '', type: 'success' });
 
         const isFormValid = computed(() => form.value.author && form.value.kpiType && form.value.name && form.value.purpose && form.value.frequency);
+
+        // Reinitialize Lucide icons when DOM updates
+        function refreshIcons() {
+          nextTick(() => {
+            if (window.lucide) lucide.createIcons();
+          });
+        }
+
+        // Watch for changes that need icon refresh
+        watch([loading, showModal, showViewModal, showDeleteModal, showImportModal, showShareModal, isLoggedIn, kpis, maskedKpis, toast], refreshIcons);
 
         function showToast(message, type = 'success') {
           toast.value = { show: true, message, type };
@@ -724,6 +802,9 @@
         }
 
         onMounted(async () => {
+          // Initialize Lucide icons
+          if (window.lucide) lucide.createIcons();
+
           try {
             const vRes = await callApi('getVersion');
             if (vRes.success) version.value = vRes.data;
@@ -755,7 +836,6 @@
       }
     });
 
-    app.config.compilerOptions.isCustomElement = tag => tag.startsWith('sl-');
     app.mount('#app');
   </script>
 </body>

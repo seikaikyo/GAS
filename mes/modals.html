@@ -1,336 +1,364 @@
 <!-- Modal: Share -->
-<sl-dialog label="分享此應用程式" :open.prop="showShareModal" @sl-request-close="showShareModal = false">
-  <div v-if="shareLoading" style="text-align: center; padding: 2rem;">
-    <sl-spinner style="font-size: 2rem;"></sl-spinner>
-    <div style="margin-top: 1rem; color: #64748b;">產生短網址中...</div>
-  </div>
-
-  <div v-else-if="shareData" style="text-align: center;">
-    <!-- QR Code -->
-    <div style="margin-bottom: 1.5rem;">
-      <img :src="shareData.qrCodeUrl" alt="QR Code" style="width: 200px; height: 200px; border-radius: 0.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+<dialog id="modal-share" class="modal" :class="{ 'modal-open': showShareModal }">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-4">分享此應用程式</h3>
+    <div v-if="shareLoading" style="text-align: center; padding: 2rem;">
+      <span class="loading loading-spinner loading-lg"></span>
+      <div style="margin-top: 1rem; color: #64748b;">產生短網址中...</div>
     </div>
 
-    <!-- Short URL -->
-    <div style="margin-bottom: 1rem;">
-      <label class="input-label">短網址</label>
-      <div style="display: flex; gap: 0.5rem;">
-        <sl-input :value="shareData.shortUrl" readonly style="flex: 1; --sl-input-font-family: monospace;"></sl-input>
-        <sl-button variant="primary" @click="copyShareUrl">
-          <sl-icon name="clipboard"></sl-icon>
-        </sl-button>
+    <div v-else-if="shareData" style="text-align: center;">
+      <!-- QR Code -->
+      <div style="margin-bottom: 1.5rem;">
+        <img :src="shareData.qrCodeUrl" alt="QR Code" style="width: 200px; height: 200px; border-radius: 0.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
       </div>
+
+      <!-- Share URL -->
+      <div style="margin-bottom: 1rem;">
+        <label class="input-label">分享網址</label>
+        <div class="join w-full">
+          <input type="text" class="input input-bordered join-item flex-1 font-mono text-xs" :value="shareData.shortUrl" readonly>
+          <button class="btn btn-primary join-item" @click="copyShareUrl">
+            <i data-lucide="clipboard" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Copy Success Message -->
+      <div v-if="shareCopied" class="alert alert-success mt-4">
+        <i data-lucide="check-circle" class="w-5 h-5"></i>
+        <span>已複製到剪貼簿！</span>
+      </div>
+
+      <!-- Hint -->
+      <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 1rem;">
+        掃描 QR Code 或複製短網址即可分享給同事
+      </p>
     </div>
 
-    <!-- Copy Success Message -->
-    <sl-alert v-if="shareCopied" variant="success" open style="margin-top: 1rem;">
-      <sl-icon slot="icon" name="check-circle"></sl-icon>
-      已複製到剪貼簿！
-    </sl-alert>
-
-    <!-- Hint -->
-    <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 1rem;">
-      掃描 QR Code 或複製短網址即可分享給同事
-    </p>
+    <div class="modal-action">
+      <button class="btn" @click="showShareModal = false">關閉</button>
+    </div>
   </div>
-
-  <div slot="footer">
-    <sl-button variant="neutral" @click="showShareModal = false">關閉</sl-button>
-  </div>
-</sl-dialog>
+  <form method="dialog" class="modal-backdrop" @click="showShareModal = false"><button>close</button></form>
+</dialog>
 
 <!-- Modal: Create/Edit Work Order -->
-<sl-dialog :label="editingWorkOrderId ? '編輯工單' : '建立新工單'" :open.prop="showCreateWoModal" @sl-request-close="cancelEditWorkOrder">
-  <form @submit.prevent="submitWorkOrder">
-    <!-- 1. Customer -->
-    <div style="margin-bottom: 1rem;">
-      <label class="input-label">客戶名稱</label>
-      <div class="operator-grid" style="max-height: 160px; overflow-y: auto; padding: 0.5rem; background: #f8fafc; border-radius: 0.5rem;">
-        <div v-for="c in customers" :key="c.id"
-             :class="['operator-chip', formWo.customerName === c.name ? 'selected' : '']"
-             @click="formWo.customerName = c.name; onCustomerSelect()">
-          {{ c.name }}
-        </div>
-      </div>
-    </div>
-
-    <!-- 2. Site -->
-    <div v-if="formWo.customerName && customerSites.length > 0" style="margin-bottom: 1rem;">
-      <label class="input-label">廠區</label>
-      <div class="chip-group">
-        <div v-for="site in customerSites" :key="site"
-             :class="['chip', formWo.customerSite === site ? 'selected' : '']"
-             @click="formWo.customerSite = site">{{ site }}</div>
-      </div>
-    </div>
-
-    <!-- 3. Product -->
-    <div style="margin-bottom: 1rem;">
-      <label class="input-label">產品型號</label>
-      <div class="wo-card-list" style="max-height: 160px; padding: 0.5rem; background: #f8fafc; border-radius: 0.5rem;">
-        <div v-for="p in products" :key="p.id"
-             :class="['wo-card', formWo.productModel === p.code ? 'selected' : '']"
-             @click="formWo.productModel = p.code">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <div class="wo-number">{{ p.code }}</div>
-              <div class="wo-info">{{ p.name }}</div>
-            </div>
-            <sl-badge variant="neutral">{{ p.type }}</sl-badge>
+<dialog id="modal-wo" class="modal" :class="{ 'modal-open': showCreateWoModal }">
+  <div class="modal-box max-w-2xl">
+    <h3 class="font-bold text-lg mb-4">{{ editingWorkOrderId ? '編輯工單' : '建立新工單' }}</h3>
+    <form @submit.prevent="submitWorkOrder">
+      <!-- 1. Customer -->
+      <div style="margin-bottom: 1rem;">
+        <label class="input-label">客戶名稱</label>
+        <div class="operator-grid" style="max-height: 160px; overflow-y: auto; padding: 0.5rem; background: #f8fafc; border-radius: 0.5rem;">
+          <div v-for="c in customers" :key="c.id"
+               :class="['operator-chip', formWo.customerName === c.name ? 'selected' : '']"
+               @click="formWo.customerName = c.name; onCustomerSelect()">
+            {{ c.name }}
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- 4. Order Type -->
-    <div style="margin-bottom: 1rem;">
-      <label class="input-label">工單類型</label>
-      <div class="chip-group">
-        <div :class="['chip', formWo.orderType === 'deglue' ? 'selected' : '']"
-             @click="formWo.orderType = 'deglue'; formWo.sourceWorkOrderId = ''">除膠</div>
-        <div :class="['chip', formWo.orderType === 'regeneration' ? 'selected' : '']"
-             @click="formWo.orderType = 'regeneration'">再生</div>
-        <div :class="['chip', formWo.orderType === 'rework' ? 'selected' : '']"
-             @click="formWo.orderType = 'rework'; formWo.sourceWorkOrderId = ''">重工</div>
-      </div>
-    </div>
-
-    <!-- 4.5 Source Work Order (Regeneration only) -->
-    <div v-if="formWo.orderType === 'regeneration'" class="form-section" style="margin-bottom: 1rem; background: linear-gradient(135deg, rgba(251,146,60,0.1) 0%, rgba(251,146,60,0.05) 100%);">
-      <label class="input-label" style="color: #ea580c;">選擇來源除膠工單</label>
-      <div v-if="completedDeglueOrders.length === 0" style="color: #ea580c; font-size: 0.875rem;">
-        目前沒有已完成的除膠工單可供選擇
-      </div>
-      <div v-else class="wo-card-list" style="max-height: 160px;">
-        <div v-for="swo in completedDeglueOrders" :key="swo.id"
-             :class="['wo-card', formWo.sourceWorkOrderId === swo.id ? 'selected' : '']"
-             @click="formWo.sourceWorkOrderId = swo.id; onSourceWorkOrderSelect()"
-             style="border-color: #fed7aa;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <div class="wo-number">{{ swo.orderNumber }}</div>
-              <div class="wo-info">{{ swo.customerName }} / {{ swo.productModel }}</div>
-            </div>
-            <span style="color: #16a34a; font-size: 0.75rem; font-weight: 700;">良品: {{ swo.goodQty }}</span>
-          </div>
+      <!-- 2. Site -->
+      <div v-if="formWo.customerName && customerSites.length > 0" style="margin-bottom: 1rem;">
+        <label class="input-label">廠區</label>
+        <div class="chip-group">
+          <div v-for="site in customerSites" :key="site"
+               :class="['chip', formWo.customerSite === site ? 'selected' : '']"
+               @click="formWo.customerSite = site">{{ site }}</div>
         </div>
       </div>
-      <div v-if="formWo.sourceWorkOrderId" style="font-size: 0.75rem; color: #64748b; margin-top: 0.5rem;">
-        已選擇來源工單，客戶/產品資訊已自動帶入
-      </div>
-    </div>
 
-    <!-- 4.6 Source Work Order (Rework only) -->
-    <div v-if="formWo.orderType === 'rework'" class="form-section" style="margin-bottom: 1rem; background: linear-gradient(135deg, rgba(239,68,68,0.1) 0%, rgba(239,68,68,0.05) 100%);">
-      <label class="input-label" style="color: #dc2626;">選擇來源工單（釋氣 NG 需重烤）</label>
-      <div v-if="reworkableOrders.length === 0" style="color: #dc2626; font-size: 0.875rem;">
-        目前沒有可重工的工單（已完成且未重工過）
-      </div>
-      <div v-else class="wo-card-list" style="max-height: 160px;">
-        <div v-for="swo in reworkableOrders" :key="swo.id"
-             :class="['wo-card', formWo.sourceWorkOrderId === swo.id ? 'selected' : '']"
-             @click="formWo.sourceWorkOrderId = swo.id; onSourceWorkOrderSelect()"
-             style="border-color: #fecaca;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <div class="wo-number">{{ swo.orderNumber }}</div>
-              <div class="wo-info">{{ swo.customerName }} / {{ swo.productModel }}</div>
-            </div>
-            <div style="text-align: right;">
-              <sl-badge :variant="swo.orderType === 'regeneration' ? 'warning' : 'primary'" style="font-size: 0.7rem;">
-                {{ { deglue: '除膠', regeneration: '再生' }[swo.orderType] || swo.orderType }}
-              </sl-badge>
-              <div style="color: #16a34a; font-size: 0.75rem; font-weight: 700;">良品: {{ swo.goodQty }}</div>
+      <!-- 3. Product -->
+      <div style="margin-bottom: 1rem;">
+        <label class="input-label">產品型號</label>
+        <div class="wo-card-list" style="max-height: 160px; padding: 0.5rem; background: #f8fafc; border-radius: 0.5rem;">
+          <div v-for="p in products" :key="p.id"
+               :class="['wo-card', formWo.productModel === p.code ? 'selected' : '']"
+               @click="formWo.productModel = p.code">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div class="wo-number">{{ p.code }}</div>
+                <div class="wo-info">{{ p.name }}</div>
+              </div>
+              <span class="badge badge-ghost">{{ p.type }}</span>
             </div>
           </div>
         </div>
       </div>
-      <div style="font-size: 0.75rem; color: #dc2626; margin-top: 0.5rem; background: #fef2f2; padding: 0.5rem; border-radius: 0.25rem;">
-        ⚠️ 重工上限 1 次，重工後仍 NG 須報廢
-      </div>
-    </div>
 
-    <!-- 5. Regeneration Count -->
-    <div v-if="formWo.orderType === 'regeneration'" style="margin-bottom: 1rem;">
-      <label class="input-label">目標再生次數</label>
-      <div class="r-count-grid">
-        <div v-for="n in 10" :key="n"
-             :class="['r-chip', formWo.targetRegenerationCount === n ? 'selected' : '']"
-             @click="formWo.targetRegenerationCount = n">R{{ n }}</div>
-      </div>
-    </div>
-
-    <!-- 6. Quantity & Priority -->
-    <div class="form-row" style="margin-bottom: 1rem;">
-      <div>
-        <label class="input-label">數量</label>
-        <sl-input :value="formWo.quantity" @sl-input="e => formWo.quantity = Number(e.target.value)" type="number" required></sl-input>
-      </div>
-      <div>
-        <label class="input-label">優先級</label>
-        <div style="display: flex; gap: 0.5rem;">
-          <div :class="['chip', formWo.priority === 'normal' ? 'selected' : '']"
-               @click="formWo.priority = 'normal'" style="flex: 1; text-align: center;">一般</div>
-          <div :class="['chip', 'chip-ng', formWo.priority === 'urgent' ? 'selected' : '']"
-               @click="formWo.priority = 'urgent'" style="flex: 1; text-align: center;">緊急</div>
+      <!-- 4. Order Type -->
+      <div style="margin-bottom: 1rem;">
+        <label class="input-label">工單類型</label>
+        <div class="chip-group">
+          <div :class="['chip', formWo.orderType === 'deglue' ? 'selected' : '']"
+               @click="formWo.orderType = 'deglue'; formWo.sourceWorkOrderId = ''">除膠</div>
+          <div :class="['chip', formWo.orderType === 'regeneration' ? 'selected' : '']"
+               @click="formWo.orderType = 'regeneration'">再生</div>
+          <div :class="['chip', formWo.orderType === 'rework' ? 'selected' : '']"
+               @click="formWo.orderType = 'rework'; formWo.sourceWorkOrderId = ''">重工</div>
         </div>
       </div>
-    </div>
-  </form>
 
-  <div slot="footer" class="button-group">
-    <sl-button variant="neutral" @click="cancelEditWorkOrder">取消</sl-button>
-    <sl-button variant="primary" @click="submitWorkOrder">
-      {{ editingWorkOrderId ? '更新工單' : '建立工單' }}
-    </sl-button>
+      <!-- 4.5 Source Work Order (Regeneration only) -->
+      <div v-if="formWo.orderType === 'regeneration'" class="form-section" style="margin-bottom: 1rem; background: linear-gradient(135deg, rgba(251,146,60,0.1) 0%, rgba(251,146,60,0.05) 100%);">
+        <label class="input-label" style="color: #ea580c;">選擇來源除膠工單</label>
+        <div v-if="completedDeglueOrders.length === 0" style="color: #ea580c; font-size: 0.875rem;">
+          目前沒有已完成的除膠工單可供選擇
+        </div>
+        <div v-else class="wo-card-list" style="max-height: 160px;">
+          <div v-for="swo in completedDeglueOrders" :key="swo.id"
+               :class="['wo-card', formWo.sourceWorkOrderId === swo.id ? 'selected' : '']"
+               @click="formWo.sourceWorkOrderId = swo.id; onSourceWorkOrderSelect()"
+               style="border-color: #fed7aa;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div class="wo-number">{{ swo.orderNumber }}</div>
+                <div class="wo-info">{{ swo.customerName }} / {{ swo.productModel }}</div>
+              </div>
+              <span style="color: #16a34a; font-size: 0.75rem; font-weight: 700;">良品: {{ swo.goodQty }}</span>
+            </div>
+          </div>
+        </div>
+        <div v-if="formWo.sourceWorkOrderId" style="font-size: 0.75rem; color: #64748b; margin-top: 0.5rem;">
+          已選擇來源工單，客戶/產品資訊已自動帶入
+        </div>
+      </div>
+
+      <!-- 4.6 Source Work Order (Rework only) -->
+      <div v-if="formWo.orderType === 'rework'" class="form-section" style="margin-bottom: 1rem; background: linear-gradient(135deg, rgba(239,68,68,0.1) 0%, rgba(239,68,68,0.05) 100%);">
+        <label class="input-label" style="color: #dc2626;">選擇來源工單（釋氣 NG 需重烤）</label>
+        <div v-if="reworkableOrders.length === 0" style="color: #dc2626; font-size: 0.875rem;">
+          目前沒有可重工的工單（已完成且未重工過）
+        </div>
+        <div v-else class="wo-card-list" style="max-height: 160px;">
+          <div v-for="swo in reworkableOrders" :key="swo.id"
+               :class="['wo-card', formWo.sourceWorkOrderId === swo.id ? 'selected' : '']"
+               @click="formWo.sourceWorkOrderId = swo.id; onSourceWorkOrderSelect()"
+               style="border-color: #fecaca;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div class="wo-number">{{ swo.orderNumber }}</div>
+                <div class="wo-info">{{ swo.customerName }} / {{ swo.productModel }}</div>
+              </div>
+              <div style="text-align: right;">
+                <span :class="['badge', swo.orderType === 'regeneration' ? 'badge-warning' : 'badge-primary']" style="font-size: 0.7rem;">
+                  {{ { deglue: '除膠', regeneration: '再生' }[swo.orderType] || swo.orderType }}
+                </span>
+                <div style="color: #16a34a; font-size: 0.75rem; font-weight: 700;">良品: {{ swo.goodQty }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="font-size: 0.75rem; color: #dc2626; margin-top: 0.5rem; background: #fef2f2; padding: 0.5rem; border-radius: 0.25rem;">
+          重工上限 1 次，重工後仍 NG 須報廢
+        </div>
+      </div>
+
+      <!-- 5. Regeneration Count -->
+      <div v-if="formWo.orderType === 'regeneration'" style="margin-bottom: 1rem;">
+        <label class="input-label">目標再生次數</label>
+        <div class="r-count-grid">
+          <div v-for="n in 10" :key="n"
+               :class="['r-chip', formWo.targetRegenerationCount === n ? 'selected' : '']"
+               @click="formWo.targetRegenerationCount = n">R{{ n }}</div>
+        </div>
+      </div>
+
+      <!-- 6. Quantity & Priority -->
+      <div class="form-row" style="margin-bottom: 1rem;">
+        <div>
+          <label class="input-label">數量</label>
+          <input type="number" class="input input-bordered w-full" v-model.number="formWo.quantity" required>
+        </div>
+        <div>
+          <label class="input-label">優先級</label>
+          <div style="display: flex; gap: 0.5rem;">
+            <div :class="['chip', formWo.priority === 'normal' ? 'selected' : '']"
+                 @click="formWo.priority = 'normal'" style="flex: 1; text-align: center;">一般</div>
+            <div :class="['chip', 'chip-ng', formWo.priority === 'urgent' ? 'selected' : '']"
+                 @click="formWo.priority = 'urgent'" style="flex: 1; text-align: center;">緊急</div>
+          </div>
+        </div>
+      </div>
+    </form>
+
+    <div class="modal-action">
+      <button class="btn" @click="cancelEditWorkOrder">取消</button>
+      <button class="btn btn-primary" @click="submitWorkOrder">
+        {{ editingWorkOrderId ? '更新工單' : '建立工單' }}
+      </button>
+    </div>
   </div>
-</sl-dialog>
+  <form method="dialog" class="modal-backdrop" @click="cancelEditWorkOrder"><button>close</button></form>
+</dialog>
 
 <!-- Modal: Dispatch -->
-<sl-dialog label="新增派工" :open.prop="showDispatchModal" @sl-request-close="showDispatchModal = false">
-  <p style="color: #64748b; font-size: 0.875rem; margin-top: 0;">針對工單: <strong>{{ selectedWo?.orderNumber }}</strong></p>
+<dialog id="modal-dispatch" class="modal" :class="{ 'modal-open': showDispatchModal }">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-4">新增派工</h3>
+    <p style="color: #64748b; font-size: 0.875rem; margin-top: 0;">針對工單: <strong>{{ selectedWo?.orderNumber }}</strong></p>
 
-  <form @submit.prevent="submitDispatch">
-    <!-- Station -->
-    <div style="margin-bottom: 1rem;">
-      <label class="input-label">工作站點</label>
-      <div class="chip-group">
-        <!-- 重工工單只能選烘箱站（再次烘烤） -->
-        <template v-if="selectedWo?.orderType === 'rework'">
-          <div class="chip selected">烘箱站</div>
-          <span style="color: #94a3b8; font-size: 0.75rem; margin-left: 0.5rem;">重工僅限烘箱站（回爐重烤）</span>
-        </template>
-        <template v-else>
-          <div v-for="st in ['除膠站', '烘箱站', 'OQC檢驗', 'RFID更換', '包裝站']" :key="st"
-               :class="['chip', formDispatch.stationName === st ? 'selected' : '']"
-               @click="formDispatch.stationName = st">{{ st }}</div>
-        </template>
-      </div>
-    </div>
-
-    <!-- Operator -->
-    <div style="margin-bottom: 1rem;">
-      <label class="input-label">作業員</label>
-      <div v-if="operators.length > 0 && operators.length <= 12" class="operator-grid">
-        <div v-for="op in operators" :key="op.id"
-             :class="['operator-chip', formDispatch.operatorName === op.name ? 'selected' : '']"
-             @click="formDispatch.operatorName = op.name">
-          {{ op.name }}
+    <form @submit.prevent="submitDispatch">
+      <!-- Station -->
+      <div style="margin-bottom: 1rem;">
+        <label class="input-label">工作站點</label>
+        <div class="chip-group">
+          <!-- 重工工單只能選烘箱站（再次烘烤） -->
+          <template v-if="selectedWo?.orderType === 'rework'">
+            <div class="chip selected">烘箱站</div>
+            <span style="color: #94a3b8; font-size: 0.75rem; margin-left: 0.5rem;">重工僅限烘箱站（回爐重烤）</span>
+          </template>
+          <template v-else>
+            <div v-for="st in ['除膠站', '烘箱站', 'OQC檢驗', 'RFID更換', '包裝站']" :key="st"
+                 :class="['chip', formDispatch.stationName === st ? 'selected' : '']"
+                 @click="formDispatch.stationName = st">{{ st }}</div>
+          </template>
         </div>
       </div>
-      <sl-select v-else :value="formDispatch.operatorName" @sl-change="e => formDispatch.operatorName = e.target.value" placeholder="-- 請選擇 --" required>
-        <sl-option v-for="op in operators" :key="op.id" :value="op.name">{{ op.name }}</sl-option>
-      </sl-select>
-    </div>
 
-    <!-- Quantity -->
-    <div style="margin-bottom: 1rem;">
-      <label class="input-label">派工數量</label>
-      <sl-input :value="formDispatch.quantity" @sl-input="e => formDispatch.quantity = Number(e.target.value)" type="number" required></sl-input>
-    </div>
-  </form>
+      <!-- Operator -->
+      <div style="margin-bottom: 1rem;">
+        <label class="input-label">作業員</label>
+        <div v-if="operators.length > 0 && operators.length <= 12" class="operator-grid">
+          <div v-for="op in operators" :key="op.id"
+               :class="['operator-chip', formDispatch.operatorName === op.name ? 'selected' : '']"
+               @click="formDispatch.operatorName = op.name">
+            {{ op.name }}
+          </div>
+        </div>
+        <select v-else class="select select-bordered w-full" v-model="formDispatch.operatorName" required>
+          <option value="">-- 請選擇 --</option>
+          <option v-for="op in operators" :key="op.id" :value="op.name">{{ op.name }}</option>
+        </select>
+      </div>
 
-  <div slot="footer" class="button-group">
-    <sl-button variant="neutral" @click="showDispatchModal = false">取消</sl-button>
-    <sl-button variant="primary" @click="submitDispatch">確認派工</sl-button>
+      <!-- Quantity -->
+      <div style="margin-bottom: 1rem;">
+        <label class="input-label">派工數量</label>
+        <input type="number" class="input input-bordered w-full" v-model.number="formDispatch.quantity" required>
+      </div>
+    </form>
+
+    <div class="modal-action">
+      <button class="btn" @click="showDispatchModal = false">取消</button>
+      <button class="btn btn-primary" @click="submitDispatch">確認派工</button>
+    </div>
   </div>
-</sl-dialog>
+  <form method="dialog" class="modal-backdrop" @click="showDispatchModal = false"><button>close</button></form>
+</dialog>
 
 <!-- Modal: Report -->
-<sl-dialog label="生產回報" :open.prop="showReportModal" @sl-request-close="showReportModal = false">
-  <p style="color: #64748b; font-size: 0.875rem; margin-top: 0;">派工單: <strong>{{ selectedDispatch?.dispatchNumber }}</strong></p>
+<dialog id="modal-report" class="modal" :class="{ 'modal-open': showReportModal }">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-4">生產回報</h3>
+    <p style="color: #64748b; font-size: 0.875rem; margin-top: 0;">派工單: <strong>{{ selectedDispatch?.dispatchNumber }}</strong></p>
 
-  <form @submit.prevent="submitReport">
-    <div class="form-row" style="margin-bottom: 1rem;">
-      <div>
-        <label class="input-label" style="color: #16a34a;">良品數量</label>
-        <sl-input :value="formReport.goodQty" @sl-input="e => formReport.goodQty = Number(e.target.value)" type="number" min="0" style="--sl-input-border-color: #22c55e;"></sl-input>
+    <form @submit.prevent="submitReport">
+      <div class="form-row" style="margin-bottom: 1rem;">
+        <div>
+          <label class="input-label" style="color: #16a34a;">良品數量</label>
+          <input type="number" class="input input-bordered w-full border-success" v-model.number="formReport.goodQty" min="0">
+        </div>
+        <div>
+          <label class="input-label" style="color: #dc2626;">NG 數量</label>
+          <input type="number" class="input input-bordered w-full border-error" v-model.number="formReport.ngQty" min="0">
+        </div>
       </div>
-      <div>
-        <label class="input-label" style="color: #dc2626;">NG 數量</label>
-        <sl-input :value="formReport.ngQty" @sl-input="e => formReport.ngQty = Number(e.target.value)" type="number" min="0" style="--sl-input-border-color: #ef4444;"></sl-input>
+
+      <div style="margin-bottom: 1rem;">
+        <label class="label cursor-pointer justify-start gap-2">
+          <input type="checkbox" class="checkbox" v-model="formReport.hasAbnormal">
+          <span class="label-text">發生異常</span>
+        </label>
       </div>
-    </div>
 
-    <div style="margin-bottom: 1rem;">
-      <sl-checkbox :checked="formReport.hasAbnormal" @sl-change="e => formReport.hasAbnormal = e.target.checked">發生異常</sl-checkbox>
-    </div>
+      <div v-if="formReport.hasAbnormal" style="margin-bottom: 1rem;">
+        <label class="input-label">異常原因</label>
+        <input type="text" class="input input-bordered w-full" v-model="formReport.abnormalType">
+      </div>
+    </form>
 
-    <div v-if="formReport.hasAbnormal" style="margin-bottom: 1rem;">
-      <label class="input-label">異常原因</label>
-      <sl-input :value="formReport.abnormalType" @sl-input="e => formReport.abnormalType = e.target.value"></sl-input>
+    <div class="modal-action">
+      <button class="btn" @click="showReportModal = false">取消</button>
+      <button class="btn btn-success" @click="submitReport">提交報工</button>
     </div>
-  </form>
-
-  <div slot="footer" class="button-group">
-    <sl-button variant="neutral" @click="showReportModal = false">取消</sl-button>
-    <sl-button variant="success" @click="submitReport">提交報工</sl-button>
   </div>
-</sl-dialog>
+  <form method="dialog" class="modal-backdrop" @click="showReportModal = false"><button>close</button></form>
+</dialog>
 
 <!-- Modal: Inspection Detail -->
-<sl-dialog :label="inspectionType === 'outgassing' ? '釋氣檢驗詳情' : 'AOI 檢驗詳情'" :open.prop="showInspectionDetailModal" @sl-request-close="showInspectionDetailModal = false">
-  <div v-if="selectedInspection" style="display: flex; flex-direction: column; gap: 1rem;">
-    <!-- Header Info -->
-    <div class="info-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-      <div class="info-item" style="padding: 0.75rem; background: #f8fafc; border-radius: 0.5rem;">
-        <label style="font-size: 0.75rem; color: #64748b; display: block;">檢驗單號</label>
-        <span style="font-weight: 600; font-family: monospace;">{{ selectedInspection.testNumber || selectedInspection.inspectionNumber }}</span>
+<dialog id="modal-inspection" class="modal" :class="{ 'modal-open': showInspectionDetailModal }">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-4">{{ inspectionType === 'outgassing' ? '釋氣檢驗詳情' : 'AOI 檢驗詳情' }}</h3>
+    <div v-if="selectedInspection" style="display: flex; flex-direction: column; gap: 1rem;">
+      <!-- Header Info -->
+      <div class="info-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+        <div class="info-item" style="padding: 0.75rem; background: #f8fafc; border-radius: 0.5rem;">
+          <label style="font-size: 0.75rem; color: #64748b; display: block;">檢驗單號</label>
+          <span style="font-weight: 600; font-family: monospace;">{{ selectedInspection.testNumber || selectedInspection.inspectionNumber }}</span>
+        </div>
+        <div class="info-item" style="padding: 0.75rem; background: #f8fafc; border-radius: 0.5rem;">
+          <label style="font-size: 0.75rem; color: #64748b; display: block;">工單編號</label>
+          <span style="font-weight: 600;">{{ selectedInspection.orderNumber }}</span>
+        </div>
+        <div class="info-item" style="padding: 0.75rem; background: #f8fafc; border-radius: 0.5rem;">
+          <label style="font-size: 0.75rem; color: #64748b; display: block;">條碼/序號</label>
+          <span style="font-family: monospace;">{{ selectedInspection.rfidCode || '-' }}</span>
+        </div>
+        <div class="info-item" style="padding: 0.75rem; border-radius: 0.5rem;" :style="{ background: selectedInspection.result === 'PASS' ? '#dcfce7' : '#fee2e2' }">
+          <label style="font-size: 0.75rem; color: #64748b; display: block;">檢驗結果</label>
+          <span :style="{ fontWeight: 700, color: selectedInspection.result === 'PASS' ? '#16a34a' : '#dc2626' }">{{ selectedInspection.result }}</span>
+        </div>
       </div>
-      <div class="info-item" style="padding: 0.75rem; background: #f8fafc; border-radius: 0.5rem;">
-        <label style="font-size: 0.75rem; color: #64748b; display: block;">工單編號</label>
-        <span style="font-weight: 600;">{{ selectedInspection.orderNumber }}</span>
+
+      <!-- AOI Specific: Defect Info -->
+      <div v-if="inspectionType === 'aoi' && selectedInspection.defectType" style="padding: 0.75rem; background: #fff7ed; border-radius: 0.5rem; border: 1px solid #fed7aa;">
+        <label style="font-size: 0.75rem; color: #9a3412; display: block;">缺陷類型</label>
+        <span style="font-weight: 600; color: #c2410c;">{{ selectedInspection.defectType }}</span>
+        <span v-if="selectedInspection.defectCount" style="margin-left: 0.5rem; color: #9a3412;">({{ selectedInspection.defectCount }} 處)</span>
       </div>
-      <div class="info-item" style="padding: 0.75rem; background: #f8fafc; border-radius: 0.5rem;">
-        <label style="font-size: 0.75rem; color: #64748b; display: block;">條碼/序號</label>
-        <span style="font-family: monospace;">{{ selectedInspection.rfidCode || '-' }}</span>
+
+      <!-- Notes -->
+      <div v-if="selectedInspection.notes" style="padding: 0.75rem; background: #f1f5f9; border-radius: 0.5rem;">
+        <label style="font-size: 0.75rem; color: #64748b; display: block; margin-bottom: 0.25rem;">備註</label>
+        <span>{{ selectedInspection.notes }}</span>
       </div>
-      <div class="info-item" style="padding: 0.75rem; border-radius: 0.5rem;" :style="{ background: selectedInspection.result === 'PASS' ? '#dcfce7' : '#fee2e2' }">
-        <label style="font-size: 0.75rem; color: #64748b; display: block;">檢驗結果</label>
-        <span :style="{ fontWeight: 700, color: selectedInspection.result === 'PASS' ? '#16a34a' : '#dc2626' }">{{ selectedInspection.result }}</span>
+
+      <!-- Operator & Time -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+        <div>
+          <label style="font-size: 0.75rem; color: #64748b; display: block;">檢驗員</label>
+          <span style="font-weight: 500;">{{ selectedInspection.operatorName }}</span>
+        </div>
+        <div>
+          <label style="font-size: 0.75rem; color: #64748b; display: block;">檢驗時間</label>
+          <span style="font-size: 0.875rem;">{{ (selectedInspection.testedAt || selectedInspection.inspectedAt) ? new Date(selectedInspection.testedAt || selectedInspection.inspectedAt).toLocaleString('zh-TW') : '-' }}</span>
+        </div>
+      </div>
+
+      <!-- Signature -->
+      <div v-if="selectedInspection.signature" style="margin-top: 0.5rem; padding: 1rem; background: #f8fafc; border-radius: 0.5rem; border: 1px solid #e2e8f0;">
+        <label style="font-size: 0.75rem; color: #64748b; display: block; margin-bottom: 0.5rem;">品檢簽名</label>
+        <div style="text-align: center;">
+          <img :src="selectedInspection.signature" alt="簽名" style="max-height: 100px; border-bottom: 1px solid #cbd5e1;">
+        </div>
+      </div>
+
+      <!-- No Signature Notice -->
+      <div v-else-if="inspectionType === 'outgassing'" style="padding: 0.75rem; background: #fef3c7; border-radius: 0.5rem; text-align: center; color: #92400e; font-size: 0.875rem;">
+        此筆檢驗紀錄無簽名資料
       </div>
     </div>
 
-    <!-- AOI Specific: Defect Info -->
-    <div v-if="inspectionType === 'aoi' && selectedInspection.defectType" style="padding: 0.75rem; background: #fff7ed; border-radius: 0.5rem; border: 1px solid #fed7aa;">
-      <label style="font-size: 0.75rem; color: #9a3412; display: block;">缺陷類型</label>
-      <span style="font-weight: 600; color: #c2410c;">{{ selectedInspection.defectType }}</span>
-      <span v-if="selectedInspection.defectCount" style="margin-left: 0.5rem; color: #9a3412;">({{ selectedInspection.defectCount }} 處)</span>
-    </div>
-
-    <!-- Notes -->
-    <div v-if="selectedInspection.notes" style="padding: 0.75rem; background: #f1f5f9; border-radius: 0.5rem;">
-      <label style="font-size: 0.75rem; color: #64748b; display: block; margin-bottom: 0.25rem;">備註</label>
-      <span>{{ selectedInspection.notes }}</span>
-    </div>
-
-    <!-- Operator & Time -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-      <div>
-        <label style="font-size: 0.75rem; color: #64748b; display: block;">檢驗員</label>
-        <span style="font-weight: 500;">{{ selectedInspection.operatorName }}</span>
-      </div>
-      <div>
-        <label style="font-size: 0.75rem; color: #64748b; display: block;">檢驗時間</label>
-        <span style="font-size: 0.875rem;">{{ (selectedInspection.testedAt || selectedInspection.inspectedAt) ? new Date(selectedInspection.testedAt || selectedInspection.inspectedAt).toLocaleString('zh-TW') : '-' }}</span>
-      </div>
-    </div>
-
-    <!-- Signature -->
-    <div v-if="selectedInspection.signature" style="margin-top: 0.5rem; padding: 1rem; background: #f8fafc; border-radius: 0.5rem; border: 1px solid #e2e8f0;">
-      <label style="font-size: 0.75rem; color: #64748b; display: block; margin-bottom: 0.5rem;">品檢簽名</label>
-      <div style="text-align: center;">
-        <img :src="selectedInspection.signature" alt="簽名" style="max-height: 100px; border-bottom: 1px solid #cbd5e1;">
-      </div>
-    </div>
-
-    <!-- No Signature Notice -->
-    <div v-else-if="inspectionType === 'outgassing'" style="padding: 0.75rem; background: #fef3c7; border-radius: 0.5rem; text-align: center; color: #92400e; font-size: 0.875rem;">
-      此筆檢驗紀錄無簽名資料
+    <div class="modal-action">
+      <button v-if="inspectionType === 'outgassing'" class="btn btn-primary" @click="generateSingleOutgassingReport(selectedInspection)">
+        <i data-lucide="file-text" class="w-4 h-4"></i>
+        下載報告
+      </button>
+      <button class="btn" @click="showInspectionDetailModal = false">關閉</button>
     </div>
   </div>
-
-  <div slot="footer">
-    <sl-button variant="neutral" @click="showInspectionDetailModal = false">關閉</sl-button>
-  </div>
-</sl-dialog>
+  <form method="dialog" class="modal-backdrop" @click="showInspectionDetailModal = false"><button>close</button></form>
+</dialog>

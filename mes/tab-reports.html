@@ -1,5 +1,5 @@
 <!-- Tab: Reports -->
-<sl-tab-panel name="reports">
+<div v-show="currentTab === 'reports'">
   <div class="section-header">
     <h2>報工紀錄</h2>
   </div>
@@ -36,9 +36,9 @@
             <span style="color: #dc2626; font-weight: 700;">{{ r.ngQty }}</span>
           </td>
           <td>
-            <sl-badge v-if="r.hasAbnormal === true || r.hasAbnormal === 'TRUE'" variant="danger">
+            <span v-if="r.hasAbnormal === true || r.hasAbnormal === 'TRUE'" class="badge badge-error">
               {{ r.abnormalType || '異常' }}
-            </sl-badge>
+            </span>
             <span v-else style="color: #94a3b8;">-</span>
           </td>
           <td style="font-size: 0.75rem; color: #64748b;">
@@ -48,7 +48,7 @@
         <tr v-if="reports.length === 0" class="empty-row">
           <td colspan="7">
             <div class="empty-state">
-              <sl-icon name="file-earmark-text"></sl-icon>
+              <i data-lucide="file-text" class="w-12 h-12 mx-auto mb-4 opacity-50"></i>
               <div>暫無報工紀錄</div>
             </div>
           </td>
@@ -56,4 +56,4 @@
       </tbody>
     </table>
   </div>
-</sl-tab-panel>
+</div>

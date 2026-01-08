@@ -1,11 +1,11 @@
 <!-- Tab: Work Orders -->
-<sl-tab-panel name="work-orders">
+<div v-show="currentTab === 'work-orders'">
   <div class="section-header">
     <h2>工單列表</h2>
-    <sl-button variant="success" @click="showCreateWoModal = true">
-      <sl-icon slot="prefix" name="plus-lg"></sl-icon>
+    <button class="btn btn-success" @click="showCreateWoModal = true">
+      <i data-lucide="plus" class="w-4 h-4"></i>
       建立工單
-    </sl-button>
+    </button>
   </div>
 
   <div class="scrollable">
@@ -30,12 +30,12 @@
             <div style="font-size: 0.75rem; color: #64748b;">{{ wo.customerName }}</div>
           </td>
           <td>
-            <sl-badge :variant="wo.orderType === 'regeneration' ? 'warning' : wo.orderType === 'rework' ? 'danger' : 'primary'">
+            <span :class="['badge', wo.orderType === 'regeneration' ? 'badge-warning' : wo.orderType === 'rework' ? 'badge-error' : 'badge-primary']">
               {{ { deglue: '除膠', regeneration: '再生', rework: '重工' }[wo.orderType] || wo.orderType }}
-            </sl-badge>
-            <sl-badge v-if="wo.orderType === 'rework' && wo.reworkCount" variant="danger" style="margin-left: 0.25rem;">
+            </span>
+            <span v-if="wo.orderType === 'rework' && wo.reworkCount" class="badge badge-error ml-1">
               第{{ wo.reworkCount }}次
-            </sl-badge>
+            </span>
           </td>
           <td>
             <span :class="'status-badge status-' + wo.status">
@@ -48,23 +48,23 @@
           </td>
           <td>
             <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-              <sl-button v-if="wo.status !== 'completed'" size="small" variant="primary" @click="openDispatchModal(wo)">
+              <button v-if="wo.status !== 'completed'" class="btn btn-sm btn-primary" @click="openDispatchModal(wo)">
                 派工
-              </sl-button>
-              <sl-button v-if="wo.status === 'draft'" size="small" variant="neutral" @click="startEditWorkOrder(wo)">
+              </button>
+              <button v-if="wo.status === 'draft'" class="btn btn-sm btn-ghost" @click="startEditWorkOrder(wo)">
                 編輯
-              </sl-button>
-              <sl-button v-if="wo.status === 'draft' || wo.status === 'pending'" size="small" variant="danger" outline @click="deleteWorkOrder(wo.id)">
+              </button>
+              <button v-if="wo.status === 'draft' || wo.status === 'pending'" class="btn btn-sm btn-outline btn-error" @click="deleteWorkOrder(wo.id)">
                 取消
-              </sl-button>
-              <sl-badge v-if="wo.status === 'completed'" variant="success">已完成</sl-badge>
+              </button>
+              <span v-if="wo.status === 'completed'" class="badge badge-success">已完成</span>
             </div>
           </td>
         </tr>
         <tr v-if="workOrders.length === 0" class="empty-row">
           <td colspan="6">
             <div class="empty-state">
-              <sl-icon name="inbox"></sl-icon>
+              <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-4 opacity-50"></i>
               <div>暫無工單資料</div>
             </div>
           </td>
@@ -72,4 +72,4 @@
       </tbody>
     </table>
   </div>
-</sl-tab-panel>
+</div>

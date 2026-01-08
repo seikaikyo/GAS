@@ -1,0 +1,323 @@
+<!-- Tab: Label Editor -->
+<div v-show="currentTab === 'label-editor'">
+  <div class="section-header">
+    <h2>樣式設計</h2>
+    <div style="display: flex; gap: 0.5rem;">
+      <select class="select select-bordered select-sm" v-model="currentTemplateId" @change="loadTemplate">
+        <option value="">-- 新標籤 --</option>
+        <option v-for="tpl in labelTemplates" :key="tpl.id" :value="tpl.id">{{ tpl.name }}</option>
+      </select>
+      <button class="btn btn-sm btn-ghost" @click="showTemplateSaveModal = true">
+        <i data-lucide="save" class="w-4 h-4"></i>
+        儲存
+      </button>
+      <button class="btn btn-sm btn-primary" @click="previewLabel">
+        <i data-lucide="printer" class="w-4 h-4"></i>
+        預覽列印
+      </button>
+    </div>
+  </div>
+
+  <div class="label-editor-layout">
+    <!-- Left: Toolbox -->
+    <div class="label-toolbox">
+      <h4>元素工具</h4>
+      <div class="tool-grid">
+        <div class="tool-item" draggable="true" @dragstart="dragStart($event, 'text')">
+          <i data-lucide="type" class="w-5 h-5"></i>
+          <span>文字</span>
+        </div>
+        <div class="tool-item" draggable="true" @dragstart="dragStart($event, 'barcode')">
+          <i data-lucide="barcode" class="w-5 h-5"></i>
+          <span>條碼</span>
+        </div>
+        <div class="tool-item" draggable="true" @dragstart="dragStart($event, 'qrcode')">
+          <i data-lucide="qr-code" class="w-5 h-5"></i>
+          <span>QR Code</span>
+        </div>
+        <div class="tool-item" draggable="true" @dragstart="dragStart($event, 'image')">
+          <i data-lucide="image" class="w-5 h-5"></i>
+          <span>圖片</span>
+        </div>
+        <div class="tool-item" draggable="true" @dragstart="dragStart($event, 'line')">
+          <i data-lucide="minus" class="w-5 h-5"></i>
+          <span>線條</span>
+        </div>
+        <div class="tool-item" draggable="true" @dragstart="dragStart($event, 'rect')">
+          <i data-lucide="square" class="w-5 h-5"></i>
+          <span>方框</span>
+        </div>
+      </div>
+
+      <h4 style="margin-top: 1.5rem;">資料欄位</h4>
+      <div class="field-list">
+        <div class="field-item" v-for="field in dataFields" :key="field.key"
+             draggable="true" @dragstart="dragStartField($event, field)">
+          <code>{{ field.key }}</code>
+          <span>{{ field.label }}</span>
+        </div>
+      </div>
+
+      <h4 style="margin-top: 1.5rem;">標籤尺寸</h4>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+        <div>
+          <label class="input-label">寬 (mm)</label>
+          <input type="number" class="input input-bordered input-sm w-full"
+                 v-model.number="labelSize.width" min="10" max="200">
+        </div>
+        <div>
+          <label class="input-label">高 (mm)</label>
+          <input type="number" class="input input-bordered input-sm w-full"
+                 v-model.number="labelSize.height" min="10" max="200">
+        </div>
+      </div>
+
+      <h4 style="margin-top: 1.5rem;">縮放</h4>
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <button class="btn btn-xs btn-ghost" @click="canvasScale = Math.max(6, canvasScale - 2)">-</button>
+        <span style="min-width: 50px; text-align: center; font-size: 0.875rem;">{{ canvasScale }}x</span>
+        <button class="btn btn-xs btn-ghost" @click="canvasScale = Math.min(20, canvasScale + 2)">+</button>
+      </div>
+    </div>
+
+    <!-- Center: Canvas -->
+    <div class="label-canvas-container">
+      <div class="label-canvas"
+           :style="{ width: labelSize.width * canvasScale + 'px', height: labelSize.height * canvasScale + 'px' }"
+           @drop="dropElement($event)" @dragover.prevent @click="deselectAll">
+
+        <!-- Elements -->
+        <div v-for="(el, idx) in labelElements" :key="idx"
+             :class="['label-element', el.type, { selected: selectedElementIdx === idx }]"
+             :style="getElementStyle(el)"
+             @click.stop="selectElement(idx)"
+             @mousedown="startDrag($event, idx)">
+
+          <!-- Text Element -->
+          <template v-if="el.type === 'text'">
+            <span :style="{ fontSize: el.fontSize + 'px', fontWeight: el.bold ? 'bold' : 'normal' }">
+              {{ resolveFieldValue(el.text) }}
+            </span>
+          </template>
+
+          <!-- Barcode Element -->
+          <template v-else-if="el.type === 'barcode'">
+            <div class="barcode-preview">
+              <div class="barcode-bars"></div>
+              <span>{{ resolveFieldValue(el.value) || 'BARCODE' }}</span>
+            </div>
+          </template>
+
+          <!-- QR Code Element -->
+          <template v-else-if="el.type === 'qrcode'">
+            <div class="qrcode-preview" :style="{ width: el.size + 'px', height: el.size + 'px' }">
+              <i data-lucide="qr-code" style="width: 100%; height: 100%;"></i>
+            </div>
+          </template>
+
+          <!-- Image Element -->
+          <template v-else-if="el.type === 'image'">
+            <div class="image-preview" :style="{ width: el.width + 'px', height: el.height + 'px' }">
+              <i data-lucide="image" class="w-6 h-6"></i>
+            </div>
+          </template>
+
+          <!-- Line Element -->
+          <template v-else-if="el.type === 'line'">
+            <div class="line-preview" :style="{ width: el.width + 'px', borderWidth: el.thickness + 'px' }"></div>
+          </template>
+
+          <!-- Rect Element -->
+          <template v-else-if="el.type === 'rect'">
+            <div class="rect-preview" :style="{ width: el.width + 'px', height: el.height + 'px', borderWidth: el.thickness + 'px' }"></div>
+          </template>
+
+          <!-- Resize Handle -->
+          <div v-if="selectedElementIdx === idx && el.type !== 'text'" class="resize-handle"
+               @mousedown.stop="startResize($event, idx)"></div>
+        </div>
+      </div>
+
+      <div class="canvas-info">
+        {{ labelSize.width }} x {{ labelSize.height }} mm | {{ labelElements.length }} 個元素
+      </div>
+    </div>
+
+    <!-- Right: Properties -->
+    <div class="label-properties">
+      <h4>屬性設定</h4>
+
+      <div v-if="selectedElementIdx !== null && labelElements[selectedElementIdx]" class="property-form">
+        <div class="prop-group">
+          <label>位置</label>
+          <div class="prop-row">
+            <span class="prop-label">X</span>
+            <input type="number" class="input input-bordered input-xs"
+                   style="width: 70px;" v-model.number="labelElements[selectedElementIdx].x">
+            <span class="prop-label">Y</span>
+            <input type="number" class="input input-bordered input-xs"
+                   style="width: 70px;" v-model.number="labelElements[selectedElementIdx].y">
+          </div>
+        </div>
+
+        <!-- Text Properties -->
+        <template v-if="labelElements[selectedElementIdx].type === 'text'">
+          <div class="prop-group">
+            <label>文字內容</label>
+            <input type="text" class="input input-bordered input-sm w-full"
+                   v-model="labelElements[selectedElementIdx].text" placeholder="文字或 ${欄位}">
+          </div>
+          <div class="prop-group">
+            <label>字體大小</label>
+            <input type="number" class="input input-bordered input-sm w-full"
+                   v-model.number="labelElements[selectedElementIdx].fontSize" min="6" max="72">
+          </div>
+          <div class="prop-group">
+            <label class="label cursor-pointer justify-start gap-2">
+              <input type="checkbox" class="checkbox checkbox-sm" v-model="labelElements[selectedElementIdx].bold">
+              <span>粗體</span>
+            </label>
+          </div>
+        </template>
+
+        <!-- Barcode Properties -->
+        <template v-if="labelElements[selectedElementIdx].type === 'barcode'">
+          <div class="prop-group">
+            <label>條碼內容</label>
+            <input type="text" class="input input-bordered input-sm w-full"
+                   v-model="labelElements[selectedElementIdx].value" placeholder="${epc}">
+          </div>
+          <div class="prop-group">
+            <label>條碼格式</label>
+            <select class="select select-bordered select-sm w-full"
+                    v-model="labelElements[selectedElementIdx].format">
+              <option value="CODE128">Code 128</option>
+              <option value="CODE39">Code 39</option>
+              <option value="EAN13">EAN-13</option>
+            </select>
+          </div>
+          <div class="prop-group">
+            <label>高度</label>
+            <input type="number" class="input input-bordered input-sm w-full"
+                   v-model.number="labelElements[selectedElementIdx].height" min="10" max="100">
+          </div>
+        </template>
+
+        <!-- QR Code Properties -->
+        <template v-if="labelElements[selectedElementIdx].type === 'qrcode'">
+          <div class="prop-group">
+            <label>QR 內容</label>
+            <input type="text" class="input input-bordered input-sm w-full"
+                   v-model="labelElements[selectedElementIdx].value" placeholder="${epc}">
+          </div>
+          <div class="prop-group">
+            <label>尺寸</label>
+            <input type="number" class="input input-bordered input-sm w-full"
+                   v-model.number="labelElements[selectedElementIdx].size" min="20" max="150">
+          </div>
+        </template>
+
+        <!-- Size Properties (for rect, image, line) -->
+        <template v-if="['rect', 'image', 'line'].includes(labelElements[selectedElementIdx].type)">
+          <div class="prop-group">
+            <label>尺寸</label>
+            <div class="prop-row">
+              <span class="prop-label">寬</span>
+              <input type="number" class="input input-bordered input-xs"
+                     style="width: 70px;" v-model.number="labelElements[selectedElementIdx].width">
+              <template v-if="labelElements[selectedElementIdx].type !== 'line'">
+                <span class="prop-label">高</span>
+                <input type="number" class="input input-bordered input-xs"
+                       style="width: 70px;" v-model.number="labelElements[selectedElementIdx].height">
+              </template>
+            </div>
+          </div>
+          <div v-if="labelElements[selectedElementIdx].type !== 'image'" class="prop-group">
+            <label>線條粗細</label>
+            <input type="number" class="input input-bordered input-sm w-full"
+                   v-model.number="labelElements[selectedElementIdx].thickness" min="1" max="10">
+          </div>
+        </template>
+
+        <button class="btn btn-sm btn-error w-full" style="margin-top: 1rem;" @click="deleteElement">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+          刪除元素
+        </button>
+      </div>
+
+      <div v-else class="empty-state" style="padding: 2rem;">
+        <i data-lucide="mouse-pointer" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+        <div style="font-size: 0.875rem;">點選元素以編輯屬性</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Template Save Modal -->
+<div v-if="showTemplateSaveModal" class="modal modal-open">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-4">儲存標籤樣板</h3>
+    <div style="margin-bottom: 1rem;">
+      <label class="input-label">樣板名稱</label>
+      <input type="text" class="input input-bordered w-full"
+             v-model="templateSaveName" placeholder="例如: 標準 RFID 標籤">
+    </div>
+    <div class="modal-action">
+      <button class="btn btn-ghost" @click="showTemplateSaveModal = false">取消</button>
+      <button class="btn btn-primary" @click="saveTemplate">儲存</button>
+    </div>
+  </div>
+  <div class="modal-backdrop" @click="showTemplateSaveModal = false"></div>
+</div>
+
+<!-- Preview Modal -->
+<div v-if="showLabelPreviewModal" class="modal modal-open">
+  <div class="modal-box" style="max-width: 600px;">
+    <h3 class="font-bold text-lg mb-4">標籤預覽</h3>
+
+    <div class="preview-data-form" style="margin-bottom: 1rem;">
+      <label class="input-label">測試資料</label>
+      <select class="select select-bordered w-full" v-model="previewWorkOrderId" @change="loadPreviewData">
+        <option value="">-- 選擇工單 --</option>
+        <option v-for="wo in workOrders" :key="wo.id" :value="wo.id">
+          {{ wo.orderNumber }} - {{ wo.productModel }}
+        </option>
+      </select>
+    </div>
+
+    <div class="label-preview-container">
+      <div class="label-preview-canvas"
+           :style="{ width: labelSize.width * 3 + 'px', height: labelSize.height * 3 + 'px' }">
+        <div v-for="(el, idx) in labelElements" :key="idx"
+             :class="['label-element', el.type]"
+             :style="getElementStyle(el)">
+          <template v-if="el.type === 'text'">
+            <span :style="{ fontSize: el.fontSize + 'px', fontWeight: el.bold ? 'bold' : 'normal' }">
+              {{ resolveFieldValue(el.text, previewData) }}
+            </span>
+          </template>
+          <template v-else-if="el.type === 'barcode'">
+            <div class="barcode-preview">
+              <div class="barcode-bars"></div>
+              <span>{{ resolveFieldValue(el.value, previewData) || 'BARCODE' }}</span>
+            </div>
+          </template>
+          <template v-else-if="el.type === 'qrcode'">
+            <div class="qrcode-preview" :style="{ width: el.size + 'px', height: el.size + 'px' }">
+              <i data-lucide="qr-code" style="width: 100%; height: 100%;"></i>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-action">
+      <button class="btn btn-ghost" @click="showLabelPreviewModal = false">關閉</button>
+      <button class="btn btn-primary" @click="generateSBPL">
+        <i data-lucide="download" class="w-4 h-4"></i>
+        匯出 SBPL
+      </button>
+    </div>
+  </div>
+  <div class="modal-backdrop" @click="showLabelPreviewModal = false"></div>
+</div>

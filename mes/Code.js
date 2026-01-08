@@ -41,17 +41,39 @@ function getWebAppUrl() {
 }
 
 /**
- * 產生分享資訊（QR Code）
+ * 產生分享資訊（短網址 + QR Code）
  */
 function createShortUrl(longUrl) {
+  // 固定部署網址（避免 getWebAppUrl 返回 null）
+  const DEPLOYED_URL = 'https://script.google.com/macros/s/AKfycbwbX1uACKWhzRhe8JxlXwKEWbZ7ysduAQtf2R2drxIZm5X6acMX7WFUMEpCGouPELoKYw/exec';
+
   if (!longUrl) {
-    longUrl = getWebAppUrl();
+    longUrl = getWebAppUrl() || DEPLOYED_URL;
+  }
+
+  let shortUrl = longUrl;
+
+  // 使用 TinyURL API 產生短網址
+  try {
+    const response = UrlFetchApp.fetch('https://tinyurl.com/api-create.php?url=' + encodeURIComponent(longUrl), {
+      muteHttpExceptions: true,
+      followRedirects: true
+    });
+    const code = response.getResponseCode();
+    const text = response.getContentText().trim();
+
+    if (code === 200 && text.startsWith('http')) {
+      shortUrl = text;
+    }
+  } catch (e) {
+    console.error('短網址產生失敗:', e.toString());
+    // 失敗時使用原始網址
   }
 
   return {
     longUrl: longUrl,
-    shortUrl: longUrl,
-    qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(longUrl)
+    shortUrl: shortUrl,
+    qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(shortUrl)
   };
 }
 
@@ -72,8 +94,13 @@ function api(action, payload) {
     let result;
     switch (action) {
       case 'getVersion':
-        return { success: true, data: '5.2.8' };
-        
+        return { success: true, data: '5.9.7' };
+
+      // 效能優化：單次載入所有資料 (含快取)
+      case 'getAllData':
+        result = getAllDataWithCache();
+        break;
+
       // Work Orders
       case 'getWorkOrders':
         result = dbGetWorkOrders().filter(w => w.status !== 'cancelled');
@@ -190,6 +217,20 @@ function api(action, payload) {
         break;
       case 'importAoiCsv':
         result = dbImportAoiCsv(payload.workOrderId, payload.csvRows, payload.operatorName);
+        break;
+
+      // R0 Labels (跨裝置同步)
+      case 'getR0Labels':
+        result = dbGetR0Labels();
+        break;
+      case 'createR0Label':
+        result = dbCreateR0Label(payload);
+        break;
+      case 'updateR0Label':
+        result = dbUpdateR0Label(payload.id, payload.data);
+        break;
+      case 'syncR0Labels':
+        result = dbSyncR0Labels(payload.labels);
         break;
 
       // Admin / Tools

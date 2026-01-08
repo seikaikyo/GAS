@@ -1,7 +1,6 @@
-<script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.15.0/cdn/shoelace.js"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 <script>
-  const { createApp, ref, onMounted } = Vue;
+  const { createApp, ref, onMounted, nextTick, watch } = Vue;
 
   const app = createApp({
     setup() {
@@ -20,6 +19,17 @@
       // Computed
       const regenerationOrders = Vue.computed(() => workOrders.value.filter(w => w.orderType === 'regeneration'));
       const completedDeglueOrders = Vue.computed(() => workOrders.value.filter(w => w.orderType === 'deglue' && w.status === 'completed'));
+      // AOI PASS 的工單（可進行 RFID 更換）
+      const aoiPassedOrders = Vue.computed(() => {
+        const passedWorkOrderIds = new Set(
+          aoiInspections.value
+            .filter(a => a.result === 'PASS')
+            .map(a => a.workOrderId)
+        );
+        return workOrders.value.filter(w =>
+          passedWorkOrderIds.has(w.id) && w.status !== 'completed' && w.status !== 'cancelled'
+        );
+      });
       // 可重工的工單：已完成且尚未重工過的工單（reworkCount = 0 或未設定）
       const reworkableOrders = Vue.computed(() => workOrders.value.filter(w =>
         w.status === 'completed' && (!w.reworkCount || parseInt(w.reworkCount) === 0)
@@ -35,6 +45,44 @@
       const filteredOutgassingTests = Vue.computed(() => {
         if (!formOutgassing.value.workOrderId) return outgassingTests.value;
         return outgassingTests.value.filter(t => t.workOrderId === formOutgassing.value.workOrderId);
+      });
+
+      // R0 Computed
+      const filteredR0Labels = Vue.computed(() => {
+        const filter = r0TableFilter.value.toLowerCase();
+        if (!filter) return r0Labels.value;
+        return r0Labels.value.filter(l =>
+          (l.r0Code && l.r0Code.toLowerCase().includes(filter)) ||
+          (l.currentEpc && l.currentEpc.toLowerCase().includes(filter)) ||
+          (l.orderNumber && l.orderNumber.toLowerCase().includes(filter)) ||
+          (l.customerName && l.customerName.toLowerCase().includes(filter))
+        );
+      });
+
+      const r0CodePreview = Vue.computed(() => {
+        if (!formR0Generate.value.workOrderId) return '';
+        const year = new Date().getFullYear().toString().slice(-2);
+        const area = formR0Generate.value.areaCode || 'A';
+        const serial = String(r0SerialCounter.value).padStart(6, '0');
+        const customerCode = formR0Generate.value.customerCode || 'XXX';
+        return `R0${customerCode}@${printerConfig.value.yearPrefix}${year}${area}${serial}`;
+      });
+
+      // EPC 預覽 (顯示目前設定會產生的 EPC 格式)
+      const epcPreview = Vue.computed(() => {
+        if (!formR0Generate.value.workOrderId) return '';
+        const header = epcConfig.value.header || 'E2';
+        const customer = (formR0Generate.value.customerCode || 'XXXX').toUpperCase().padEnd(4, '0').slice(0, 4);
+        const product = (formR0Generate.value.productCode || 'XXXX').toUpperCase().padEnd(4, '0').slice(0, 4);
+        const year = new Date().getFullYear().toString().slice(-2);
+        const serial = String(epcSerialCounter.value).padStart(12, '0');
+        return `${header}${customer}${product}${year}${serial}`;
+      });
+
+      const canUpgradeR0 = Vue.computed(() => {
+        if (!formR0Upgrade.value.labelInfo) return false;
+        const currentCount = parseInt(formR0Upgrade.value.labelInfo.regenerationCount) || 0;
+        return currentCount < 5;
       });
 
       // Modals
@@ -83,6 +131,122 @@
       const selectedInspection = ref(null);
       const inspectionType = ref(''); // 'outgassing' or 'aoi'
 
+      // Oven Monitoring (10 ovens)
+      const ovens = ref([
+        { id: 1, name: '烘箱 1', apiEndpoint: '', batchQty: 18, scannedCodes: [], doorOpen: false, temperature: 0, runningTime: 0, running: false },
+        { id: 2, name: '烘箱 2', apiEndpoint: '', batchQty: 18, scannedCodes: [], doorOpen: false, temperature: 0, runningTime: 0, running: false },
+        { id: 3, name: '烘箱 3', apiEndpoint: '', batchQty: 18, scannedCodes: [], doorOpen: false, temperature: 0, runningTime: 0, running: false },
+        { id: 4, name: '烘箱 4', apiEndpoint: '', batchQty: 18, scannedCodes: [], doorOpen: false, temperature: 0, runningTime: 0, running: false },
+        { id: 5, name: '烘箱 5', apiEndpoint: '', batchQty: 18, scannedCodes: [], doorOpen: false, temperature: 0, runningTime: 0, running: false },
+        { id: 6, name: '烘箱 6', apiEndpoint: '', batchQty: 18, scannedCodes: [], doorOpen: false, temperature: 0, runningTime: 0, running: false },
+        { id: 7, name: '烘箱 7', apiEndpoint: '', batchQty: 18, scannedCodes: [], doorOpen: false, temperature: 0, runningTime: 0, running: false },
+        { id: 8, name: '烘箱 8', apiEndpoint: '', batchQty: 18, scannedCodes: [], doorOpen: false, temperature: 0, runningTime: 0, running: false },
+        { id: 9, name: '烘箱 9', apiEndpoint: '', batchQty: 18, scannedCodes: [], doorOpen: false, temperature: 0, runningTime: 0, running: false },
+        { id: 10, name: '烘箱 10', apiEndpoint: '', batchQty: 18, scannedCodes: [], doorOpen: false, temperature: 0, runningTime: 0, running: false }
+      ]);
+      const selectedOvenId = ref(null);
+      const ovenScanInput = ref('');
+      const ecuConnected = ref(false);
+      const ovenConfig = ref({ ecuEndpoint: '' });
+      const ovenBindings = ref({}); // { ovenId: dispatchId }
+      const ovenBatchQty = ref(18);
+      const ovenAutoReportEnabled = ref(false);
+      const ovenEventLogs = ref([]);
+      const showOvenSettingsModal = ref(false);
+      let ovenTimer = null;
+
+      // Label Editor
+      const labelTemplates = ref([]);
+      const currentTemplateId = ref('');
+      const labelSize = ref({ width: 50, height: 30 });
+      const labelElements = ref([]);
+      const selectedElementIdx = ref(null);
+      const showTemplateSaveModal = ref(false);
+      const showLabelPreviewModal = ref(false);
+      const templateSaveName = ref('');
+      const previewWorkOrderId = ref('');
+      const previewData = ref({});
+      const canvasScale = ref(16); // 縮放倍率 (6-20x)
+      const dataFields = ref([
+        { key: '${r0Code}', label: 'R0 編碼' },
+        { key: '${epc}', label: 'EPC 編碼' },
+        { key: '${orderNumber}', label: '工單號' },
+        { key: '${productModel}', label: '產品型號' },
+        { key: '${customerName}', label: '客戶名稱' },
+        { key: '${customerCode}', label: '客戶代碼' },
+        { key: '${regenerationStatus}', label: '再生狀態' },
+        { key: '${regenerationCount}', label: '再生次數' },
+        { key: '${date}', label: '日期' },
+        { key: '${operator}', label: '操作員' }
+      ]);
+      let dragType = null;
+      let dragData = null;
+      let isDragging = false;
+      let dragOffset = { x: 0, y: 0 };
+
+      // R0 Management
+      const r0SubTab = ref('generate');
+      const r0Labels = ref([]);
+      const r0TableFilter = ref('');
+      const r0QueryInput = ref('');
+      const r0QueryResult = ref(null);
+      const r0GenerateQueue = ref([]);
+      const printerConnected = ref(false);
+      const showPrinterSettingsModal = ref(false);
+      const printerConfig = ref({
+        type: 'sato',
+        connection: 'usb',
+        ip: '',
+        simulationMode: true,
+        yearPrefix: 'YCD',
+        serialStart: 1
+      });
+
+      // R0 Generate Form
+      const formR0Generate = ref({
+        workOrderId: '',
+        quantity: 10,
+        customerCode: '',
+        productCode: '',
+        areaCode: 'A'
+      });
+
+      // R0 Simulate Form (for testing without RFID printer)
+      const formR0Simulate = ref({
+        r0Code: '',
+        epc: ''
+      });
+
+      // R0 Replace Form
+      const formR0Replace = ref({
+        oldBarcode: '',
+        oldLabelInfo: null,
+        reason: '',
+        operatorName: '',
+        pendingNewLabel: false,
+        newEpc: ''
+      });
+
+      // R0 Upgrade Form
+      const formR0Upgrade = ref({
+        barcode: '',
+        labelInfo: null,
+        operatorName: '',
+        notes: ''
+      });
+
+      // R0 Serial Counter (stored in localStorage)
+      const r0SerialCounter = ref(parseInt(localStorage.getItem('r0SerialCounter') || '1'));
+
+      // EPC Serial Counter (stored in localStorage)
+      const epcSerialCounter = ref(parseInt(localStorage.getItem('epcSerialCounter') || '1'));
+
+      // EPC Config
+      const epcConfig = ref({
+        header: 'E2',           // 2 位 header
+        autoGenerate: true      // 是否自動產生
+      });
+
       // Editing State
       const editingOperatorId = ref(null);
       const editingCustomerId = ref(null);
@@ -98,6 +262,16 @@
       const adminMessage = ref('');
       const adminMessageType = ref('success');
       const systemVersion = ref('5.1.0');
+
+      // Reinitialize Lucide icons when DOM updates
+      function refreshIcons() {
+        nextTick(() => {
+          if (window.lucide) lucide.createIcons();
+        });
+      }
+
+      // Watch for changes that need icon refresh
+      watch([loading, currentTab, showCreateWoModal, showDispatchModal, showReportModal, showShareModal, showInspectionDetailModal, workOrders, dispatches], refreshIcons);
 
       // Event Handlers
       const onWoSelect = () => {
@@ -145,21 +319,27 @@
         finally { epcCheckStatus.value = 'idle'; }
       };
 
-      // API Wrapper
-      const callApi = (action, payload) => {
-        loadingCount.value++;
-        loading.value = true;
+      // API Wrapper (showLoading: 是否顯示載入動畫，預設 true)
+      const callApi = (action, payload, showLoading = true) => {
+        if (showLoading) {
+          loadingCount.value++;
+          loading.value = true;
+        }
         return new Promise((resolve, reject) => {
           google.script.run
             .withSuccessHandler(res => {
-              loadingCount.value--;
-              if (loadingCount.value <= 0) loading.value = false;
+              if (showLoading) {
+                loadingCount.value--;
+                if (loadingCount.value <= 0) loading.value = false;
+              }
               if (res.success) resolve(res.data);
               else reject(res.error);
             })
             .withFailureHandler(err => {
-              loadingCount.value--;
-              if (loadingCount.value <= 0) loading.value = false;
+              if (showLoading) {
+                loadingCount.value--;
+                if (loadingCount.value <= 0) loading.value = false;
+              }
               reject(err);
             })
             .api(action, payload);
@@ -168,19 +348,71 @@
 
       window.onerror = () => { loading.value = false; loadingCount.value = 0; };
 
-      const refreshData = async () => {
+      // 從 localStorage 載入快取資料（立即顯示）
+      const loadCachedData = () => {
         try {
-          const ver = await callApi('getVersion');
-          version.value = ver;
-          const [wos, ds, eh, rps, ops, custs, prods, ogTests, aoiRecs] = await Promise.all([
-            callApi('getWorkOrders'), callApi('getDispatches'), callApi('getEpcHistory'),
-            callApi('getReports'), callApi('getOperators'), callApi('getCustomers'),
-            callApi('getProducts'), callApi('getOutgassingTests'), callApi('getAoiInspections')
+          const cached = localStorage.getItem('MES_DATA_CACHE');
+          if (cached) {
+            const data = JSON.parse(cached);
+            version.value = data.version || '';
+            workOrders.value = data.workOrders || [];
+            dispatches.value = data.dispatches || [];
+            reports.value = data.reports || [];
+            operators.value = data.operators || [];
+            customers.value = data.customers || [];
+            products.value = data.products || [];
+            outgassingTests.value = data.outgassingTests || [];
+            aoiInspections.value = data.aoiInspections || [];
+            epcHistory.value = data.epcHistory || [];
+            r0Labels.value = data.r0Labels || [];
+            return true;
+          }
+        } catch (e) { console.warn('Cache load failed:', e); }
+        return false;
+      };
+
+      // 儲存資料到 localStorage
+      const saveCachedData = (ver, allData) => {
+        try {
+          const cacheData = {
+            version: ver,
+            workOrders: allData.workOrders,
+            dispatches: allData.dispatches,
+            reports: allData.reports,
+            operators: allData.operators,
+            customers: allData.customers,
+            products: allData.products,
+            outgassingTests: allData.outgassingTests,
+            aoiInspections: allData.aoiInspections,
+            epcHistory: allData.epcHistory,
+            r0Labels: allData.r0Labels,
+            cachedAt: Date.now()
+          };
+          localStorage.setItem('MES_DATA_CACHE', JSON.stringify(cacheData));
+        } catch (e) { console.warn('Cache save failed:', e); }
+      };
+
+      const refreshData = async (showLoading = true) => {
+        try {
+          // 效能優化：單次 API 取得所有資料（含快取）
+          const [ver, allData] = await Promise.all([
+            callApi('getVersion', null, showLoading),
+            callApi('getAllData', null, showLoading)
           ]);
-          workOrders.value = wos; dispatches.value = ds; epcHistory.value = eh;
-          reports.value = rps; operators.value = ops; customers.value = custs;
-          products.value = prods; outgassingTests.value = ogTests; aoiInspections.value = aoiRecs;
-        } catch (e) { alert('載入失敗: ' + e); }
+          version.value = ver;
+          workOrders.value = allData.workOrders || [];
+          dispatches.value = allData.dispatches || [];
+          reports.value = allData.reports || [];
+          operators.value = allData.operators || [];
+          customers.value = allData.customers || [];
+          products.value = allData.products || [];
+          outgassingTests.value = allData.outgassingTests || [];
+          aoiInspections.value = allData.aoiInspections || [];
+          epcHistory.value = allData.epcHistory || [];
+          r0Labels.value = allData.r0Labels || [];
+          // 儲存到本地快取
+          saveCachedData(ver, allData);
+        } catch (e) { if (showLoading) alert('載入失敗: ' + e); }
       };
 
       // Share Functions
@@ -463,6 +695,18 @@
         reportWindow.document.close();
       };
 
+      // 單筆釋氣檢驗報告
+      const generateSingleOutgassingReport = (test) => {
+        if (!test) { alert('無檢驗資料'); return; }
+        const wo = workOrders.value.find(w => w.id === test.workOrderId);
+        if (!wo) { alert('找不到對應工單'); return; }
+        const signature = test.signature || '';
+        const reportHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>釋氣檢驗報告 - ${test.testNumber || test.inspectionNumber}</title><style>body{font-family:'Microsoft JhengHei',sans-serif;padding:20px;max-width:800px;margin:0 auto}.header{text-align:center;border-bottom:2px solid #333;padding-bottom:15px;margin-bottom:20px}.header h1{margin:0;font-size:24px}.header p{margin:5px 0;color:#666}.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}.info-item{padding:8px;background:#f5f5f5;border-radius:4px}.info-item label{font-size:12px;color:#666;display:block}.info-item span{font-weight:bold}.result-box{padding:20px;border-radius:8px;text-align:center;margin:20px 0}.result-box.pass{background:#dcfce7;border:2px solid #16a34a}.result-box.ng{background:#fee2e2;border:2px solid #dc2626}.result-text{font-size:36px;font-weight:bold}.result-text.pass{color:#16a34a}.result-text.ng{color:#dc2626}.signature-section{margin-top:30px;display:flex;justify-content:flex-end}.signature-box{text-align:center}.signature-box img{max-height:80px;border-bottom:1px solid #333}.signature-box p{margin:5px 0 0;font-size:12px}.footer{margin-top:40px;text-align:center;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:10px}@media print{body{padding:0}.no-print{display:none}}</style></head><body><div class="header"><h1>釋氣檢驗報告</h1><p>Outgassing Inspection Report</p></div><div class="info-grid"><div class="info-item"><label>檢驗單號</label><span>${test.testNumber || test.inspectionNumber || '-'}</span></div><div class="info-item"><label>工單編號</label><span>${wo.orderNumber}</span></div><div class="info-item"><label>客戶/廠區</label><span>${wo.customerName} / ${wo.customerSite || '-'}</span></div><div class="info-item"><label>產品型號</label><span>${wo.productModel}</span></div><div class="info-item"><label>條碼/序號</label><span>${test.rfidCode || '-'}</span></div><div class="info-item"><label>檢驗時間</label><span>${test.testedAt ? new Date(test.testedAt).toLocaleString('zh-TW') : '-'}</span></div></div><div class="result-box ${test.result === 'PASS' ? 'pass' : 'ng'}"><div class="result-text ${test.result === 'PASS' ? 'pass' : 'ng'}">${test.result}</div><p style="margin:10px 0 0;color:#666;">檢驗結果</p></div>${test.notes ? `<div style="background:#f5f5f5;padding:15px;border-radius:8px;margin:20px 0;"><strong>備註：</strong>${test.notes}</div>` : ''}<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:30px;"><div><p style="margin:0 0 5px;color:#666;font-size:12px;">檢驗員</p><p style="margin:0;font-weight:bold;">${test.operatorName || '-'}</p></div><div class="signature-box">${signature ? `<img src="${signature}" alt="簽名">` : '<div style="width:150px;height:60px;border-bottom:1px solid #333;"></div>'}<p>品檢人員簽名</p></div></div><div class="footer">SMAI-MES 品質管理系統 | 報告產生時間: ${new Date().toLocaleString('zh-TW')} | v${systemVersion.value}</div><div class="no-print" style="margin-top:20px;text-align:center;"><button onclick="window.print()" style="padding:10px 30px;font-size:16px;cursor:pointer;">列印報告</button></div></body></html>`;
+        const reportWindow = window.open('', '_blank');
+        reportWindow.document.write(reportHtml);
+        reportWindow.document.close();
+      };
+
       // AOI
       const handleAoiCsvFile = (event) => {
         const file = event.target.files[0];
@@ -623,7 +867,1076 @@
         finally { adminLoading.value = false; }
       };
 
-      onMounted(() => { refreshData(); });
+      // R0 Management Functions
+
+      /**
+       * 將文字轉換為 Hex 格式 (用於 EPC 編碼)
+       * @param {string} text - 原始文字
+       * @param {number} length - 目標長度 (hex 字元數)
+       * @returns {string} - Hex 字串，不足補 0，超過截斷
+       */
+      const textToHex = (text, length) => {
+        if (!text) return '0'.repeat(length);
+        // 將每個字元轉為 hex，取 ASCII 碼
+        let hex = '';
+        for (let i = 0; i < text.length && hex.length < length; i++) {
+          const code = text.charCodeAt(i);
+          if (code < 128) {
+            // ASCII 字元直接用
+            hex += text[i].toUpperCase();
+          } else {
+            // 非 ASCII 轉為 hex
+            hex += code.toString(16).toUpperCase();
+          }
+        }
+        // 補 0 或截斷
+        return hex.slice(0, length).padEnd(length, '0');
+      };
+
+      /**
+       * 產生 EPC 編碼 (方案A: 結構化)
+       * 格式: [Header:2][Customer:4][Product:4][Year:2][Serial:12] = 24 位 hex
+       * 範例: E2TSM0HP1026000000000001
+       */
+      const generateEpc = (customerCode, productCode) => {
+        const header = epcConfig.value.header || 'E2';
+        const customer = textToHex(customerCode || 'XXXX', 4);
+        const product = textToHex(productCode || 'XXXX', 4);
+        const year = new Date().getFullYear().toString().slice(-2);
+        const serial = String(epcSerialCounter.value).padStart(12, '0');
+
+        const epc = `${header}${customer}${product}${year}${serial}`;
+
+        // 遞增序號
+        epcSerialCounter.value++;
+        localStorage.setItem('epcSerialCounter', epcSerialCounter.value.toString());
+
+        return epc.toUpperCase();
+      };
+
+      /**
+       * 解析 EPC 編碼
+       */
+      const parseEpc = (epc) => {
+        if (!epc || epc.length < 24) return null;
+        return {
+          header: epc.slice(0, 2),
+          customerCode: epc.slice(2, 6),
+          productCode: epc.slice(6, 10),
+          year: '20' + epc.slice(10, 12),
+          serial: parseInt(epc.slice(12, 24), 10)
+        };
+      };
+
+      const onR0WorkOrderSelect = () => {
+        const wo = workOrders.value.find(w => w.id === formR0Generate.value.workOrderId);
+        if (wo) {
+          // Get customer code
+          const customer = customers.value.find(c => c.name === wo.customerName);
+          formR0Generate.value.customerCode = customer?.code || wo.customerName.slice(0, 3).toUpperCase();
+          // Get product code
+          const product = products.value.find(p => p.name === wo.productModel || p.code === wo.productModel);
+          formR0Generate.value.productCode = product?.code || wo.productModel.slice(0, 4).toUpperCase();
+        }
+      };
+
+      const generateR0Code = (customerCode, areaCode, serialNum) => {
+        const year = new Date().getFullYear().toString().slice(-2);
+        const serial = String(serialNum).padStart(6, '0');
+        return `R0${customerCode}@${printerConfig.value.yearPrefix}${year}${areaCode}${serial}`;
+      };
+
+      const generateR0Labels = () => {
+        if (!formR0Generate.value.workOrderId || !formR0Generate.value.quantity) return;
+        const wo = workOrders.value.find(w => w.id === formR0Generate.value.workOrderId);
+        if (!wo) return;
+
+        const qty = formR0Generate.value.quantity;
+        const customerCode = formR0Generate.value.customerCode || 'XXX';
+        const areaCode = formR0Generate.value.areaCode || 'A';
+
+        for (let i = 0; i < qty; i++) {
+          const r0Code = generateR0Code(customerCode, areaCode, r0SerialCounter.value);
+          r0GenerateQueue.value.push({
+            r0Code,
+            workOrderId: wo.id,
+            orderNumber: wo.orderNumber,
+            customerName: wo.customerName,
+            productModel: wo.productModel,
+            status: 'pending',
+            epc: null
+          });
+          r0SerialCounter.value++;
+        }
+        localStorage.setItem('r0SerialCounter', r0SerialCounter.value.toString());
+      };
+
+      const startR0Printing = async () => {
+        if (r0GenerateQueue.value.length === 0) return;
+
+        for (const item of r0GenerateQueue.value) {
+          if (item.status === 'printed') continue;
+          item.status = 'printing';
+
+          if (printerConfig.value.simulationMode) {
+            // Simulation mode: wait for manual EPC input
+            await new Promise(r => setTimeout(r, 500));
+            item.status = 'pending'; // Keep pending until EPC is entered
+          } else {
+            // Real printer: send SBPL command and wait for callback
+            try {
+              // TODO: Implement real SATO printer communication
+              item.status = 'pending';
+            } catch (e) {
+              console.error('Print error:', e);
+            }
+          }
+        }
+        nextTick(() => { if (window.lucide) lucide.createIcons(); });
+      };
+
+      /**
+       * 瀏覽器列印預覽 - 用任何印表機測試標籤
+       */
+      const printLabelPreview = () => {
+        const items = r0GenerateQueue.value.filter(i => i.status !== 'printed');
+        if (items.length === 0) {
+          alert('沒有待列印的標籤');
+          return;
+        }
+
+        const labelWidth = 65; // mm
+        const labelHeight = 35; // mm
+        const date = new Date().toLocaleDateString('zh-TW');
+
+        let labelsHtml = items.map((item, idx) => {
+          const epc = item.epc || '(待綁定 EPC)';
+          const status = item.regenerationStatus || 'R0';
+          return `
+            <div class="label" style="
+              width: ${labelWidth}mm;
+              height: ${labelHeight}mm;
+              border: 1px solid #000;
+              padding: 2mm;
+              margin: 2mm;
+              display: inline-block;
+              vertical-align: top;
+              font-family: Arial, sans-serif;
+              box-sizing: border-box;
+              page-break-inside: avoid;
+            ">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                  <div style="font-size: 10pt; font-weight: bold;">${item.customerName || ''}</div>
+                  <div style="font-size: 8pt; color: #666;">${item.productModel || ''}</div>
+                </div>
+                <div style="font-size: 14pt; font-weight: bold; border: 2px solid #000; padding: 1mm 3mm;">${status}</div>
+              </div>
+              <div style="margin-top: 3mm;">
+                <div style="font-size: 7pt; color: #666;">R0 編碼:</div>
+                <div style="font-size: 9pt; font-weight: bold; font-family: monospace;">${item.r0Code}</div>
+              </div>
+              <div style="margin-top: 2mm;">
+                <div style="font-size: 7pt; color: #666;">EPC:</div>
+                <div style="font-size: 7pt; font-family: monospace; word-break: break-all;">${epc}</div>
+              </div>
+              <div style="margin-top: 2mm; font-size: 6pt; color: #999;">${date} | #${idx + 1}</div>
+            </div>
+          `;
+        }).join('');
+
+        const printHtml = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>標籤列印預覽</title>
+            <style>
+              @media print {
+                body { margin: 0; }
+                .no-print { display: none; }
+              }
+              body { font-family: Arial, sans-serif; }
+              .print-header { padding: 10px; background: #f0f0f0; margin-bottom: 10px; }
+              .labels-container { padding: 5mm; }
+            </style>
+          </head>
+          <body>
+            <div class="print-header no-print">
+              <h3 style="margin: 0 0 10px;">標籤列印預覽 (共 ${items.length} 張)</h3>
+              <button onclick="window.print()" style="padding: 10px 20px; font-size: 14px; cursor: pointer;">
+                列印標籤
+              </button>
+              <button onclick="window.close()" style="padding: 10px 20px; font-size: 14px; margin-left: 10px; cursor: pointer;">
+                關閉
+              </button>
+              <p style="margin: 10px 0 0; font-size: 12px; color: #666;">
+                提示: 實際標籤尺寸為 ${labelWidth}mm x ${labelHeight}mm，請調整印表機設定
+              </p>
+            </div>
+            <div class="labels-container">
+              ${labelsHtml}
+            </div>
+          </body>
+          </html>
+        `;
+
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(printHtml);
+        printWindow.document.close();
+      };
+
+      /**
+       * 補印單一標籤
+       */
+      const reprintLabel = (label) => {
+        const labelWidth = 65;
+        const labelHeight = 35;
+        const date = new Date().toLocaleDateString('zh-TW');
+        const status = label.regenerationStatus || 'R0';
+        const epc = label.currentEpc || label.epc || '(無 EPC)';
+
+        const printHtml = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>補印標籤 - ${label.r0Code}</title>
+            <style>
+              @media print { body { margin: 0; } .no-print { display: none; } }
+              body { font-family: Arial, sans-serif; }
+              .print-header { padding: 10px; background: #f0f0f0; margin-bottom: 10px; }
+            </style>
+          </head>
+          <body>
+            <div class="print-header no-print">
+              <h3 style="margin: 0 0 10px;">補印標籤</h3>
+              <button onclick="window.print()" style="padding: 10px 20px; font-size: 14px; cursor: pointer;">列印</button>
+              <button onclick="window.close()" style="padding: 10px 20px; font-size: 14px; margin-left: 10px; cursor: pointer;">關閉</button>
+            </div>
+            <div style="padding: 5mm;">
+              <div style="
+                width: ${labelWidth}mm;
+                height: ${labelHeight}mm;
+                border: 1px solid #000;
+                padding: 2mm;
+                font-family: Arial, sans-serif;
+                box-sizing: border-box;
+              ">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                  <div>
+                    <div style="font-size: 10pt; font-weight: bold;">${label.customerName || ''}</div>
+                    <div style="font-size: 8pt; color: #666;">${label.productModel || ''}</div>
+                  </div>
+                  <div style="font-size: 14pt; font-weight: bold; border: 2px solid #000; padding: 1mm 3mm;">${status}</div>
+                </div>
+                <div style="margin-top: 3mm;">
+                  <div style="font-size: 7pt; color: #666;">R0 編碼:</div>
+                  <div style="font-size: 9pt; font-weight: bold; font-family: monospace;">${label.r0Code}</div>
+                </div>
+                <div style="margin-top: 2mm;">
+                  <div style="font-size: 7pt; color: #666;">EPC:</div>
+                  <div style="font-size: 7pt; font-family: monospace; word-break: break-all;">${epc}</div>
+                </div>
+                <div style="margin-top: 2mm; font-size: 6pt; color: #999;">${date} | 補印</div>
+              </div>
+            </div>
+          </body>
+          </html>
+        `;
+
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(printHtml);
+        printWindow.document.close();
+      };
+
+      /**
+       * 為指定的 R0 項目自動產生並綁定 EPC
+       */
+      const autoGenerateEpcForItem = (item) => {
+        if (!item) return null;
+        // 從 item 取得客戶和產品資訊
+        const customer = customers.value.find(c => c.name === item.customerName);
+        const product = products.value.find(p => p.name === item.productModel || p.code === item.productModel);
+        const customerCode = customer?.code || item.customerName?.slice(0, 4) || 'XXXX';
+        const productCode = product?.code || item.productModel?.slice(0, 4) || 'XXXX';
+        return generateEpc(customerCode, productCode);
+      };
+
+      /**
+       * 自動為所有待綁定的 R0 產生 EPC
+       */
+      const autoGenerateAllEpc = () => {
+        const pendingItems = r0GenerateQueue.value.filter(i => !i.epc);
+        if (pendingItems.length === 0) {
+          alert('沒有待綁定的 R0 項目');
+          return;
+        }
+
+        let count = 0;
+        pendingItems.forEach(item => {
+          const epc = autoGenerateEpcForItem(item);
+          if (epc) {
+            bindEpcToR0(item, epc);
+            count++;
+          }
+        });
+
+        alert(`已自動產生並綁定 ${count} 個 EPC`);
+        nextTick(() => { if (window.lucide) lucide.createIcons(); });
+      };
+
+      /**
+       * 將 EPC 綁定到 R0 項目
+       */
+      const bindEpcToR0 = (item, epc) => {
+        item.epc = epc;
+        item.status = 'printed';
+
+        // Save to r0Labels
+        const newLabel = {
+          id: 'r0-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+          r0Code: item.r0Code,
+          currentEpc: epc,
+          workOrderId: item.workOrderId,
+          orderNumber: item.orderNumber,
+          customerName: item.customerName,
+          productModel: item.productModel,
+          areaCode: formR0Generate.value.areaCode,
+          regenerationStatus: 'R0',
+          regenerationCount: 0,
+          status: 'active',
+          createdAt: new Date().toISOString(),
+          history: [{
+            type: 'create',
+            action: '標籤產生',
+            detail: `EPC: ${epc}`,
+            timestamp: new Date().toISOString()
+          }]
+        };
+        r0Labels.value.unshift(newLabel);
+        saveR0LabelsToStorage();
+      };
+
+      const simulateEpcCallback = async () => {
+        const { r0Code, epc } = formR0Simulate.value;
+        if (!r0Code) {
+          alert('請選擇 R0 編碼');
+          return;
+        }
+
+        const item = r0GenerateQueue.value.find(i => i.r0Code === r0Code);
+        if (!item) {
+          alert('找不到對應的 R0 編碼');
+          return;
+        }
+
+        // 如果沒有輸入 EPC，自動產生
+        const finalEpc = epc || autoGenerateEpcForItem(item);
+        if (!finalEpc) {
+          alert('無法產生 EPC');
+          return;
+        }
+
+        bindEpcToR0(item, finalEpc);
+        formR0Simulate.value = { r0Code: '', epc: '' };
+        alert(`R0 標籤 ${r0Code} 已成功綁定 EPC:\n${finalEpc}`);
+        nextTick(() => { if (window.lucide) lucide.createIcons(); });
+      };
+
+      const clearR0Queue = () => {
+        if (confirm('確定要清除待列印佇列嗎？')) {
+          r0GenerateQueue.value = [];
+        }
+      };
+
+      const queryR0Label = () => {
+        const input = r0QueryInput.value.trim();
+        if (!input) return;
+
+        // Search by R0 code or EPC
+        const found = r0Labels.value.find(l =>
+          l.r0Code === input ||
+          l.currentEpc === input ||
+          (l.r0Code && l.r0Code.includes(input)) ||
+          (l.currentEpc && l.currentEpc.includes(input))
+        );
+
+        r0QueryResult.value = found || null;
+        if (!found) {
+          alert('查無此標籤紀錄');
+        }
+        nextTick(() => { if (window.lucide) lucide.createIcons(); });
+      };
+
+      const lookupOldR0 = () => {
+        const barcode = formR0Replace.value.oldBarcode.trim();
+        if (!barcode) return;
+
+        const found = r0Labels.value.find(l =>
+          l.r0Code === barcode ||
+          l.currentEpc === barcode ||
+          (l.r0Code && l.r0Code.includes(barcode))
+        );
+
+        if (found) {
+          formR0Replace.value.oldLabelInfo = found;
+        } else {
+          alert('查無此標籤紀錄');
+          formR0Replace.value.oldLabelInfo = null;
+        }
+        nextTick(() => { if (window.lucide) lucide.createIcons(); });
+      };
+
+      const printReplacementLabel = () => {
+        if (!formR0Replace.value.oldLabelInfo || !formR0Replace.value.reason || !formR0Replace.value.operatorName) return;
+        formR0Replace.value.pendingNewLabel = true;
+        alert('請列印新標籤，然後輸入新 EPC 完成更換');
+      };
+
+      const confirmReplacement = async () => {
+        const oldLabel = formR0Replace.value.oldLabelInfo;
+        const newEpc = formR0Replace.value.newEpc.trim();
+        if (!oldLabel || !newEpc) return;
+
+        // Update label with new EPC
+        const labelIndex = r0Labels.value.findIndex(l => l.id === oldLabel.id);
+        if (labelIndex >= 0) {
+          const oldEpc = r0Labels.value[labelIndex].currentEpc;
+          r0Labels.value[labelIndex].currentEpc = newEpc;
+          r0Labels.value[labelIndex].history.push({
+            type: 'replace',
+            action: 'RFID 更換',
+            detail: `原因: ${formR0Replace.value.reason}, 舊 EPC: ${oldEpc}, 新 EPC: ${newEpc}, 操作員: ${formR0Replace.value.operatorName}`,
+            timestamp: new Date().toISOString()
+          });
+          saveR0LabelsToStorage();
+        }
+
+        alert(`RFID 更換完成！\nR0: ${oldLabel.r0Code}\n新 EPC: ${newEpc}`);
+        clearReplaceForm();
+      };
+
+      const clearReplaceForm = () => {
+        formR0Replace.value = {
+          oldBarcode: '',
+          oldLabelInfo: null,
+          reason: '',
+          operatorName: '',
+          pendingNewLabel: false,
+          newEpc: ''
+        };
+      };
+
+      const lookupForUpgrade = () => {
+        const barcode = formR0Upgrade.value.barcode.trim();
+        if (!barcode) return;
+
+        const found = r0Labels.value.find(l =>
+          l.r0Code === barcode ||
+          l.currentEpc === barcode ||
+          (l.r0Code && l.r0Code.includes(barcode))
+        );
+
+        if (found) {
+          formR0Upgrade.value.labelInfo = found;
+        } else {
+          alert('查無此標籤紀錄');
+          formR0Upgrade.value.labelInfo = null;
+        }
+        nextTick(() => { if (window.lucide) lucide.createIcons(); });
+      };
+
+      const performStatusUpgrade = async () => {
+        const labelInfo = formR0Upgrade.value.labelInfo;
+        if (!labelInfo || !canUpgradeR0.value || !formR0Upgrade.value.operatorName) return;
+
+        const labelIndex = r0Labels.value.findIndex(l => l.id === labelInfo.id);
+        if (labelIndex >= 0) {
+          const currentCount = parseInt(r0Labels.value[labelIndex].regenerationCount) || 0;
+          const newCount = currentCount + 1;
+          const newStatus = `R${newCount}`;
+
+          r0Labels.value[labelIndex].regenerationCount = newCount;
+          r0Labels.value[labelIndex].regenerationStatus = newStatus;
+          r0Labels.value[labelIndex].history.push({
+            type: 'upgrade',
+            action: '狀態升級',
+            detail: `${labelInfo.regenerationStatus || 'R0'} → ${newStatus}, 操作員: ${formR0Upgrade.value.operatorName}${formR0Upgrade.value.notes ? ', 備註: ' + formR0Upgrade.value.notes : ''}`,
+            timestamp: new Date().toISOString()
+          });
+          saveR0LabelsToStorage();
+        }
+
+        alert(`狀態升級完成！\nR0: ${labelInfo.r0Code}\n新狀態: R${(parseInt(labelInfo.regenerationCount) || 0) + 1}`);
+        clearUpgradeForm();
+      };
+
+      const clearUpgradeForm = () => {
+        formR0Upgrade.value = {
+          barcode: '',
+          labelInfo: null,
+          operatorName: '',
+          notes: ''
+        };
+      };
+
+      const getR0StatusClass = (status) => {
+        const s = status || 'R0';
+        if (s === 'R0') return 'badge-info';
+        if (s === 'R1' || s === 'R2') return 'badge-success';
+        if (s === 'R3' || s === 'R4') return 'badge-warning';
+        if (s === 'R5') return 'badge-error';
+        return 'badge-ghost';
+      };
+
+      const viewR0Detail = (label) => {
+        r0QueryResult.value = label;
+        r0SubTab.value = 'query';
+        r0QueryInput.value = label.r0Code;
+        nextTick(() => { if (window.lucide) lucide.createIcons(); });
+      };
+
+      const savePrinterSettings = () => {
+        localStorage.setItem('printerConfig', JSON.stringify(printerConfig.value));
+        showPrinterSettingsModal.value = false;
+        alert('印表機設定已儲存');
+      };
+
+      const loadPrinterConfig = () => {
+        const saved = localStorage.getItem('printerConfig');
+        if (saved) {
+          try {
+            printerConfig.value = { ...printerConfig.value, ...JSON.parse(saved) };
+          } catch (e) {}
+        }
+      };
+
+      const saveR0LabelsToStorage = async () => {
+        // 同時儲存到 localStorage (快速) 和後端 (持久)
+        localStorage.setItem('r0Labels', JSON.stringify(r0Labels.value));
+        // 背景同步到後端（不阻塞）
+        try {
+          await callApi('syncR0Labels', { labels: r0Labels.value }, false);
+        } catch (e) {
+          console.warn('R0Labels 後端同步失敗:', e);
+        }
+      };
+
+      const loadR0LabelsFromStorage = () => {
+        // 優先從 localStorage 載入（快速顯示）
+        // 後端資料會在 refreshData 時載入並覆蓋
+        const saved = localStorage.getItem('r0Labels');
+        if (saved) {
+          try {
+            r0Labels.value = JSON.parse(saved);
+          } catch (e) {}
+        }
+      };
+
+      // Oven Monitoring Functions (10 ovens)
+      const formatOvenTime = (seconds) => {
+        if (!seconds) return '00:00';
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+      };
+
+      const addOvenLog = (type, ovenName, message) => {
+        const now = new Date();
+        const time = now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+        ovenEventLogs.value.unshift({ type, ovenName, message, time });
+        if (ovenEventLogs.value.length > 100) ovenEventLogs.value.pop();
+        nextTick(() => { if (window.lucide) lucide.createIcons(); });
+      };
+
+      const clearOvenLogs = () => { ovenEventLogs.value = []; };
+
+      const getOvenDispatch = (ovenId) => {
+        const dispatchId = ovenBindings.value[ovenId];
+        if (!dispatchId) return null;
+        return dispatches.value.find(d => d.id === dispatchId);
+      };
+
+      const connectAllOvens = async () => {
+        if (!ovenConfig.value.ecuEndpoint) {
+          addOvenLog('warning', '系統', '請先設定 ECU API 端點');
+          showOvenSettingsModal.value = true;
+          return;
+        }
+        addOvenLog('info', '系統', '正在連線至 ECU-1051...');
+        try {
+          await new Promise(r => setTimeout(r, 1000));
+          ecuConnected.value = true;
+          addOvenLog('success', '系統', 'ECU-1051 連線成功');
+          startOvenPolling();
+        } catch (e) {
+          ecuConnected.value = false;
+          addOvenLog('error', '系統', 'ECU 連線失敗: ' + e);
+        }
+      };
+
+      const startOvenPolling = () => {
+        if (ovenTimer) clearInterval(ovenTimer);
+        ovenTimer = setInterval(() => {
+          ovens.value.forEach(oven => {
+            if (oven.running) {
+              oven.runningTime++;
+              // Simulate temperature increase
+              if (oven.temperature < 150) oven.temperature += 2;
+            }
+          });
+        }, 1000);
+      };
+
+      const simulateDoor = async (ovenId, isOpen) => {
+        const oven = ovens.value.find(o => o.id === ovenId);
+        if (!oven) return;
+
+        const prevState = oven.doorOpen;
+        oven.doorOpen = isOpen;
+
+        if (isOpen) {
+          addOvenLog('warning', oven.name, '門已開啟');
+          oven.running = false;
+        } else {
+          addOvenLog('success', oven.name, '門已關閉，開始運行');
+          oven.running = true;
+          oven.runningTime = 0;
+          oven.temperature = 25;
+
+          // Auto report if enabled
+          if (prevState && ovenAutoReportEnabled.value && ovenBindings.value[ovenId]) {
+            await triggerOvenAutoReport(ovenId);
+          }
+        }
+        nextTick(() => { if (window.lucide) lucide.createIcons(); });
+      };
+
+      const triggerOvenAutoReport = async (ovenId) => {
+        const oven = ovens.value.find(o => o.id === ovenId);
+        const dispatchId = ovenBindings.value[ovenId];
+        const dispatch = dispatches.value.find(d => d.id === dispatchId);
+        if (!dispatch) {
+          addOvenLog('error', oven.name, '找不到綁定的派工單');
+          return;
+        }
+        try {
+          addOvenLog('info', oven.name, `自動報工 ${ovenBatchQty.value} 片...`);
+          const result = await callApi('createReport', {
+            dispatchId: dispatch.id,
+            goodQty: ovenBatchQty.value,
+            ngQty: 0,
+            hasAbnormal: false,
+            abnormalType: '',
+            notes: `${oven.name} 自動報工`
+          });
+          addOvenLog('success', oven.name, `報工成功: ${result.reportNumber}`);
+          await refreshData();
+        } catch (e) {
+          addOvenLog('error', oven.name, '報工失敗: ' + e);
+        }
+      };
+
+      const saveOvenSettings = () => {
+        addOvenLog('success', '系統', '設定已儲存');
+        showOvenSettingsModal.value = false;
+      };
+
+      // Oven Barcode Scanning
+      const selectOvenForScan = (ovenId) => {
+        selectedOvenId.value = ovenId;
+        ovenScanInput.value = '';
+      };
+
+      const scanOvenBarcode = () => {
+        if (!selectedOvenId.value || !ovenScanInput.value.trim()) return;
+        const oven = ovens.value.find(o => o.id === selectedOvenId.value);
+        if (!oven) return;
+
+        const code = ovenScanInput.value.trim();
+        // 檢查是否已掃描過
+        if (oven.scannedCodes.includes(code)) {
+          addOvenLog('warning', oven.name, `條碼 ${code} 已掃描過`);
+        } else {
+          oven.scannedCodes.push(code);
+          addOvenLog('info', oven.name, `掃描條碼: ${code} (${oven.scannedCodes.length}/${oven.batchQty})`);
+        }
+        ovenScanInput.value = '';
+      };
+
+      const clearOvenScannedCodes = (ovenId) => {
+        const oven = ovens.value.find(o => o.id === ovenId);
+        if (oven) {
+          oven.scannedCodes = [];
+          addOvenLog('info', oven.name, '已清除所有已掃描條碼');
+        }
+      };
+
+      const removeOvenScannedCode = (ovenId, code) => {
+        const oven = ovens.value.find(o => o.id === ovenId);
+        if (oven) {
+          const idx = oven.scannedCodes.indexOf(code);
+          if (idx > -1) {
+            oven.scannedCodes.splice(idx, 1);
+          }
+        }
+      };
+
+      // Label Editor Functions
+      const dragStart = (e, type) => {
+        dragType = type;
+        e.dataTransfer.effectAllowed = 'copy';
+      };
+
+      const dragStartField = (e, field) => {
+        dragType = 'text';
+        dragData = field.key;
+        e.dataTransfer.effectAllowed = 'copy';
+      };
+
+      const dropElement = (e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const scale = canvasScale.value;
+        const x = Math.round((e.clientX - rect.left) / scale);
+        const y = Math.round((e.clientY - rect.top) / scale);
+
+        let newElement = { x, y };
+
+        switch (dragType) {
+          case 'text':
+            newElement = { ...newElement, type: 'text', text: dragData || '文字', fontSize: 12, bold: false };
+            break;
+          case 'barcode':
+            newElement = { ...newElement, type: 'barcode', value: '${epc}', format: 'CODE128', height: 30 };
+            break;
+          case 'qrcode':
+            newElement = { ...newElement, type: 'qrcode', value: '${epc}', size: 40 };
+            break;
+          case 'image':
+            newElement = { ...newElement, type: 'image', width: 30, height: 30, src: '' };
+            break;
+          case 'line':
+            newElement = { ...newElement, type: 'line', width: 40, thickness: 1 };
+            break;
+          case 'rect':
+            newElement = { ...newElement, type: 'rect', width: 30, height: 20, thickness: 1 };
+            break;
+        }
+
+        labelElements.value.push(newElement);
+        selectedElementIdx.value = labelElements.value.length - 1;
+        dragType = null;
+        dragData = null;
+        nextTick(() => { if (window.lucide) lucide.createIcons(); });
+      };
+
+      const selectElement = (idx) => {
+        selectedElementIdx.value = idx;
+      };
+
+      const deselectAll = () => {
+        selectedElementIdx.value = null;
+      };
+
+      const deleteElement = () => {
+        if (selectedElementIdx.value !== null) {
+          labelElements.value.splice(selectedElementIdx.value, 1);
+          selectedElementIdx.value = null;
+        }
+      };
+
+      const getElementStyle = (el) => {
+        const scale = canvasScale.value;
+        return {
+          left: el.x * scale + 'px',
+          top: el.y * scale + 'px'
+        };
+      };
+
+      const startDrag = (e, idx) => {
+        if (e.target.classList.contains('resize-handle')) return;
+        isDragging = true;
+        selectedElementIdx.value = idx;
+        const el = labelElements.value[idx];
+        const canvas = document.querySelector('.label-canvas');
+        if (!canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        const scale = canvasScale.value;
+
+        // 記錄點擊位置相對於元素左上角的偏移 (用於保持拖曳時的相對位置)
+        dragOffset.x = e.clientX - rect.left - el.x * scale;
+        dragOffset.y = e.clientY - rect.top - el.y * scale;
+
+        const onMove = (me) => {
+          if (!isDragging) return;
+          const canvas = document.querySelector('.label-canvas');
+          if (!canvas) return;
+          const rect = canvas.getBoundingClientRect();
+          const s = canvasScale.value;
+          // 新位置 = (滑鼠相對 canvas 位置 - 偏移量) / 縮放比例
+          el.x = Math.max(0, Math.round((me.clientX - rect.left - dragOffset.x) / s));
+          el.y = Math.max(0, Math.round((me.clientY - rect.top - dragOffset.y) / s));
+        };
+
+        const onUp = () => {
+          isDragging = false;
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+        };
+
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      };
+
+      const startResize = (e, idx) => {
+        const el = labelElements.value[idx];
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const startW = el.width || el.size || 40;
+        const startH = el.height || el.size || 40;
+
+        const onMove = (me) => {
+          const dx = me.clientX - startX;
+          const dy = me.clientY - startY;
+          const scale = canvasScale.value;
+          if (el.type === 'qrcode') {
+            el.size = Math.max(20, Math.round(startW + dx / scale));
+          } else {
+            el.width = Math.max(10, Math.round(startW + dx / scale));
+            if (el.height !== undefined) {
+              el.height = Math.max(10, Math.round(startH + dy / scale));
+            }
+          }
+        };
+
+        const onUp = () => {
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+        };
+
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      };
+
+      const resolveFieldValue = (text, data = null) => {
+        if (!text) return '';
+        const d = data || previewData.value;
+        return text
+          .replace(/\$\{r0Code\}/g, d.r0Code || 'R0XXX@YCD26A000001')
+          .replace(/\$\{epc\}/g, d.epc || 'E2XXXX000026000000000001')
+          .replace(/\$\{orderNumber\}/g, d.orderNumber || 'WO-XXXXXX')
+          .replace(/\$\{productModel\}/g, d.productModel || 'MODEL')
+          .replace(/\$\{customerName\}/g, d.customerName || 'CUSTOMER')
+          .replace(/\$\{customerCode\}/g, d.customerCode || 'XXX')
+          .replace(/\$\{regenerationStatus\}/g, d.regenerationStatus || 'R0')
+          .replace(/\$\{regenerationCount\}/g, d.regenerationCount ?? '0')
+          .replace(/\$\{date\}/g, d.date || new Date().toLocaleDateString('zh-TW'))
+          .replace(/\$\{operator\}/g, d.operator || 'OP');
+      };
+
+      const loadTemplate = () => {
+        if (!currentTemplateId.value) {
+          labelElements.value = [];
+          labelSize.value = { width: 50, height: 30 };
+          return;
+        }
+        const tpl = labelTemplates.value.find(t => t.id === currentTemplateId.value);
+        if (tpl) {
+          labelSize.value = { width: tpl.width, height: tpl.height };
+          labelElements.value = JSON.parse(JSON.stringify(tpl.elements));
+        }
+        nextTick(() => { if (window.lucide) lucide.createIcons(); });
+      };
+
+      const saveTemplate = async () => {
+        if (!templateSaveName.value.trim()) {
+          alert('請輸入樣板名稱');
+          return;
+        }
+        const template = {
+          id: currentTemplateId.value || 'tpl-' + Date.now(),
+          name: templateSaveName.value.trim(),
+          width: labelSize.value.width,
+          height: labelSize.value.height,
+          elements: JSON.parse(JSON.stringify(labelElements.value))
+        };
+
+        // Save to localStorage for now (can be extended to database)
+        const existing = labelTemplates.value.findIndex(t => t.id === template.id);
+        if (existing >= 0) {
+          labelTemplates.value[existing] = template;
+        } else {
+          labelTemplates.value.push(template);
+        }
+        localStorage.setItem('labelTemplates', JSON.stringify(labelTemplates.value));
+
+        currentTemplateId.value = template.id;
+        showTemplateSaveModal.value = false;
+        alert('樣板已儲存');
+      };
+
+      const previewLabel = () => {
+        showLabelPreviewModal.value = true;
+        nextTick(() => { if (window.lucide) lucide.createIcons(); });
+      };
+
+      const loadPreviewData = () => {
+        const wo = workOrders.value.find(w => w.id === previewWorkOrderId.value);
+        if (wo) {
+          // 取得客戶代碼
+          const customer = customers.value.find(c => c.name === wo.customerName);
+          const customerCode = customer?.code || wo.customerName.slice(0, 3).toUpperCase();
+
+          // 取得產品代碼
+          const product = products.value.find(p => p.name === wo.productModel || p.code === wo.productModel);
+          const productCode = product?.code || wo.productModel.slice(0, 4).toUpperCase();
+
+          // 產生 R0 編碼預覽
+          const year = new Date().getFullYear().toString().slice(-2);
+          const r0Code = `R0${customerCode}@YCD${year}A000001`;
+
+          // 產生 EPC 預覽
+          const epcCustomer = customerCode.toUpperCase().padEnd(4, '0').slice(0, 4);
+          const epcProduct = productCode.toUpperCase().padEnd(4, '0').slice(0, 4);
+          const epc = `E2${epcCustomer}${epcProduct}${year}000000000001`;
+
+          previewData.value = {
+            r0Code: r0Code,
+            epc: epc,
+            orderNumber: wo.orderNumber,
+            productModel: wo.productModel,
+            customerName: wo.customerName,
+            customerCode: customerCode,
+            date: new Date().toLocaleDateString('zh-TW'),
+            operator: operators.value[0]?.name || 'OP'
+          };
+        }
+      };
+
+      const generateSBPL = () => {
+        // Generate SATO SBPL commands
+        let sbpl = [];
+        sbpl.push('<STX>'); // Start
+        sbpl.push('A'); // ASCII mode
+        sbpl.push('H0' + String(labelSize.value.height * 8).padStart(4, '0')); // Label height
+        sbpl.push('V0' + String(labelSize.value.width * 8).padStart(4, '0')); // Label width
+
+        labelElements.value.forEach(el => {
+          const x = String(el.x * 8).padStart(4, '0');
+          const y = String(el.y * 8).padStart(4, '0');
+
+          switch (el.type) {
+            case 'text':
+              sbpl.push(`H${x}`);
+              sbpl.push(`V${y}`);
+              sbpl.push(`P02`); // Font
+              sbpl.push(resolveFieldValue(el.text, previewData.value));
+              break;
+            case 'barcode':
+              sbpl.push(`H${x}`);
+              sbpl.push(`V${y}`);
+              sbpl.push(`B1${el.format === 'CODE128' ? '3' : '1'}0${String(el.height).padStart(3, '0')}`);
+              sbpl.push(resolveFieldValue(el.value, previewData.value));
+              break;
+            case 'qrcode':
+              sbpl.push(`H${x}`);
+              sbpl.push(`V${y}`);
+              sbpl.push(`BQ2${String(el.size / 10).padStart(2, '0')}`);
+              sbpl.push(resolveFieldValue(el.value, previewData.value));
+              break;
+          }
+        });
+
+        sbpl.push('Q1'); // Print 1 label
+        sbpl.push('Z'); // End
+        sbpl.push('<ETX>');
+
+        const sbplText = sbpl.join('\r\n');
+
+        // Download as file
+        const blob = new Blob([sbplText], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'label.sbpl';
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+
+      // Load saved templates on mount
+      const loadSavedTemplates = () => {
+        const saved = localStorage.getItem('labelTemplates');
+        if (saved) {
+          try {
+            labelTemplates.value = JSON.parse(saved);
+          } catch (e) {}
+        }
+
+        // Add default templates if not exist (based on SATO PDF: 6.5cm x 3.5cm anti-metal RFID)
+        // 條碼用 R0 編碼 (人可讀掃描)，QR Code 用 EPC (機器讀取備用)
+        const defaultTemplates = [
+          {
+            id: 'default-r0',
+            name: 'R0 標籤 (新品)',
+            width: 65, // 6.5cm
+            height: 35, // 3.5cm
+            elements: [
+              { type: 'text', x: 3, y: 3, text: '${customerName}', fontSize: 10, bold: true },
+              { type: 'text', x: 3, y: 12, text: '${productModel}', fontSize: 8, bold: false },
+              { type: 'text', x: 50, y: 3, text: 'R0', fontSize: 14, bold: true },
+              { type: 'barcode', x: 3, y: 18, value: '${r0Code}', format: 'CODE128', height: 8 },
+              { type: 'qrcode', x: 50, y: 12, value: '${epc}', size: 20 },
+              { type: 'text', x: 3, y: 30, text: '${date}', fontSize: 6, bold: false }
+            ]
+          },
+          {
+            id: 'default-rn',
+            name: 'RN 標籤 (再生)',
+            width: 65,
+            height: 35,
+            elements: [
+              { type: 'text', x: 3, y: 3, text: '${customerName}', fontSize: 10, bold: true },
+              { type: 'text', x: 3, y: 12, text: '${productModel}', fontSize: 8, bold: false },
+              { type: 'rect', x: 48, y: 2, width: 15, height: 12, thickness: 2 },
+              { type: 'text', x: 50, y: 3, text: '${regenerationStatus}', fontSize: 14, bold: true },
+              { type: 'barcode', x: 3, y: 18, value: '${r0Code}', format: 'CODE128', height: 8 },
+              { type: 'qrcode', x: 50, y: 14, value: '${epc}', size: 18 },
+              { type: 'text', x: 3, y: 30, text: '再生: ${regenerationCount}/5', fontSize: 6, bold: false },
+              { type: 'text', x: 35, y: 30, text: '${date}', fontSize: 6, bold: false }
+            ]
+          }
+        ];
+
+        // Add defaults if not already present
+        defaultTemplates.forEach(tpl => {
+          if (!labelTemplates.value.find(t => t.id === tpl.id)) {
+            labelTemplates.value.push(tpl);
+          }
+        });
+      };
+
+      // Watch for tab change to refresh icons
+      watch(currentTab, (newTab) => {
+        if (newTab === 'oven') {
+          nextTick(() => { if (window.lucide) lucide.createIcons(); });
+        }
+      });
+
+      onMounted(() => {
+        // 效能優化：先載入本地快取（瞬間顯示），再背景更新
+        const hasCached = loadCachedData();
+        if (hasCached) {
+          // 有快取：先顯示舊資料，背景靜默更新（不顯示 loading）
+          refreshData(false);
+        } else {
+          // 無快取：顯示 loading 並載入
+          refreshData(true);
+        }
+        loadSavedTemplates();
+        loadPrinterConfig();
+        loadR0LabelsFromStorage();
+        // Initialize Lucide icons
+        if (window.lucide) lucide.createIcons();
+      });
 
       return {
         loading, version, currentTab, workOrders, dispatches, reports,
@@ -632,7 +1945,7 @@
         selectedWo, selectedDispatch, selectedEpcWo,
         formWo, formDispatch, formReport, formEpc, formOperator, formCustomer, formProduct,
         editingOperatorId, editingCustomerId, editingProductId, editingWorkOrderId,
-        regenerationOrders, completedDeglueOrders, reworkableOrders, epcHistory, operators, customers, products, customerSites, epcCheckStatus, epcCheckInfo,
+        regenerationOrders, completedDeglueOrders, reworkableOrders, aoiPassedOrders, epcHistory, operators, customers, products, customerSites, epcCheckStatus, epcCheckInfo,
         refreshData, submitWorkOrder, openDispatchModal, submitDispatch, openReportModal, submitReport,
         startEditWorkOrder, cancelEditWorkOrder, deleteWorkOrder, deleteDispatch,
         submitEpcChange, onWoSelect, onCustomerSelect, onSourceWorkOrderSelect, checkOldEpc,
@@ -642,17 +1955,39 @@
         startJob, completeJob, getStatusClass,
         signaturePadOutgassing, signaturePadAoi, startSign, drawSign, endSign, clearSignature,
         outgassingTests, outgassingSampleInfo, formOutgassing, filteredOutgassingTests,
-        loadOutgassingSampleInfo, submitOutgassingTest, generateOutgassingReport,
+        loadOutgassingSampleInfo, submitOutgassingTest, generateOutgassingReport, generateSingleOutgassingReport,
         aoiInspections, aoiCsvPreview, formAoi, formAoiSingle,
         handleAoiCsvFile, submitAoiImport, submitSingleAoi,
         showInspectionDetailModal, selectedInspection, inspectionType, viewInspectionDetail,
         adminLoading, adminMessage, adminMessageType, systemVersion,
-        adminGenerateTestData, adminSyncDatabase, adminFixColumnOrder, adminFixSignatureData
+        adminGenerateTestData, adminSyncDatabase, adminFixColumnOrder, adminFixSignatureData,
+        // Oven Monitoring (10 ovens)
+        ovens, ecuConnected, ovenConfig, ovenBindings, ovenBatchQty, ovenAutoReportEnabled,
+        ovenEventLogs, showOvenSettingsModal,
+        formatOvenTime, connectAllOvens, clearOvenLogs, getOvenDispatch,
+        simulateDoor, saveOvenSettings,
+        selectedOvenId, ovenScanInput, selectOvenForScan, scanOvenBarcode,
+        clearOvenScannedCodes, removeOvenScannedCode,
+        // R0 Management
+        r0SubTab, r0Labels, r0TableFilter, r0QueryInput, r0QueryResult, r0GenerateQueue,
+        printerConnected, showPrinterSettingsModal, printerConfig, epcConfig,
+        formR0Generate, formR0Simulate, formR0Replace, formR0Upgrade,
+        filteredR0Labels, r0CodePreview, epcPreview, epcSerialCounter, canUpgradeR0,
+        onR0WorkOrderSelect, generateR0Labels, startR0Printing, printLabelPreview, simulateEpcCallback, clearR0Queue,
+        generateEpc, parseEpc, autoGenerateAllEpc, autoGenerateEpcForItem,
+        queryR0Label, lookupOldR0, printReplacementLabel, confirmReplacement, clearReplaceForm,
+        lookupForUpgrade, performStatusUpgrade, clearUpgradeForm,
+        getR0StatusClass, viewR0Detail, reprintLabel, savePrinterSettings,
+        // Label Editor
+        labelTemplates, currentTemplateId, labelSize, labelElements, selectedElementIdx,
+        showTemplateSaveModal, showLabelPreviewModal, templateSaveName, dataFields,
+        previewWorkOrderId, previewData, canvasScale,
+        dragStart, dragStartField, dropElement, selectElement, deselectAll, deleteElement,
+        getElementStyle, startDrag, startResize, resolveFieldValue,
+        loadTemplate, saveTemplate, previewLabel, loadPreviewData, generateSBPL
       };
     }
   });
 
-  // 設定 Vue 認識 Shoelace 自訂元件
-  app.config.compilerOptions.isCustomElement = tag => tag.startsWith('sl-');
   app.mount('#app');
 </script>
