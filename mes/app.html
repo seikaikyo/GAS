@@ -306,6 +306,7 @@
       const auditLoading = ref(false);
 
       // WMS 倉儲管理
+      const wmsLoading = ref(false);
       const wmsLocations = ref([]);
       const wmsInventory = ref([]);
       const wmsMovements = ref([]);
@@ -2578,6 +2579,7 @@
       };
 
       const loadWmsData = async () => {
+        wmsLoading.value = true;
         try {
           const [locations, summary, movements, inventory] = await Promise.all([
             callApi('getWmsLocations', null, false),
@@ -2590,6 +2592,7 @@
           wmsMovements.value = movements || [];
           wmsInventory.value = inventory || [];
         } catch (e) { console.error('WMS 載入失敗:', e); }
+        finally { wmsLoading.value = false; }
       };
 
       const initWmsLocations = async () => {
@@ -3319,7 +3322,7 @@
         getElementStyle, startDrag, startResize, resolveFieldValue,
         loadTemplate, saveTemplate, previewLabel, loadPreviewData, generateSBPL,
         // WMS 倉儲管理
-        wmsLocations, wmsInventory, wmsMovements, wmsLocationSummary, wmsInventoryList,
+        wmsLoading, wmsLocations, wmsInventory, wmsMovements, wmsLocationSummary, wmsInventoryList,
         showWmsInboundModal, showWmsTransferModal, showWmsOutboundModal, showLocationDetailModal,
         selectedLocation, formWms, formatTime, formatDate,
         loadWmsData, initWmsLocations, wmsLocationTypeLabel, wmsMovementTypeLabel, wmsMovementTypeBadge,

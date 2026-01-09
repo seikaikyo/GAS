@@ -38,8 +38,14 @@
     </div>
   </div>
 
+  <!-- Loading 狀態 -->
+  <div v-if="wmsLoading" class="empty-state" style="padding: 3rem;">
+    <span class="loading loading-spinner loading-lg text-primary"></span>
+    <div style="margin-top: 1rem; color: #64748b;">載入倉儲資料中...</div>
+  </div>
+
   <!-- 空狀態 -->
-  <div v-if="wmsLocationSummary.length === 0" class="empty-state" style="padding: 3rem;">
+  <div v-else-if="wmsLocationSummary.length === 0" class="empty-state" style="padding: 3rem;">
     <i data-lucide="warehouse" class="w-12 h-12 mx-auto mb-4 opacity-50"></i>
     <div>尚未設定倉區</div>
     <button class="btn btn-primary mt-4" @click="initWmsLocations">
