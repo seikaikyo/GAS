@@ -506,41 +506,97 @@
       </div>
     </div>
 
-    <!-- 統計摘要 -->
+    <!-- 外包成本估算 -->
     <div class="changelog-summary">
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; text-align: center;">
-        <div>
-          <div class="total-hours">130+ 小時</div>
-          <div class="total-label">累計開發工時（v3.0 起）</div>
+      <h4 style="margin: 0 0 1rem; font-size: 0.9rem; color: #1e293b;">外包成本估算（同等規模 MES 系統）</h4>
+
+      <!-- 實際開發者資訊 -->
+      <div style="background: linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(168,85,247,0.1) 100%); border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem;">
+        <div style="font-size: 0.75rem; color: #6366f1; font-weight: 600; margin-bottom: 0.5rem;">實際開發者</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.8rem;">
+          <div><span style="color: #64748b;">年資：</span><strong>8+ 年</strong></div>
+          <div><span style="color: #64748b;">角色：</span><strong>Full-Stack + AI</strong></div>
         </div>
-        <div>
-          <div class="total-hours" style="background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">1 人</div>
-          <div class="total-label">實際開發人力</div>
+        <div style="margin-top: 0.75rem; font-size: 0.75rem; color: #64748b;">
+          <div style="margin-bottom: 0.25rem;"><strong style="color: #334155;">擅長語言：</strong>TypeScript, Python, Go, SQL</div>
+          <div style="margin-bottom: 0.25rem;"><strong style="color: #334155;">框架工具：</strong>Vue, Angular, React, FastAPI, GAS</div>
+          <div><strong style="color: #334155;">AI 工具：</strong>Claude Code, Cursor, GitHub Copilot</div>
         </div>
       </div>
-      <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px dashed #e2e8f0;">
-        <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.75rem;">業界標準人力配置（同等規模 MES 系統）</div>
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; font-size: 0.7rem;">
-          <div style="background: #f1f5f9; padding: 0.5rem; border-radius: 0.375rem;">
-            <div style="font-weight: 600; color: #334155;">PM</div>
-            <div style="color: #64748b;">1 人</div>
-          </div>
-          <div style="background: #f1f5f9; padding: 0.5rem; border-radius: 0.375rem;">
-            <div style="font-weight: 600; color: #334155;">前端</div>
-            <div style="color: #64748b;">2 人</div>
-          </div>
-          <div style="background: #f1f5f9; padding: 0.5rem; border-radius: 0.375rem;">
-            <div style="font-weight: 600; color: #334155;">後端</div>
-            <div style="color: #64748b;">2 人</div>
-          </div>
-          <div style="background: #f1f5f9; padding: 0.5rem; border-radius: 0.375rem;">
-            <div style="font-weight: 600; color: #334155;">QA</div>
-            <div style="color: #64748b;">1 人</div>
-          </div>
+
+      <!-- 外包報價對比 -->
+      <div style="border: 1px solid #e2e8f0; border-radius: 0.5rem; overflow: hidden;">
+        <table style="width: 100%; font-size: 0.75rem; border-collapse: collapse;">
+          <thead>
+            <tr style="background: #f8fafc;">
+              <th style="padding: 0.5rem; text-align: left; border-bottom: 1px solid #e2e8f0;">角色</th>
+              <th style="padding: 0.5rem; text-align: center; border-bottom: 1px solid #e2e8f0;">人數</th>
+              <th style="padding: 0.5rem; text-align: center; border-bottom: 1px solid #e2e8f0;">時薪 (USD)</th>
+              <th style="padding: 0.5rem; text-align: center; border-bottom: 1px solid #e2e8f0;">工時</th>
+              <th style="padding: 0.5rem; text-align: right; border-bottom: 1px solid #e2e8f0;">小計</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding: 0.5rem;">PM / Tech Lead</td>
+              <td style="padding: 0.5rem; text-align: center;">1</td>
+              <td style="padding: 0.5rem; text-align: center;">$80</td>
+              <td style="padding: 0.5rem; text-align: center;">80h</td>
+              <td style="padding: 0.5rem; text-align: right;">$6,400</td>
+            </tr>
+            <tr style="background: #fafafa;">
+              <td style="padding: 0.5rem;">Senior Frontend</td>
+              <td style="padding: 0.5rem; text-align: center;">1</td>
+              <td style="padding: 0.5rem; text-align: center;">$60</td>
+              <td style="padding: 0.5rem; text-align: center;">200h</td>
+              <td style="padding: 0.5rem; text-align: right;">$12,000</td>
+            </tr>
+            <tr>
+              <td style="padding: 0.5rem;">Senior Backend</td>
+              <td style="padding: 0.5rem; text-align: center;">1</td>
+              <td style="padding: 0.5rem; text-align: center;">$65</td>
+              <td style="padding: 0.5rem; text-align: center;">160h</td>
+              <td style="padding: 0.5rem; text-align: right;">$10,400</td>
+            </tr>
+            <tr style="background: #fafafa;">
+              <td style="padding: 0.5rem;">UI/UX Designer</td>
+              <td style="padding: 0.5rem; text-align: center;">1</td>
+              <td style="padding: 0.5rem; text-align: center;">$50</td>
+              <td style="padding: 0.5rem; text-align: center;">60h</td>
+              <td style="padding: 0.5rem; text-align: right;">$3,000</td>
+            </tr>
+            <tr>
+              <td style="padding: 0.5rem;">QA Engineer</td>
+              <td style="padding: 0.5rem; text-align: center;">1</td>
+              <td style="padding: 0.5rem; text-align: center;">$45</td>
+              <td style="padding: 0.5rem; text-align: center;">80h</td>
+              <td style="padding: 0.5rem; text-align: right;">$3,600</td>
+            </tr>
+            <tr style="background: #fef3c7; font-weight: 600;">
+              <td style="padding: 0.5rem;" colspan="3">外包總計（5 人團隊）</td>
+              <td style="padding: 0.5rem; text-align: center;">580h</td>
+              <td style="padding: 0.5rem; text-align: right; color: #d97706;">$35,400</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 成本對比 -->
+      <div style="margin-top: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div style="background: #dcfce7; padding: 0.75rem; border-radius: 0.5rem; text-align: center;">
+          <div style="font-size: 0.7rem; color: #16a34a;">實際成本</div>
+          <div style="font-size: 1.25rem; font-weight: 700; color: #15803d;">130h + AI</div>
+          <div style="font-size: 0.65rem; color: #64748b;">Claude Code 訂閱 ~$200/月</div>
         </div>
-        <div style="margin-top: 0.75rem; font-size: 0.7rem; color: #94a3b8;">
-          標準配置：6 人團隊 / 3-6 個月開發週期
+        <div style="background: #fee2e2; padding: 0.75rem; border-radius: 0.5rem; text-align: center;">
+          <div style="font-size: 0.7rem; color: #dc2626;">外包報價</div>
+          <div style="font-size: 1.25rem; font-weight: 700; color: #b91c1c;">$35,400</div>
+          <div style="font-size: 0.65rem; color: #64748b;">約 NT$ 1,100,000</div>
         </div>
+      </div>
+
+      <div style="margin-top: 0.75rem; font-size: 0.65rem; color: #94a3b8; text-align: center;">
+        * 外包時薪參考 Upwork/Toptal 2024 年台灣區 Senior 工程師行情
       </div>
     </div>
   </div>
