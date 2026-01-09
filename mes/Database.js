@@ -125,6 +125,28 @@ const DB_CONFIG = {
         'id', 'timestamp', 'operatorName', 'operatorCode', 'action', 'module',
         'targetType', 'targetId', 'targetName', 'details', 'ipAddress', 'userAgent'
       ]
+    },
+    // 排程管理
+    shifts: {
+      name: 'Shifts',
+      headers: [
+        'id', 'shiftDate', 'shiftType', 'operatorId', 'operatorName',
+        'stationName', 'startTime', 'endTime', 'status', 'notes', 'createdAt'
+      ]
+    },
+    equipmentSchedules: {
+      name: 'EquipmentSchedules',
+      headers: [
+        'id', 'scheduleDate', 'equipmentType', 'equipmentId', 'equipmentName',
+        'workOrderId', 'dispatchId', 'startTime', 'endTime', 'status', 'notes', 'createdAt'
+      ]
+    },
+    schedulePlans: {
+      name: 'SchedulePlans',
+      headers: [
+        'id', 'planName', 'planDate', 'planType', 'totalDispatches',
+        'completedDispatches', 'status', 'createdBy', 'notes', 'createdAt'
+      ]
     }
   }
 };
@@ -1469,5 +1491,266 @@ function dbGetAuditLogsByOperator(operatorName, limit = 50) {
     .filter(log => log.operatorName === operatorName)
     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
     .slice(0, limit);
+}
+
+// ========================================
+// 排程管理 (Scheduling)
+// ========================================
+
+/**
+ * 取得所有班次
+ */
+function dbGetShifts() {
+  return getTableData('Shifts');
+}
+
+/**
+ * 依日期取得班次
+ */
+function dbGetShiftsByDate(date) {
+  return getTableData('Shifts').filter(s => s.shiftDate === date);
+}
+
+/**
+ * 取得日期範圍內的班次
+ */
+function dbGetShiftsByDateRange(startDate, endDate) {
+  return getTableData('Shifts').filter(s => s.shiftDate >= startDate && s.shiftDate <= endDate);
+}
+
+/**
+ * 建立班次
+ */
+function dbCreateShift(data) {
+  return insertRecord('Shifts', {
+    shiftDate: data.shiftDate,
+    shiftType: data.shiftType || 'day', // day, evening, night
+    operatorId: data.operatorId || '',
+    operatorName: data.operatorName || '',
+    stationName: data.stationName || '',
+    startTime: data.startTime || '08:00',
+    endTime: data.endTime || '17:00',
+    status: data.status || 'scheduled', // scheduled, confirmed, completed, cancelled
+    notes: data.notes || '',
+    createdAt: new Date().toISOString()
+  });
+}
+
+/**
+ * 更新班次
+ */
+function dbUpdateShift(id, data) {
+  return updateRecord('Shifts', id, data);
+}
+
+/**
+ * 刪除班次
+ */
+function dbDeleteShift(id) {
+  return deleteRecord('Shifts', id);
+}
+
+/**
+ * 批次匯入班次
+ * @param {Array} shifts - 班次陣列 [{ operatorId, operatorName, shiftDate, shiftType, notes }]
+ * @returns {Object} { imported, skipped, total, errors }
+ */
+function dbImportShifts(shifts) {
+  const existingShifts = dbGetShifts();
+  let imported = 0;
+  let skipped = 0;
+  const errors = [];
+
+  // 建立現有班次的快速查找表 (operatorId + shiftDate)
+  const existingMap = {};
+  existingShifts.forEach(s => {
+    const key = `${s.operatorId}_${s.shiftDate}`;
+    existingMap[key] = true;
+  });
+
+  shifts.forEach((shift, index) => {
+    try {
+      // 檢查必要欄位
+      if (!shift.operatorId || !shift.shiftDate || !shift.shiftType) {
+        errors.push({ row: index + 1, error: '缺少必要欄位 (operatorId, shiftDate, shiftType)' });
+        skipped++;
+        return;
+      }
+
+      // 檢查是否重複 (同一人同一天)
+      const key = `${shift.operatorId}_${shift.shiftDate}`;
+      if (existingMap[key]) {
+        skipped++;
+        return;
+      }
+
+      // 設定預設時間
+      let startTime = shift.startTime;
+      let endTime = shift.endTime;
+
+      if (!startTime || !endTime) {
+        switch (shift.shiftType) {
+          case 'day':
+            startTime = startTime || '08:00';
+            endTime = endTime || '17:00';
+            break;
+          case 'evening':
+            startTime = startTime || '16:00';
+            endTime = endTime || '00:00';
+            break;
+          case 'night':
+            startTime = startTime || '00:00';
+            endTime = endTime || '08:00';
+            break;
+          default:
+            startTime = startTime || '08:00';
+            endTime = endTime || '17:00';
+        }
+      }
+
+      // 建立班次
+      dbCreateShift({
+        shiftDate: shift.shiftDate,
+        shiftType: shift.shiftType,
+        operatorId: shift.operatorId,
+        operatorName: shift.operatorName || '',
+        stationName: shift.stationName || '',
+        startTime: startTime,
+        endTime: endTime,
+        status: 'scheduled',
+        notes: shift.notes || ''
+      });
+
+      imported++;
+      existingMap[key] = true; // 加入已存在表防止同批次重複
+
+    } catch (e) {
+      errors.push({ row: index + 1, error: e.toString() });
+      skipped++;
+    }
+  });
+
+  return {
+    imported,
+    skipped,
+    total: shifts.length,
+    errors: errors.length > 0 ? errors : undefined
+  };
+}
+
+/**
+ * 取得所有設備排程
+ */
+function dbGetEquipmentSchedules() {
+  return getTableData('EquipmentSchedules');
+}
+
+/**
+ * 依日期取得設備排程
+ */
+function dbGetEquipmentSchedulesByDate(date) {
+  return getTableData('EquipmentSchedules').filter(s => s.scheduleDate === date);
+}
+
+/**
+ * 建立設備排程
+ */
+function dbCreateEquipmentSchedule(data) {
+  return insertRecord('EquipmentSchedules', {
+    scheduleDate: data.scheduleDate,
+    equipmentType: data.equipmentType || 'oven', // oven, station
+    equipmentId: data.equipmentId || '',
+    equipmentName: data.equipmentName || '',
+    workOrderId: data.workOrderId || '',
+    dispatchId: data.dispatchId || '',
+    startTime: data.startTime || '',
+    endTime: data.endTime || '',
+    status: data.status || 'scheduled', // scheduled, in_progress, completed, cancelled
+    notes: data.notes || '',
+    createdAt: new Date().toISOString()
+  });
+}
+
+/**
+ * 更新設備排程
+ */
+function dbUpdateEquipmentSchedule(id, data) {
+  return updateRecord('EquipmentSchedules', id, data);
+}
+
+/**
+ * 刪除設備排程
+ */
+function dbDeleteEquipmentSchedule(id) {
+  return deleteRecord('EquipmentSchedules', id);
+}
+
+/**
+ * 取得所有排程計劃
+ */
+function dbGetSchedulePlans() {
+  return getTableData('SchedulePlans');
+}
+
+/**
+ * 建立排程計劃
+ */
+function dbCreateSchedulePlan(data) {
+  return insertRecord('SchedulePlans', {
+    planName: data.planName || '',
+    planDate: data.planDate,
+    planType: data.planType || 'daily', // daily, weekly
+    totalDispatches: data.totalDispatches || 0,
+    completedDispatches: data.completedDispatches || 0,
+    status: data.status || 'draft', // draft, active, completed
+    createdBy: data.createdBy || '',
+    notes: data.notes || '',
+    createdAt: new Date().toISOString()
+  });
+}
+
+/**
+ * 更新排程計劃
+ */
+function dbUpdateSchedulePlan(id, data) {
+  return updateRecord('SchedulePlans', id, data);
+}
+
+/**
+ * 計算排程統計
+ */
+function dbGetScheduleStats(date) {
+  const shifts = dbGetShiftsByDate(date);
+  const equipSchedules = dbGetEquipmentSchedulesByDate(date);
+  const dispatches = getTableData('Dispatches').filter(d =>
+    d.plannedStartAt && d.plannedStartAt.startsWith(date)
+  );
+
+  // 計算各班次人數
+  const shiftCounts = {
+    day: shifts.filter(s => s.shiftType === 'day').length,
+    evening: shifts.filter(s => s.shiftType === 'evening').length,
+    night: shifts.filter(s => s.shiftType === 'night').length
+  };
+
+  // 計算設備使用率
+  const ovenSchedules = equipSchedules.filter(e => e.equipmentType === 'oven');
+  const ovenUsage = ovenSchedules.length > 0 ? (ovenSchedules.length / 10 * 100).toFixed(0) : 0;
+
+  // 計算派工統計
+  const totalDispatches = dispatches.length;
+  const completedDispatches = dispatches.filter(d => d.status === 'completed').length;
+  const inProgressDispatches = dispatches.filter(d => d.status === 'in_progress').length;
+
+  return {
+    date,
+    shifts: shiftCounts,
+    totalShifts: shifts.length,
+    ovenUsage: Number(ovenUsage),
+    totalDispatches,
+    completedDispatches,
+    inProgressDispatches,
+    completionRate: totalDispatches > 0 ? Math.round(completedDispatches / totalDispatches * 100) : 0
+  };
 }
 

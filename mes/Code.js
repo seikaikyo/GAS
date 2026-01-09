@@ -1,6 +1,6 @@
 /**
  * Code.js - GAS 後端入口
- * v5.0.0 - 模組化架構 + Shoelace UI
+ * v5.0.0 - 模組化架構 + DaisyUI
  */
 
 function doGet() {
@@ -94,7 +94,7 @@ function api(action, payload) {
     let result;
     switch (action) {
       case 'getVersion':
-        return { success: true, data: '5.26.0' };
+        return { success: true, data: '5.36.0' };
 
       // 效能優化：單次載入所有資料 (含快取)
       case 'getAllData':
@@ -329,6 +329,56 @@ function api(action, payload) {
         break;
       case 'createAuditLog':
         result = dbCreateAuditLog(payload);
+        break;
+
+      // 排程管理 (Scheduling)
+      case 'getShifts':
+        result = dbGetShifts();
+        break;
+      case 'getShiftsByDate':
+        result = dbGetShiftsByDate(payload.date);
+        break;
+      case 'getShiftsByDateRange':
+        result = dbGetShiftsByDateRange(payload.startDate, payload.endDate);
+        break;
+      case 'createShift':
+        result = dbCreateShift(payload);
+        break;
+      case 'updateShift':
+        result = dbUpdateShift(payload.id, payload.data);
+        break;
+      case 'deleteShift':
+        result = dbDeleteShift(payload.id);
+        break;
+      case 'importShifts':
+        result = dbImportShifts(payload.shifts);
+        break;
+      case 'getEquipmentSchedules':
+        result = dbGetEquipmentSchedules();
+        break;
+      case 'getEquipmentSchedulesByDate':
+        result = dbGetEquipmentSchedulesByDate(payload.date);
+        break;
+      case 'createEquipmentSchedule':
+        result = dbCreateEquipmentSchedule(payload);
+        break;
+      case 'updateEquipmentSchedule':
+        result = dbUpdateEquipmentSchedule(payload.id, payload.data);
+        break;
+      case 'deleteEquipmentSchedule':
+        result = dbDeleteEquipmentSchedule(payload.id);
+        break;
+      case 'getSchedulePlans':
+        result = dbGetSchedulePlans();
+        break;
+      case 'createSchedulePlan':
+        result = dbCreateSchedulePlan(payload);
+        break;
+      case 'updateSchedulePlan':
+        result = dbUpdateSchedulePlan(payload.id, payload.data);
+        break;
+      case 'getScheduleStats':
+        result = dbGetScheduleStats(payload.date);
         break;
 
       case 'getShortUrl':

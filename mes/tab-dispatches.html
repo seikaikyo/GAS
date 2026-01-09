@@ -34,14 +34,22 @@
         </div>
       </div>
 
-      <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-        <button v-if="d.status === 'pending'" class="btn btn-primary w-full" @click="startJob(d)">
+      <!-- 待開始狀態：開始 + 取消 並列 -->
+      <div v-if="d.status === 'pending'" class="flex gap-2">
+        <button class="btn btn-primary flex-1" @click="startJob(d)">
           <i data-lucide="play" class="w-4 h-4"></i>
           開始作業
         </button>
+        <button class="btn btn-outline btn-error flex-1" @click="deleteDispatch(d.id)">
+          <i data-lucide="x" class="w-4 h-4"></i>
+          取消
+        </button>
+      </div>
 
+      <!-- 作業中狀態 -->
+      <div v-if="d.status === 'in_progress'" class="flex flex-col gap-2">
         <!-- 烘箱站專用：開/關門按鈕 -->
-        <div v-if="d.status === 'in_progress' && d.stationName === '烘箱站'" class="oven-door-controls">
+        <div v-if="d.stationName === '烘箱站'" class="oven-door-controls">
           <button class="btn btn-sm flex-1"
                   :class="getDispatchDoorState(d.id) === 'open' ? 'btn-warning' : 'btn-ghost'"
                   @click="recordOvenDoor(d, 'open')"
@@ -58,7 +66,7 @@
           </button>
         </div>
         <!-- 烘箱站：顯示目前狀態與時間 -->
-        <div v-if="d.status === 'in_progress' && d.stationName === '烘箱站' && getDispatchDoorState(d.id)"
+        <div v-if="d.stationName === '烘箱站' && getDispatchDoorState(d.id)"
              class="oven-door-status">
           <span v-if="getDispatchDoorState(d.id) === 'open'">
             <i data-lucide="door-open" class="w-3 h-3"></i>
@@ -70,18 +78,18 @@
           </span>
           <span class="door-time">{{ getDispatchDoorTime(d.id) }}</span>
         </div>
-
-        <button v-if="d.status === 'in_progress'" class="btn btn-success w-full" @click="completeJob(d)">
+        <!-- 完成報工按鈕 -->
+        <button class="btn btn-success w-full" @click="completeJob(d)">
           <i data-lucide="check" class="w-4 h-4"></i>
           完成並報工
         </button>
+      </div>
 
-        <button v-if="d.status === 'completed'" class="btn btn-ghost w-full" disabled>
+      <!-- 已完成狀態 -->
+      <div v-if="d.status === 'completed'" class="flex">
+        <button class="btn btn-ghost w-full" disabled>
+          <i data-lucide="check-circle" class="w-4 h-4"></i>
           已完成
-        </button>
-
-        <button v-if="d.status === 'pending'" class="btn btn-sm btn-outline btn-error w-full" @click="deleteDispatch(d.id)">
-          取消派工
         </button>
       </div>
     </div>

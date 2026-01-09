@@ -7,7 +7,7 @@
       const loading = ref(false);
       const loadingCount = ref(0);
       const version = ref('');
-      const currentTab = ref('work-orders');
+      const currentTab = ref('schedule');
       const workOrders = ref([]);
       const woStatusFilter = ref('all');
       const dispatches = ref([]);
@@ -338,6 +338,256 @@
         locationCode: '',
         operatorName: '',
         notes: ''
+      });
+
+      // ===== 排程管理 (Scheduling Dashboard) =====
+      const scheduleSubTab = ref('overview');
+      const scheduleDate = ref(new Date().toISOString().split('T')[0]);
+      const shifts = ref([]);
+      const equipmentSchedules = ref([]);
+      const schedulePlans = ref([]);
+      const ganttView = ref('day');
+
+      // 排程 Modals
+      const showShiftModal = ref(false);
+      const showEquipmentScheduleModal = ref(false);
+      const savingShift = ref(false);
+      const savingEquipmentSchedule = ref(false);
+
+      // 排程表單
+      const shiftForm = ref({
+        operatorId: '',
+        shiftDate: new Date().toISOString().split('T')[0],
+        shiftType: 'day',
+        stationName: '',
+        notes: ''
+      });
+      const equipmentScheduleForm = ref({
+        equipmentType: 'oven',
+        equipmentId: '',
+        scheduleDate: new Date().toISOString().split('T')[0],
+        startTime: '08:00',
+        endTime: '16:00',
+        workOrderId: '',
+        notes: ''
+      });
+
+      // 站點選項
+      const stationOptions = ['除膠站', '烘箱站', 'OQC檢驗', 'AOI檢驗', '釋氣檢驗', 'RFID更換', '包裝站'];
+      const skillStations = ['除膠站', '烘箱站', 'OQC檢驗', 'AOI檢驗', '釋氣檢驗', 'RFID更換', '包裝站'];
+
+      // 班次匯入相關狀態
+      const showShiftImportModal = ref(false);
+      const shiftImportWeekStart = ref(getMonday(new Date()).toISOString().split('T')[0]);
+      const shiftImportPreview = ref([]);
+      const shiftImportError = ref('');
+      const importingShifts = ref(false);
+
+      // 取得指定日期所在週的星期一
+      function getMonday(d) {
+        const date = new Date(d);
+        const day = date.getDay();
+        const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+        return new Date(date.setDate(diff));
+      }
+
+      // 甘特圖小時
+      const ganttHours = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+      const timelineHours = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22];
+
+      // 排程統計 (Computed)
+      const scheduleStats = Vue.computed(() => {
+        const today = scheduleDate.value;
+        const todayDisp = dispatches.value.filter(d => d.createdAt && d.createdAt.startsWith(today));
+        const completed = todayDisp.filter(d => d.status === 'completed');
+        const inProgress = todayDisp.filter(d => d.status === 'in_progress');
+        const pending = todayDisp.filter(d => d.status === 'pending');
+        const targetQty = todayDisp.reduce((sum, d) => sum + (parseInt(d.targetQty) || 0), 0);
+        const completedQty = completed.reduce((sum, d) => sum + (parseInt(d.completedQty) || 0), 0);
+        return {
+          targetQty,
+          completedQty,
+          achievementRate: targetQty > 0 ? Math.round(completedQty / targetQty * 100) : 0,
+          inProgressCount: inProgress.length,
+          pendingCount: pending.length
+        };
+      });
+
+      const todayShiftStats = Vue.computed(() => {
+        const today = scheduleDate.value;
+        const todayShifts = shifts.value.filter(s => s.shiftDate === today);
+        return {
+          day: todayShifts.filter(s => s.shiftType === 'day').length,
+          evening: todayShifts.filter(s => s.shiftType === 'evening').length,
+          night: todayShifts.filter(s => s.shiftType === 'night').length,
+          total: todayShifts.length,
+          coverage: operators.value.length > 0 ? Math.round(todayShifts.length / operators.value.length * 100) : 0
+        };
+      });
+
+      const equipmentStats = Vue.computed(() => {
+        const today = scheduleDate.value;
+        const todaySchedules = equipmentSchedules.value.filter(e => e.scheduleDate === today);
+        const ovenSchedules = todaySchedules.filter(e => e.equipmentType === 'oven');
+        const stationSchedules = todaySchedules.filter(e => e.equipmentType === 'station');
+        return {
+          ovenInUse: new Set(ovenSchedules.map(e => e.equipmentId)).size,
+          ovenTotal: 10,
+          stationActive: new Set(stationSchedules.map(e => e.equipmentId)).size,
+          stationTotal: 5,
+          usageRate: Math.round((ovenSchedules.length + stationSchedules.length) / 15 * 100)
+        };
+      });
+
+      const equipmentUsageRing = Vue.computed(() => {
+        const rate = equipmentStats.value.usageRate || 0;
+        const circumference = 2 * Math.PI * 40;
+        return {
+          dashArray: circumference,
+          dashOffset: circumference * (1 - rate / 100)
+        };
+      });
+
+      const conflictStats = Vue.computed(() => {
+        // 簡單衝突檢測：同一設備同一時段多個排程
+        const conflicts = [];
+        const grouped = {};
+        equipmentSchedules.value.forEach(e => {
+          const key = `${e.equipmentId}-${e.scheduleDate}-${e.startTime}`;
+          if (!grouped[key]) grouped[key] = [];
+          grouped[key].push(e);
+        });
+        Object.entries(grouped).forEach(([key, items]) => {
+          if (items.length > 1) {
+            conflicts.push({ id: key, type: 'time', message: `${items[0].equipmentName} 時間衝突` });
+          }
+        });
+        return {
+          total: conflicts.length,
+          items: conflicts,
+          timeConflict: conflicts.filter(c => c.type === 'time').length,
+          resourceConflict: 0,
+          capacityConflict: 0
+        };
+      });
+
+      const todayDispatches = Vue.computed(() => {
+        const today = scheduleDate.value;
+        return dispatches.value.filter(d => d.createdAt && d.createdAt.startsWith(today));
+      });
+
+      const stationLoadData = Vue.computed(() => {
+        const today = scheduleDate.value;
+        const todayDisp = dispatches.value.filter(d => d.createdAt && d.createdAt.startsWith(today));
+        const stationCounts = {};
+        stationOptions.forEach(s => stationCounts[s] = 0);
+        todayDisp.forEach(d => {
+          if (stationCounts[d.stationName] !== undefined) stationCounts[d.stationName]++;
+        });
+        const maxCount = Math.max(...Object.values(stationCounts), 1);
+        return stationOptions.map(s => ({
+          name: s,
+          count: stationCounts[s],
+          load: Math.round(stationCounts[s] / maxCount * 100)
+        }));
+      });
+
+      const scheduledWorkOrders = Vue.computed(() => {
+        return workOrders.value.filter(w => w.status !== 'cancelled' && w.status !== 'completed').slice(0, 10);
+      });
+
+      const ganttWorkOrders = Vue.computed(() => {
+        return scheduledWorkOrders.value.map((wo, idx) => {
+          const startHour = 8 + idx;
+          const duration = 2;
+          return {
+            ...wo,
+            startPercent: ((startHour - 8) / 12) * 100,
+            widthPercent: (duration / 12) * 100
+          };
+        });
+      });
+
+      const scheduleOperators = Vue.computed(() => {
+        return operators.value.filter(o => o.isActive !== 'FALSE' && o.isActive !== false);
+      });
+
+      const weekDays = Vue.computed(() => {
+        const base = new Date(scheduleDate.value);
+        const dayOfWeek = base.getDay();
+        const monday = new Date(base);
+        monday.setDate(base.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+        const days = [];
+        const dayNames = ['一', '二', '三', '四', '五', '六', '日'];
+        const today = new Date().toISOString().split('T')[0];
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(monday);
+          d.setDate(monday.getDate() + i);
+          const dateStr = d.toISOString().split('T')[0];
+          days.push({
+            date: dateStr,
+            dateStr: `${d.getMonth() + 1}/${d.getDate()}`,
+            name: dayNames[i],
+            isToday: dateStr === today
+          });
+        }
+        return days;
+      });
+
+      const ovenSchedules = Vue.computed(() => {
+        return ovens.value.map(oven => ({
+          id: oven.id,
+          name: oven.name,
+          schedules: equipmentSchedules.value
+            .filter(e => e.equipmentType === 'oven' && e.equipmentId === String(oven.id))
+            .map(e => {
+              const start = parseInt(e.startTime?.split(':')[0] || 0);
+              const end = parseInt(e.endTime?.split(':')[0] || 0);
+              return {
+                ...e,
+                startPercent: (start / 24) * 100,
+                widthPercent: ((end - start) / 24) * 100
+              };
+            })
+        }));
+      });
+
+      const stationSchedules = Vue.computed(() => {
+        return stationOptions.map(station => ({
+          name: station,
+          schedules: equipmentSchedules.value
+            .filter(e => e.equipmentType === 'station' && e.equipmentName === station)
+            .map(e => {
+              const start = parseInt(e.startTime?.split(':')[0] || 0);
+              const end = parseInt(e.endTime?.split(':')[0] || 0);
+              return {
+                ...e,
+                startPercent: (start / 24) * 100,
+                widthPercent: ((end - start) / 24) * 100
+              };
+            })
+        }));
+      });
+
+      const filteredEquipments = Vue.computed(() => {
+        if (equipmentScheduleForm.value.equipmentType === 'oven') {
+          return ovens.value.map(o => ({ id: String(o.id), name: o.name }));
+        }
+        return stationOptions.map(s => ({ id: s, name: s }));
+      });
+
+      const equipmentUsageStats = Vue.computed(() => {
+        const stats = [];
+        ovens.value.forEach(oven => {
+          const schedules = equipmentSchedules.value.filter(e => e.equipmentType === 'oven' && e.equipmentId === String(oven.id));
+          stats.push({ name: oven.name, usage: Math.min(schedules.length * 20, 100) });
+        });
+        return stats.slice(0, 5);
+      });
+
+      const maintenanceReminders = Vue.computed(() => {
+        // 靜態資料示範
+        return [];
       });
 
       // Reinitialize Lucide icons when DOM updates
@@ -2567,6 +2817,356 @@
         }
       };
 
+      // ===== 排程管理 Methods =====
+      const loadScheduleData = async () => {
+        try {
+          const [shiftsData, equipData] = await Promise.all([
+            callApi('getShifts', null, false),
+            callApi('getEquipmentSchedules', null, false)
+          ]);
+          shifts.value = shiftsData || [];
+          equipmentSchedules.value = equipData || [];
+        } catch (e) {
+          console.error('載入排程資料失敗:', e);
+        }
+      };
+
+      const refreshScheduleData = () => {
+        loadScheduleData();
+      };
+
+      const changeScheduleDate = (delta) => {
+        const d = new Date(scheduleDate.value);
+        d.setDate(d.getDate() + delta);
+        scheduleDate.value = d.toISOString().split('T')[0];
+      };
+
+      const openShiftModal = (operatorId = '', date = '') => {
+        shiftForm.value = {
+          operatorId: operatorId,
+          shiftDate: date || scheduleDate.value,
+          shiftType: 'day',
+          stationName: '',
+          notes: ''
+        };
+        showShiftModal.value = true;
+      };
+
+      const quickAddShift = (operatorId, date) => {
+        openShiftModal(operatorId, date);
+      };
+
+      const saveShift = async () => {
+        if (!shiftForm.value.operatorId || !shiftForm.value.shiftDate) {
+          alert('請選擇人員和日期');
+          return;
+        }
+        savingShift.value = true;
+        try {
+          const operator = operators.value.find(o => o.id === shiftForm.value.operatorId);
+          await callApi('createShift', {
+            ...shiftForm.value,
+            operatorName: operator?.name || ''
+          });
+          await loadScheduleData();
+          showShiftModal.value = false;
+          logAudit('create', 'schedule', '新增班次', { shift: shiftForm.value });
+        } catch (e) {
+          alert('儲存失敗: ' + e);
+        } finally {
+          savingShift.value = false;
+        }
+      };
+
+      // ===== 班次 CSV 匯入功能 =====
+
+      // 下載 CSV 範本
+      const downloadShiftTemplate = () => {
+        const monday = new Date(shiftImportWeekStart.value);
+        const headers = ['人員'];
+        const weekDayNames = ['一', '二', '三', '四', '五', '六', '日'];
+
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(monday);
+          d.setDate(monday.getDate() + i);
+          const dateStr = `${d.getMonth() + 1}/${d.getDate()}`;
+          headers.push(`${weekDayNames[i]} ${dateStr}`);
+        }
+
+        const exampleRows = [
+          ['張品管', '24M(早)', '24M(早)', '24M(早)', '', '24N(夜)', '', ''],
+          ['李小華', '24N(夜)', '', '', '24M(早)', '24M(早)', '24M(早)', ''],
+          ['王大明', '', '24M(早)加班', '24M(早)', '24M(早)', '', '', '24N(夜)']
+        ];
+
+        let csv = headers.join(',') + '\n';
+        exampleRows.forEach(row => {
+          csv += row.join(',') + '\n';
+        });
+
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `班次範本_${shiftImportWeekStart.value}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+
+      // 解析班別字串 (如: "24M(早)加班", "24N(夜)", "早", "夜", "D", "N")
+      const parseShiftType = (cellValue) => {
+        if (!cellValue || cellValue.trim() === '') return null;
+
+        const val = cellValue.trim().toUpperCase();
+        let shiftType = null;
+        let notes = '';
+
+        // 解析班別
+        if (val.includes('M') || val.includes('早') || val.startsWith('D') || val === '早班') {
+          shiftType = 'day';
+        } else if (val.includes('N') || val.includes('夜') || val === '夜班') {
+          shiftType = 'night';
+        } else if (val.includes('中') || val.startsWith('E') || val === '中班') {
+          shiftType = 'evening';
+        } else if (val === '休' || val === 'O' || val === 'OFF' || val === '休假') {
+          return null; // 休假不建立班次
+        }
+
+        // 如果還是無法判斷，嘗試從原始值推斷
+        if (!shiftType && cellValue.trim()) {
+          // 有內容但無法辨識班別，預設早班並將內容當備註
+          shiftType = 'day';
+          notes = cellValue.trim();
+        }
+
+        // 提取備註（括號後的內容或「加班」等）
+        const originalVal = cellValue.trim();
+        if (originalVal.includes('加班')) notes = '加班';
+        const match = originalVal.match(/\)(.+)$/);
+        if (match) notes = match[1];
+
+        return { shiftType, notes };
+      };
+
+      // 處理 CSV 檔案
+      const handleShiftCsvFile = (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        shiftImportError.value = '';
+        shiftImportPreview.value = [];
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const text = e.target.result;
+            const lines = text.split(/\r?\n/).filter(line => line.trim());
+
+            if (lines.length < 2) {
+              shiftImportError.value = 'CSV 檔案至少需要標題列和一列資料';
+              return;
+            }
+
+            // 解析標題列（取得日期對應）
+            const headers = lines[0].split(',').map(h => h.trim());
+            const weekStart = new Date(shiftImportWeekStart.value);
+            const dateColumns = [];
+
+            // 建立日期對應（第一欄是人員，之後是星期一到日）
+            for (let i = 1; i < headers.length && i <= 7; i++) {
+              const d = new Date(weekStart);
+              d.setDate(weekStart.getDate() + (i - 1));
+              dateColumns.push(d.toISOString().split('T')[0]);
+            }
+
+            const preview = [];
+
+            // 解析資料列
+            for (let i = 1; i < lines.length; i++) {
+              const cols = lines[i].split(',').map(c => c.trim());
+              const operatorName = cols[0];
+
+              if (!operatorName) continue;
+
+              // 查找對應的人員
+              const operator = operators.value.find(o =>
+                o.name === operatorName ||
+                o.name.includes(operatorName) ||
+                operatorName.includes(o.name)
+              );
+
+              // 解析每天的班次
+              for (let j = 0; j < dateColumns.length && j + 1 < cols.length; j++) {
+                const cellValue = cols[j + 1];
+                const parsed = parseShiftType(cellValue);
+
+                if (parsed && parsed.shiftType) {
+                  preview.push({
+                    operatorName,
+                    operatorId: operator?.id || null,
+                    shiftDate: dateColumns[j],
+                    shiftType: parsed.shiftType,
+                    notes: parsed.notes,
+                    error: operator ? null : '找不到對應人員'
+                  });
+                }
+              }
+            }
+
+            shiftImportPreview.value = preview;
+
+            if (preview.length === 0) {
+              shiftImportError.value = '沒有解析到任何班次資料，請檢查 CSV 格式';
+            }
+
+          } catch (err) {
+            shiftImportError.value = '解析 CSV 失敗: ' + err.message;
+          }
+        };
+        reader.readAsText(file, 'UTF-8');
+      };
+
+      // 關閉匯入 Modal
+      const closeShiftImportModal = () => {
+        showShiftImportModal.value = false;
+        shiftImportPreview.value = [];
+        shiftImportError.value = '';
+      };
+
+      // 執行匯入
+      const importShifts = async () => {
+        const validShifts = shiftImportPreview.value.filter(s => !s.error && s.operatorId);
+
+        if (validShifts.length === 0) {
+          alert('沒有可匯入的班次');
+          return;
+        }
+
+        importingShifts.value = true;
+        try {
+          const result = await callApi('importShifts', { shifts: validShifts });
+          alert(`成功匯入 ${result.imported || validShifts.length} 筆班次`);
+          await loadScheduleData();
+          closeShiftImportModal();
+          logAudit('import', 'schedule', '批次匯入班次', { count: validShifts.length });
+        } catch (e) {
+          alert('匯入失敗: ' + e);
+        } finally {
+          importingShifts.value = false;
+        }
+      };
+
+      const openEquipmentScheduleModal = (type = 'oven') => {
+        equipmentScheduleForm.value = {
+          equipmentType: type,
+          equipmentId: '',
+          scheduleDate: scheduleDate.value,
+          startTime: '08:00',
+          endTime: '16:00',
+          workOrderId: '',
+          notes: ''
+        };
+        showEquipmentScheduleModal.value = true;
+      };
+
+      const saveEquipmentSchedule = async () => {
+        if (!equipmentScheduleForm.value.equipmentId) {
+          alert('請選擇設備');
+          return;
+        }
+        savingEquipmentSchedule.value = true;
+        try {
+          let equipmentName = '';
+          if (equipmentScheduleForm.value.equipmentType === 'oven') {
+            const oven = ovens.value.find(o => String(o.id) === equipmentScheduleForm.value.equipmentId);
+            equipmentName = oven?.name || '';
+          } else {
+            equipmentName = equipmentScheduleForm.value.equipmentId;
+          }
+          await callApi('createEquipmentSchedule', {
+            ...equipmentScheduleForm.value,
+            equipmentName
+          });
+          await loadScheduleData();
+          showEquipmentScheduleModal.value = false;
+          logAudit('create', 'schedule', '新增設備排程', { schedule: equipmentScheduleForm.value });
+        } catch (e) {
+          alert('儲存失敗: ' + e);
+        } finally {
+          savingEquipmentSchedule.value = false;
+        }
+      };
+
+      const openSchedulePlanModal = () => {
+        alert('排程計劃功能開發中');
+      };
+
+      const editWorkOrderSchedule = (wo) => {
+        alert(`編輯工單 ${wo.id} 排程（功能開發中）`);
+      };
+
+      const getShiftForOperatorDay = (operatorId, date) => {
+        return shifts.value.find(s => s.operatorId === operatorId && s.shiftDate === date);
+      };
+
+      const formatShiftType = (type) => {
+        return { day: '早', evening: '中', night: '夜' }[type] || type;
+      };
+
+      const hasSkill = (operator, station) => {
+        // 簡易技能判斷：假設所有人員都有基本技能
+        return true;
+      };
+
+      // 根據 workOrderId 取得工單編號
+      const getWorkOrderNumber = (workOrderId) => {
+        if (!workOrderId) return '-';
+        const wo = workOrders.value.find(w => w.id === workOrderId);
+        return wo?.orderNumber || workOrderId.substring(0, 8);
+      };
+
+      const getProgressClass = (rate) => {
+        if (rate >= 80) return 'high';
+        if (rate >= 50) return 'medium';
+        return 'low';
+      };
+
+      const getCoverageClass = (rate) => {
+        if (rate >= 80) return 'high';
+        if (rate >= 50) return 'medium';
+        return 'low';
+      };
+
+      const getConflictIcon = (type) => {
+        return { time: 'clock', resource: 'users', capacity: 'trending-up' }[type] || 'alert-triangle';
+      };
+
+      const getLoadClass = (load) => {
+        if (load >= 80) return 'high';
+        if (load >= 50) return 'medium';
+        return 'low';
+      };
+
+      const getUsageClass = (usage) => {
+        if (usage >= 80) return 'high';
+        if (usage >= 50) return 'medium';
+        return 'low';
+      };
+
+      const getMaintenanceIcon = (type) => {
+        return { preventive: 'calendar-check', repair: 'wrench', inspection: 'search' }[type] || 'tool';
+      };
+
+      const formatScheduleDate = (dateStr) => {
+        if (!dateStr) return '-';
+        const d = new Date(dateStr);
+        return `${d.getMonth() + 1}/${d.getDate()}`;
+      };
+
+      const formatWoStatus = (status) => {
+        return { draft: '草稿', pending: '待生產', in_progress: '生產中', completed: '已完成', paused: '暫停' }[status] || status;
+      };
+
       // Watch for tab change to refresh icons
       watch(currentTab, (newTab) => {
         if (newTab === 'oven') {
@@ -2574,6 +3174,10 @@
         }
         if (newTab === 'wms') {
           loadWmsData();
+          nextTick(() => { if (window.lucide) lucide.createIcons(); });
+        }
+        if (newTab === 'schedule') {
+          loadScheduleData();
           nextTick(() => { if (window.lucide) lucide.createIcons(); });
         }
       });
@@ -2708,7 +3312,26 @@
         submitWmsInbound, submitWmsTransfer, submitWmsOutbound,
         // 盤點
         showWmsStockTakeModal, stockTakeItems, formStockTake,
-        loadStockTakeInventory, submitWmsStockTake
+        loadStockTakeInventory, submitWmsStockTake,
+        // 排程管理 (Scheduling Dashboard)
+        scheduleSubTab, scheduleDate, shifts, equipmentSchedules, schedulePlans, ganttView,
+        showShiftModal, showEquipmentScheduleModal, savingShift, savingEquipmentSchedule,
+        shiftForm, equipmentScheduleForm, stationOptions, skillStations,
+        ganttHours, timelineHours,
+        scheduleStats, todayShiftStats, equipmentStats, equipmentUsageRing, conflictStats,
+        todayDispatches, stationLoadData, scheduledWorkOrders, ganttWorkOrders,
+        scheduleOperators, weekDays, ovenSchedules, stationSchedules,
+        filteredEquipments, equipmentUsageStats, maintenanceReminders,
+        loadScheduleData, refreshScheduleData, changeScheduleDate,
+        openShiftModal, quickAddShift, saveShift,
+        openEquipmentScheduleModal, saveEquipmentSchedule,
+        openSchedulePlanModal, editWorkOrderSchedule,
+        getShiftForOperatorDay, formatShiftType, hasSkill, getWorkOrderNumber,
+        getProgressClass, getCoverageClass, getConflictIcon, getLoadClass, getUsageClass,
+        getMaintenanceIcon, formatScheduleDate, formatWoStatus,
+        // 班次 CSV 匯入
+        showShiftImportModal, shiftImportWeekStart, shiftImportPreview, shiftImportError, importingShifts,
+        downloadShiftTemplate, handleShiftCsvFile, closeShiftImportModal, importShifts
       };
     }
   });

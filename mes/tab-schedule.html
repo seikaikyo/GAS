@@ -1,0 +1,774 @@
+<!--
+  tab-schedule.html - 排程管理 Dashboard
+  使用 DaisyUI 元件
+-->
+
+<div v-show="currentTab === 'schedule'" class="schedule-dashboard">
+  <!-- 子頁籤導航 -->
+  <div class="schedule-tabs">
+    <button class="schedule-tab" :class="{ active: scheduleSubTab === 'overview' }" @click="scheduleSubTab = 'overview'">
+      <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+      排程總覽
+    </button>
+    <button class="schedule-tab" :class="{ active: scheduleSubTab === 'production' }" @click="scheduleSubTab = 'production'">
+      <i data-lucide="calendar-range" class="w-4 h-4"></i>
+      生產排程
+    </button>
+    <button class="schedule-tab" :class="{ active: scheduleSubTab === 'workforce' }" @click="scheduleSubTab = 'workforce'">
+      <i data-lucide="users" class="w-4 h-4"></i>
+      人員排班
+    </button>
+    <button class="schedule-tab" :class="{ active: scheduleSubTab === 'equipment' }" @click="scheduleSubTab = 'equipment'">
+      <i data-lucide="cpu" class="w-4 h-4"></i>
+      設備排程
+    </button>
+  </div>
+
+  <!-- 日期選擇器 -->
+  <div class="schedule-date-picker">
+    <button class="btn btn-ghost btn-sm" @click="changeScheduleDate(-1)">
+      <i data-lucide="chevron-left" class="w-4 h-4"></i>
+    </button>
+    <input type="date" class="input input-bordered input-sm" :value="scheduleDate" @change="e => scheduleDate = e.target.value">
+    <button class="btn btn-ghost btn-sm" @click="changeScheduleDate(1)">
+      <i data-lucide="chevron-right" class="w-4 h-4"></i>
+    </button>
+    <button class="btn btn-ghost btn-sm" @click="scheduleDate = new Date().toISOString().split('T')[0]">
+      今天
+    </button>
+  </div>
+
+  <!-- ===== 排程總覽 (S1-S4) ===== -->
+  <div v-show="scheduleSubTab === 'overview'" class="schedule-grid">
+
+    <!-- S1: 今日產能 -->
+    <div class="schedule-widget">
+      <div class="widget-header">
+        <h3 class="widget-title">
+          <i data-lucide="target" class="w-4 h-4"></i>
+          今日產能
+        </h3>
+        <div class="tooltip" data-tip="顯示今日計劃產能與實際完成數量">
+          <i data-lucide="info" class="w-4 h-4 info-icon"></i>
+        </div>
+      </div>
+      <div class="widget-content">
+        <div class="kpi-grid">
+          <div class="kpi-item">
+            <span class="schedule-metric-value">{{ scheduleStats.targetQty || 0 }}</span>
+            <span class="schedule-metric-label">目標數量</span>
+          </div>
+          <div class="kpi-item">
+            <span class="schedule-metric-value highlight">{{ scheduleStats.completedQty || 0 }}</span>
+            <span class="schedule-metric-label">完成數量</span>
+          </div>
+        </div>
+        <div class="progress-section">
+          <div class="progress-header">
+            <span>達成率</span>
+            <span class="progress-value">{{ scheduleStats.achievementRate || 0 }}%</span>
+          </div>
+          <div class="schedule-progress-bar">
+            <div class="schedule-progress-fill" :class="getProgressClass(scheduleStats.achievementRate)"
+                 :style="{ width: (scheduleStats.achievementRate || 0) + '%' }"></div>
+          </div>
+        </div>
+        <div class="mini-stats">
+          <div class="mini-stat">
+            <span class="mini-label">進行中</span>
+            <span class="mini-value">{{ scheduleStats.inProgressCount || 0 }}</span>
+          </div>
+          <div class="mini-stat">
+            <span class="mini-label">待派工</span>
+            <span class="mini-value">{{ scheduleStats.pendingCount || 0 }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S2: 人力配置 -->
+    <div class="schedule-widget">
+      <div class="widget-header">
+        <h3 class="widget-title">
+          <i data-lucide="users" class="w-4 h-4"></i>
+          人力配置
+        </h3>
+        <div class="tooltip" data-tip="顯示今日各班次人員配置狀況">
+          <i data-lucide="info" class="w-4 h-4 info-icon"></i>
+        </div>
+      </div>
+      <div class="widget-content">
+        <div class="shift-summary">
+          <div class="shift-card shift-day">
+            <div class="shift-icon">
+              <i data-lucide="sun" class="w-5 h-5"></i>
+            </div>
+            <div class="shift-info">
+              <span class="shift-count">{{ todayShiftStats.day || 0 }}</span>
+              <span class="shift-label">早班</span>
+            </div>
+          </div>
+          <div class="shift-card shift-evening">
+            <div class="shift-icon">
+              <i data-lucide="sunset" class="w-5 h-5"></i>
+            </div>
+            <div class="shift-info">
+              <span class="shift-count">{{ todayShiftStats.evening || 0 }}</span>
+              <span class="shift-label">中班</span>
+            </div>
+          </div>
+          <div class="shift-card shift-night">
+            <div class="shift-icon">
+              <i data-lucide="moon" class="w-5 h-5"></i>
+            </div>
+            <div class="shift-info">
+              <span class="shift-count">{{ todayShiftStats.night || 0 }}</span>
+              <span class="shift-label">夜班</span>
+            </div>
+          </div>
+        </div>
+        <div class="workforce-total">
+          <span class="total-label">今日總人力</span>
+          <span class="total-value">{{ todayShiftStats.total || 0 }} 人</span>
+        </div>
+        <div class="station-coverage">
+          <span class="coverage-label">站點覆蓋率</span>
+          <span class="coverage-value" :class="getCoverageClass(todayShiftStats.coverage)">
+            {{ todayShiftStats.coverage || 0 }}%
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- S3: 設備稼動 -->
+    <div class="schedule-widget">
+      <div class="widget-header">
+        <h3 class="widget-title">
+          <i data-lucide="cpu" class="w-4 h-4"></i>
+          設備稼動
+        </h3>
+        <div class="tooltip" data-tip="顯示今日設備排程與使用狀況">
+          <i data-lucide="info" class="w-4 h-4 info-icon"></i>
+        </div>
+      </div>
+      <div class="widget-content">
+        <div class="equipment-overview">
+          <div class="equipment-ring">
+            <svg viewBox="0 0 100 100" class="usage-ring">
+              <circle cx="50" cy="50" r="40" class="ring-bg"/>
+              <circle cx="50" cy="50" r="40" class="ring-fill"
+                      :stroke-dasharray="equipmentUsageRing.dashArray"
+                      :stroke-dashoffset="equipmentUsageRing.dashOffset"/>
+            </svg>
+            <div class="ring-center">
+              <span class="ring-value">{{ equipmentStats.usageRate || 0 }}%</span>
+              <span class="ring-label">稼動率</span>
+            </div>
+          </div>
+        </div>
+        <div class="equipment-details">
+          <div class="equip-stat">
+            <i data-lucide="flame" class="w-4 h-4 equip-icon oven"></i>
+            <span class="equip-label">烘箱使用</span>
+            <span class="equip-value">{{ equipmentStats.ovenInUse || 0 }}/{{ equipmentStats.ovenTotal || 10 }}</span>
+          </div>
+          <div class="equip-stat">
+            <i data-lucide="layers" class="w-4 h-4 equip-icon station"></i>
+            <span class="equip-label">站點運作</span>
+            <span class="equip-value">{{ equipmentStats.stationActive || 0 }}/{{ equipmentStats.stationTotal || 5 }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S4: 排程衝突 -->
+    <div class="schedule-widget" :class="{ 'has-warning': conflictStats.total > 0 }">
+      <div class="widget-header">
+        <h3 class="widget-title">
+          <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+          排程衝突
+        </h3>
+        <div class="tooltip" data-tip="顯示排程衝突與需要注意的事項">
+          <i data-lucide="info" class="w-4 h-4 info-icon"></i>
+        </div>
+      </div>
+      <div class="widget-content">
+        <div class="conflict-summary">
+          <div class="conflict-number" :class="{ warning: conflictStats.total > 0 }">
+            {{ conflictStats.total || 0 }}
+          </div>
+          <div class="conflict-label">待處理衝突</div>
+        </div>
+        <div class="conflict-list" v-if="conflictStats.items && conflictStats.items.length > 0">
+          <div v-for="item in conflictStats.items.slice(0, 3)" :key="item.id" class="conflict-item">
+            <i :data-lucide="getConflictIcon(item.type)" class="w-4 h-4 conflict-icon"></i>
+            <span class="conflict-text">{{ item.message }}</span>
+          </div>
+        </div>
+        <div v-else class="no-conflict">
+          <i data-lucide="check-circle" class="w-5 h-5 success-icon"></i>
+          <span>目前無排程衝突</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- S5: 今日派工列表 -->
+    <div class="schedule-widget wide">
+      <div class="widget-header">
+        <h3 class="widget-title">
+          <i data-lucide="list-checks" class="w-4 h-4"></i>
+          今日派工
+        </h3>
+        <button class="btn btn-ghost btn-sm" @click="refreshScheduleData">
+          <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <div class="widget-content">
+        <div class="dispatch-list" v-if="todayDispatches.length > 0">
+          <div v-for="dispatch in todayDispatches.slice(0, 5)" :key="dispatch.id" class="dispatch-item">
+            <div class="dispatch-status" :class="dispatch.status"></div>
+            <div class="dispatch-info">
+              <span class="dispatch-wo">{{ getWorkOrderNumber(dispatch.workOrderId) }}</span>
+              <span class="dispatch-station">{{ dispatch.stationName }}</span>
+            </div>
+            <div class="dispatch-qty">
+              <span class="qty-completed">{{ dispatch.completedQty || 0 }}</span>
+              <span class="qty-separator">/</span>
+              <span class="qty-target">{{ dispatch.targetQty }}</span>
+            </div>
+            <div class="dispatch-operator">
+              {{ dispatch.operatorName || '-' }}
+            </div>
+          </div>
+        </div>
+        <div v-else class="empty-state">
+          <i data-lucide="calendar-x" class="w-8 h-8"></i>
+          <span>今日無派工資料</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- S6: 站點負載 -->
+    <div class="schedule-widget wide">
+      <div class="widget-header">
+        <h3 class="widget-title">
+          <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
+          站點負載
+        </h3>
+      </div>
+      <div class="widget-content">
+        <div class="station-load-chart">
+          <div v-for="station in stationLoadData" :key="station.name" class="station-bar-wrapper">
+            <div class="station-name">{{ station.name }}</div>
+            <div class="station-bar-container">
+              <div class="station-bar" :class="getLoadClass(station.load)"
+                   :style="{ width: station.load + '%' }">
+              </div>
+            </div>
+            <div class="station-load-value">{{ station.load }}%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 生產排程 (S7-S10) ===== -->
+  <div v-show="scheduleSubTab === 'production'" class="schedule-grid">
+
+    <!-- S7: 工單排程表 -->
+    <div class="schedule-widget full-width">
+      <div class="widget-header">
+        <h3 class="widget-title">
+          <i data-lucide="table" class="w-4 h-4"></i>
+          工單排程表
+        </h3>
+        <div class="widget-actions">
+          <button class="btn btn-primary btn-sm" @click="openSchedulePlanModal">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            新增排程
+          </button>
+        </div>
+      </div>
+      <div class="widget-content">
+        <div class="schedule-table-container">
+          <table class="schedule-table">
+            <thead>
+              <tr>
+                <th>優先序</th>
+                <th>工單編號</th>
+                <th>產品</th>
+                <th>數量</th>
+                <th>預計開始</th>
+                <th>預計完成</th>
+                <th>狀態</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(wo, index) in scheduledWorkOrders" :key="wo.id">
+                <td class="priority-cell">
+                  <span class="priority-badge">{{ index + 1 }}</span>
+                </td>
+                <td>{{ wo.orderNumber || wo.id.substring(0, 8) }}</td>
+                <td>{{ wo.productName }}</td>
+                <td>{{ wo.quantity }}</td>
+                <td>{{ formatScheduleDate(wo.plannedStart) }}</td>
+                <td>{{ formatScheduleDate(wo.plannedEnd) }}</td>
+                <td>
+                  <span class="status-tag" :class="wo.status">{{ formatWoStatus(wo.status) }}</span>
+                </td>
+                <td class="action-cell">
+                  <button class="btn btn-ghost btn-xs" @click="editWorkOrderSchedule(wo)">
+                    <i data-lucide="edit" class="w-3 h-3"></i>
+                  </button>
+                </td>
+              </tr>
+              <tr v-if="scheduledWorkOrders.length === 0">
+                <td colspan="8" class="empty-cell">尚無排程工單</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- S8: 甘特圖 -->
+    <div class="schedule-widget full-width">
+      <div class="widget-header">
+        <h3 class="widget-title">
+          <i data-lucide="gantt-chart" class="w-4 h-4"></i>
+          生產甘特圖
+        </h3>
+        <div class="gantt-controls">
+          <div class="btn-group">
+            <button class="btn btn-sm" :class="ganttView === 'day' ? 'btn-primary' : 'btn-ghost'" @click="ganttView = 'day'">日</button>
+            <button class="btn btn-sm" :class="ganttView === 'week' ? 'btn-primary' : 'btn-ghost'" @click="ganttView = 'week'">週</button>
+          </div>
+        </div>
+      </div>
+      <div class="widget-content">
+        <div class="gantt-container">
+          <!-- 時間軸標題 -->
+          <div class="gantt-header">
+            <div class="gantt-label-col">工單</div>
+            <div class="gantt-timeline">
+              <div v-for="hour in ganttHours" :key="hour" class="gantt-hour">{{ hour }}:00</div>
+            </div>
+          </div>
+          <!-- 甘特圖列 -->
+          <div class="gantt-body">
+            <div v-for="wo in ganttWorkOrders" :key="wo.id" class="gantt-row">
+              <div class="gantt-label">{{ wo.orderNumber || wo.id.substring(0, 8) }}</div>
+              <div class="gantt-timeline">
+                <div class="gantt-bar" :class="wo.status"
+                     :style="{ left: wo.startPercent + '%', width: wo.widthPercent + '%' }">
+                  <span class="gantt-bar-label">{{ wo.productName }}</span>
+                </div>
+              </div>
+            </div>
+            <div v-if="ganttWorkOrders.length === 0" class="gantt-empty">
+              尚無排程資料
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 人員排班 (S9-S12) ===== -->
+  <div v-show="scheduleSubTab === 'workforce'" class="schedule-grid">
+
+    <!-- S9: 班次週曆 -->
+    <div class="schedule-widget full-width">
+      <div class="widget-header">
+        <h3 class="widget-title">
+          <i data-lucide="calendar" class="w-4 h-4"></i>
+          班次週曆
+        </h3>
+        <div class="widget-actions">
+          <button class="btn btn-outline btn-sm" @click="downloadShiftTemplate">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            下載範本
+          </button>
+          <button class="btn btn-outline btn-sm" @click="showShiftImportModal = true">
+            <i data-lucide="upload" class="w-4 h-4"></i>
+            匯入班次
+          </button>
+          <button class="btn btn-primary btn-sm" @click="openShiftModal">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            新增班次
+          </button>
+        </div>
+      </div>
+      <div class="widget-content">
+        <div class="week-calendar">
+          <div class="week-header">
+            <div class="week-cell header">人員</div>
+            <div v-for="day in weekDays" :key="day.date" class="week-cell header" :class="{ today: day.isToday }">
+              <span class="day-name">{{ day.name }}</span>
+              <span class="day-date">{{ day.dateStr }}</span>
+            </div>
+          </div>
+          <div class="week-body">
+            <div v-for="operator in scheduleOperators" :key="operator.id" class="week-row">
+              <div class="week-cell operator-name">{{ operator.name }}</div>
+              <div v-for="day in weekDays" :key="day.date" class="week-cell shift-cell" :class="{ today: day.isToday }">
+                <div v-if="getShiftForOperatorDay(operator.id, day.date)"
+                     class="shift-badge" :class="getShiftForOperatorDay(operator.id, day.date).shiftType">
+                  {{ formatShiftType(getShiftForOperatorDay(operator.id, day.date).shiftType) }}
+                </div>
+                <div v-else class="shift-empty" @click="quickAddShift(operator.id, day.date)">
+                  <i data-lucide="plus" class="w-3 h-3"></i>
+                </div>
+              </div>
+            </div>
+            <div v-if="scheduleOperators.length === 0" class="week-empty">
+              尚無人員資料
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S10: 技能矩陣 -->
+    <div class="schedule-widget full-width">
+      <div class="widget-header">
+        <h3 class="widget-title">
+          <i data-lucide="grid-3x3" class="w-4 h-4"></i>
+          技能矩陣
+        </h3>
+        <div class="tooltip" data-tip="顯示人員對各站點的技能認證狀態">
+          <i data-lucide="info" class="w-4 h-4 info-icon"></i>
+        </div>
+      </div>
+      <div class="widget-content">
+        <div class="skill-matrix-container">
+          <table class="skill-matrix">
+            <thead>
+              <tr>
+                <th>人員</th>
+                <th v-for="station in skillStations" :key="station">{{ station }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="operator in scheduleOperators" :key="operator.id">
+                <td class="operator-cell">{{ operator.name }}</td>
+                <td v-for="station in skillStations" :key="station" class="skill-cell">
+                  <i v-if="hasSkill(operator, station)" data-lucide="check-circle" class="w-4 h-4 skill-yes"></i>
+                  <i v-else data-lucide="circle" class="w-4 h-4 skill-no"></i>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 設備排程 (S13-S16) ===== -->
+  <div v-show="scheduleSubTab === 'equipment'" class="schedule-grid">
+
+    <!-- S13: 烘箱排程 -->
+    <div class="schedule-widget full-width">
+      <div class="widget-header">
+        <h3 class="widget-title">
+          <i data-lucide="flame" class="w-4 h-4"></i>
+          烘箱排程
+        </h3>
+        <div class="widget-actions">
+          <button class="btn btn-primary btn-sm" @click="openEquipmentScheduleModal('oven')">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            新增排程
+          </button>
+        </div>
+      </div>
+      <div class="widget-content">
+        <div class="equipment-timeline">
+          <div class="timeline-header">
+            <div class="timeline-label">設備</div>
+            <div class="timeline-hours">
+              <div v-for="hour in timelineHours" :key="hour" class="timeline-hour">{{ hour }}:00</div>
+            </div>
+          </div>
+          <div class="timeline-body">
+            <div v-for="oven in ovenSchedules" :key="oven.id" class="timeline-row">
+              <div class="timeline-label">{{ oven.name }}</div>
+              <div class="timeline-track">
+                <div v-for="schedule in oven.schedules" :key="schedule.id"
+                     class="timeline-block" :class="schedule.status"
+                     :style="{ left: schedule.startPercent + '%', width: schedule.widthPercent + '%' }">
+                  <span class="block-label">{{ getWorkOrderNumber(schedule.workOrderId) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S14: 站點排程 -->
+    <div class="schedule-widget full-width">
+      <div class="widget-header">
+        <h3 class="widget-title">
+          <i data-lucide="layers" class="w-4 h-4"></i>
+          站點排程
+        </h3>
+      </div>
+      <div class="widget-content">
+        <div class="equipment-timeline">
+          <div class="timeline-header">
+            <div class="timeline-label">站點</div>
+            <div class="timeline-hours">
+              <div v-for="hour in timelineHours" :key="hour" class="timeline-hour">{{ hour }}:00</div>
+            </div>
+          </div>
+          <div class="timeline-body">
+            <div v-for="station in stationSchedules" :key="station.name" class="timeline-row">
+              <div class="timeline-label">{{ station.name }}</div>
+              <div class="timeline-track">
+                <div v-for="schedule in station.schedules" :key="schedule.id"
+                     class="timeline-block" :class="schedule.status"
+                     :style="{ left: schedule.startPercent + '%', width: schedule.widthPercent + '%' }">
+                  <span class="block-label">{{ getWorkOrderNumber(schedule.workOrderId) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S15: 設備使用率統計 -->
+    <div class="schedule-widget">
+      <div class="widget-header">
+        <h3 class="widget-title">
+          <i data-lucide="pie-chart" class="w-4 h-4"></i>
+          設備使用率
+        </h3>
+      </div>
+      <div class="widget-content">
+        <div class="usage-stats">
+          <div v-for="equip in equipmentUsageStats" :key="equip.name" class="usage-item">
+            <div class="usage-header">
+              <span class="usage-name">{{ equip.name }}</span>
+              <span class="usage-percent">{{ equip.usage }}%</span>
+            </div>
+            <div class="usage-bar-bg">
+              <div class="usage-bar-fill" :class="getUsageClass(equip.usage)"
+                   :style="{ width: equip.usage + '%' }"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S16: 維護提醒 -->
+    <div class="schedule-widget">
+      <div class="widget-header">
+        <h3 class="widget-title">
+          <i data-lucide="wrench" class="w-4 h-4"></i>
+          維護提醒
+        </h3>
+      </div>
+      <div class="widget-content">
+        <div class="maintenance-list">
+          <div v-for="item in maintenanceReminders" :key="item.id" class="maintenance-item" :class="item.urgency">
+            <i :data-lucide="getMaintenanceIcon(item.type)" class="w-4 h-4 maint-icon"></i>
+            <div class="maint-info">
+              <span class="maint-name">{{ item.equipmentName }}</span>
+              <span class="maint-desc">{{ item.description }}</span>
+            </div>
+            <span class="maint-date">{{ item.dueDate }}</span>
+          </div>
+          <div v-if="maintenanceReminders.length === 0" class="no-maintenance">
+            <i data-lucide="check-circle" class="w-5 h-5"></i>
+            <span>近期無維護排程</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 班次編輯 Modal (DaisyUI) -->
+<dialog class="modal" :class="{ 'modal-open': showShiftModal }">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-4">班次管理</h3>
+    <div class="form-control mb-3">
+      <label class="label"><span class="label-text">人員</span></label>
+      <select class="select select-bordered" :value="shiftForm.operatorId" @change="e => shiftForm.operatorId = e.target.value">
+        <option value="">請選擇</option>
+        <option v-for="op in operators" :key="op.id" :value="op.id">{{ op.name }}</option>
+      </select>
+    </div>
+    <div class="form-control mb-3">
+      <label class="label"><span class="label-text">日期</span></label>
+      <input type="date" class="input input-bordered" :value="shiftForm.shiftDate" @change="e => shiftForm.shiftDate = e.target.value">
+    </div>
+    <div class="form-control mb-3">
+      <label class="label"><span class="label-text">班別</span></label>
+      <select class="select select-bordered" :value="shiftForm.shiftType" @change="e => shiftForm.shiftType = e.target.value">
+        <option value="day">早班 (08:00-16:00)</option>
+        <option value="evening">中班 (16:00-00:00)</option>
+        <option value="night">夜班 (00:00-08:00)</option>
+      </select>
+    </div>
+    <div class="form-control mb-3">
+      <label class="label"><span class="label-text">站點</span></label>
+      <select class="select select-bordered" :value="shiftForm.stationName" @change="e => shiftForm.stationName = e.target.value">
+        <option v-for="s in stationOptions" :key="s" :value="s">{{ s }}</option>
+      </select>
+    </div>
+    <div class="form-control mb-3">
+      <label class="label"><span class="label-text">備註</span></label>
+      <textarea class="textarea textarea-bordered" :value="shiftForm.notes" @input="e => shiftForm.notes = e.target.value"></textarea>
+    </div>
+    <div class="modal-action">
+      <button class="btn" @click="showShiftModal = false">取消</button>
+      <button class="btn btn-primary" @click="saveShift" :class="{ loading: savingShift }">儲存</button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop" @click="showShiftModal = false"><button>close</button></form>
+</dialog>
+
+<!-- 班次匯入 Modal (DaisyUI) -->
+<dialog class="modal" :class="{ 'modal-open': showShiftImportModal }" v-if="currentTab === 'schedule'">
+  <div class="modal-box max-w-2xl">
+    <h3 class="font-bold text-lg mb-4">
+      <i data-lucide="upload" class="w-5 h-5 inline mr-2"></i>
+      匯入班次 (週曆式 CSV)
+    </h3>
+
+    <div class="alert alert-info mb-4">
+      <i data-lucide="info" class="w-4 h-4"></i>
+      <div>
+        <div class="font-bold">CSV 格式說明</div>
+        <div class="text-sm">
+          第一列為標題：人員, 一, 二, 三, 四, 五, 六, 日<br>
+          班別填寫：早/中/夜/休（或 D/E/N/O）
+        </div>
+      </div>
+    </div>
+
+    <div class="form-control mb-4">
+      <label class="label"><span class="label-text">選擇週起始日期</span></label>
+      <input type="date" class="input input-bordered"
+             :value="shiftImportWeekStart"
+             @change="e => shiftImportWeekStart = e.target.value">
+      <label class="label">
+        <span class="label-text-alt">系統會自動對應星期一到星期日</span>
+      </label>
+    </div>
+
+    <div class="form-control mb-4">
+      <label class="label"><span class="label-text">選擇 CSV 檔案</span></label>
+      <input type="file" class="file-input file-input-bordered w-full"
+             accept=".csv,.txt"
+             @change="handleShiftCsvFile">
+    </div>
+
+    <!-- 預覽表格 -->
+    <div v-if="shiftImportPreview.length > 0" class="mb-4">
+      <div class="font-bold mb-2">預覽 ({{ shiftImportPreview.length }} 筆班次)</div>
+      <div class="overflow-x-auto max-h-60">
+        <table class="table table-xs">
+          <thead>
+            <tr>
+              <th>人員</th>
+              <th>日期</th>
+              <th>班別</th>
+              <th>狀態</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(row, idx) in shiftImportPreview.slice(0, 20)" :key="idx">
+              <td>{{ row.operatorName }}</td>
+              <td>{{ row.shiftDate }}</td>
+              <td>
+                <span class="badge" :class="{
+                  'badge-warning': row.shiftType === 'day',
+                  'badge-info': row.shiftType === 'evening',
+                  'badge-secondary': row.shiftType === 'night'
+                }">{{ formatShiftType(row.shiftType) }}</span>
+              </td>
+              <td>
+                <span v-if="row.error" class="text-error text-xs">{{ row.error }}</span>
+                <span v-else class="text-success text-xs">OK</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div v-if="shiftImportPreview.length > 20" class="text-center text-sm opacity-60 mt-2">
+          ... 還有 {{ shiftImportPreview.length - 20 }} 筆
+        </div>
+      </div>
+    </div>
+
+    <div v-if="shiftImportError" class="alert alert-error mb-4">
+      <i data-lucide="alert-circle" class="w-4 h-4"></i>
+      <span>{{ shiftImportError }}</span>
+    </div>
+
+    <div class="modal-action">
+      <button class="btn" @click="closeShiftImportModal">取消</button>
+      <button class="btn btn-primary"
+              @click="importShifts"
+              :disabled="shiftImportPreview.length === 0 || importingShifts"
+              :class="{ loading: importingShifts }">
+        確認匯入 {{ shiftImportPreview.filter(r => !r.error).length }} 筆
+      </button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop" @click="closeShiftImportModal"><button>close</button></form>
+</dialog>
+
+<!-- 設備排程 Modal (DaisyUI) -->
+<dialog class="modal" :class="{ 'modal-open': showEquipmentScheduleModal }">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-4">設備排程</h3>
+    <div class="form-control mb-3">
+      <label class="label"><span class="label-text">設備類型</span></label>
+      <select class="select select-bordered" :value="equipmentScheduleForm.equipmentType" @change="e => equipmentScheduleForm.equipmentType = e.target.value">
+        <option value="oven">烘箱</option>
+        <option value="station">站點</option>
+      </select>
+    </div>
+    <div class="form-control mb-3">
+      <label class="label"><span class="label-text">設備</span></label>
+      <select class="select select-bordered" :value="equipmentScheduleForm.equipmentId" @change="e => equipmentScheduleForm.equipmentId = e.target.value">
+        <option v-for="eq in filteredEquipments" :key="eq.id" :value="eq.id">{{ eq.name }}</option>
+      </select>
+    </div>
+    <div class="form-control mb-3">
+      <label class="label"><span class="label-text">日期</span></label>
+      <input type="date" class="input input-bordered" :value="equipmentScheduleForm.scheduleDate" @change="e => equipmentScheduleForm.scheduleDate = e.target.value">
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div class="form-control">
+        <label class="label"><span class="label-text">開始時間</span></label>
+        <input type="time" class="input input-bordered" :value="equipmentScheduleForm.startTime" @change="e => equipmentScheduleForm.startTime = e.target.value">
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text">結束時間</span></label>
+        <input type="time" class="input input-bordered" :value="equipmentScheduleForm.endTime" @change="e => equipmentScheduleForm.endTime = e.target.value">
+      </div>
+    </div>
+    <div class="form-control mb-3 mt-3">
+      <label class="label"><span class="label-text">工單</span></label>
+      <select class="select select-bordered" :value="equipmentScheduleForm.workOrderId" @change="e => equipmentScheduleForm.workOrderId = e.target.value">
+        <option value="">- 無 -</option>
+        <option v-for="wo in workOrders" :key="wo.id" :value="wo.id">{{ wo.orderNumber || wo.id.substring(0, 8) }} - {{ wo.productModel }}</option>
+      </select>
+    </div>
+    <div class="form-control mb-3">
+      <label class="label"><span class="label-text">備註</span></label>
+      <textarea class="textarea textarea-bordered" :value="equipmentScheduleForm.notes" @input="e => equipmentScheduleForm.notes = e.target.value"></textarea>
+    </div>
+    <div class="modal-action">
+      <button class="btn" @click="showEquipmentScheduleModal = false">取消</button>
+      <button class="btn btn-primary" @click="saveEquipmentSchedule" :class="{ loading: savingEquipmentSchedule }">儲存</button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop" @click="showEquipmentScheduleModal = false"><button>close</button></form>
+</dialog>

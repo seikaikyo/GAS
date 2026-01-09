@@ -2513,4 +2513,1352 @@
     color: #64748b;
     margin-top: 0.25rem;
   }
+
+  /* ========================================
+     排程 Dashboard (參考 MSW 戰情看板)
+     ======================================== */
+
+  .schedule-dashboard {
+    background: linear-gradient(135deg, #0a1929 0%, #1a2744 100%);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    min-height: 600px;
+    color: #e8f4ff;
+  }
+
+  .schedule-date-picker {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  /* 日期選擇器 - DaisyUI 深色主題 */
+  .schedule-date-picker .input {
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    color: #ffffff !important;
+    width: 160px;
+  }
+  .schedule-date-picker .input::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+  }
+  .schedule-date-picker .btn {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #e8f4ff;
+  }
+  .schedule-date-picker .btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .schedule-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .schedule-tab {
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    color: #e8f4ff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .schedule-tab:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .schedule-tab.active {
+    background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+    color: white;
+    border-color: transparent;
+  }
+
+  .schedule-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+  }
+
+  @media (max-width: 1200px) {
+    .schedule-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 768px) {
+    .schedule-grid { grid-template-columns: 1fr; }
+  }
+
+  .schedule-widget {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    min-height: 200px;
+    transition: all 0.2s;
+  }
+
+  .schedule-widget:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  .schedule-widget.wide {
+    grid-column: span 2;
+  }
+
+  .schedule-widget.full-width {
+    grid-column: 1 / -1;
+  }
+
+  .schedule-widget.has-warning {
+    border-color: rgba(255, 152, 0, 0.5);
+  }
+
+  /* Widget 內部元素 */
+  .schedule-dashboard .widget-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  .schedule-dashboard .widget-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #e8f4ff;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .schedule-dashboard .widget-title i[data-lucide] {
+    color: #00d4ff;
+  }
+
+  .schedule-dashboard .widget-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .schedule-dashboard .widget-content {
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .schedule-dashboard .info-icon {
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+    font-size: 0.8rem;
+  }
+
+  .schedule-dashboard .info-icon:hover {
+    opacity: 1;
+  }
+
+  /* KPI 網格 */
+  .schedule-dashboard .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .schedule-dashboard .kpi-item {
+    text-align: center;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 0.5rem;
+  }
+
+  .schedule-metric-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #00d4ff;
+    display: block;
+  }
+
+  .schedule-metric-value.highlight {
+    color: #4CAF50;
+  }
+
+  .schedule-metric-label {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.6);
+    display: block;
+  }
+
+  /* 進度區塊 */
+  .schedule-dashboard .progress-section {
+    margin: 1rem 0;
+  }
+
+  .schedule-dashboard .progress-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .schedule-dashboard .progress-value {
+    color: #00d4ff;
+    font-weight: 600;
+  }
+
+  .schedule-progress-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .schedule-progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s;
+    background: linear-gradient(90deg, #00d4ff, #0099cc);
+  }
+
+  .schedule-progress-fill.high { background: linear-gradient(90deg, #4CAF50, #45a049); }
+  .schedule-progress-fill.medium { background: linear-gradient(90deg, #FF9800, #f57c00); }
+  .schedule-progress-fill.low { background: linear-gradient(90deg, #f44336, #d32f2f); }
+
+  /* Mini Stats */
+  .schedule-dashboard .mini-stats {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .schedule-dashboard .mini-stat {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.75rem;
+  }
+
+  .schedule-dashboard .mini-label {
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .schedule-dashboard .mini-value {
+    color: #fff;
+    font-weight: 600;
+  }
+
+  /* 班次摘要 */
+  .schedule-dashboard .shift-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .schedule-dashboard .shift-card {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: 0.5rem;
+    color: #fff;
+  }
+
+  .schedule-dashboard .shift-card.shift-day {
+    background: rgba(76, 175, 80, 0.25);
+    border-left: 3px solid #4CAF50;
+  }
+
+  .schedule-dashboard .shift-card.shift-evening {
+    background: rgba(255, 152, 0, 0.25);
+    border-left: 3px solid #FF9800;
+  }
+
+  .schedule-dashboard .shift-card.shift-night {
+    background: rgba(33, 150, 243, 0.25);
+    border-left: 3px solid #2196F3;
+  }
+
+  .schedule-dashboard .shift-icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .schedule-dashboard .shift-info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .schedule-dashboard .shift-count {
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+
+  .schedule-dashboard .shift-label {
+    font-size: 0.7rem;
+    opacity: 0.8;
+  }
+
+  .schedule-dashboard .workforce-total,
+  .schedule-dashboard .station-coverage {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    padding: 0.5rem 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin-top: 0.5rem;
+  }
+
+  .schedule-dashboard .total-label,
+  .schedule-dashboard .coverage-label {
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .schedule-dashboard .total-value,
+  .schedule-dashboard .coverage-value {
+    font-weight: 600;
+    color: #00d4ff;
+  }
+
+  .schedule-dashboard .coverage-value.high { color: #4CAF50; }
+  .schedule-dashboard .coverage-value.medium { color: #FF9800; }
+  .schedule-dashboard .coverage-value.low { color: #f44336; }
+
+  /* 設備使用率環形圖 */
+  .schedule-dashboard .equipment-overview {
+    display: flex;
+    justify-content: center;
+    padding: 1rem 0;
+  }
+
+  .schedule-dashboard .equipment-ring {
+    position: relative;
+    width: 120px;
+    height: 120px;
+  }
+
+  .schedule-dashboard .usage-ring {
+    transform: rotate(-90deg);
+  }
+
+  .schedule-dashboard .ring-bg {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.15);
+    stroke-width: 8;
+  }
+
+  .schedule-dashboard .ring-fill {
+    fill: none;
+    stroke: #00d4ff;
+    stroke-width: 8;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.5s;
+  }
+
+  .schedule-dashboard .ring-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+  }
+
+  .schedule-dashboard .ring-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #00d4ff;
+    display: block;
+  }
+
+  .schedule-dashboard .ring-label {
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .schedule-dashboard .equipment-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .schedule-dashboard .equip-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  .schedule-dashboard .equip-icon {
+    color: #00d4ff;
+  }
+
+  .schedule-dashboard .equip-icon.oven { color: #FF9800; }
+  .schedule-dashboard .equip-icon.station { color: #4CAF50; }
+
+  .schedule-dashboard .equip-label {
+    flex: 1;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .schedule-dashboard .equip-value {
+    font-weight: 600;
+    color: #fff;
+  }
+
+  /* 衝突統計 */
+  .schedule-dashboard .conflict-summary {
+    text-align: center;
+    padding: 1rem 0;
+  }
+
+  .schedule-dashboard .conflict-number {
+    font-size: 3rem;
+    font-weight: 700;
+    color: #4CAF50;
+  }
+
+  .schedule-dashboard .conflict-number.warning {
+    color: #FF9800;
+  }
+
+  .schedule-dashboard .conflict-label {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .schedule-dashboard .conflict-list {
+    margin-top: 1rem;
+  }
+
+  .schedule-dashboard .conflict-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: rgba(255, 152, 0, 0.15);
+    border-radius: 0.25rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  .schedule-dashboard .conflict-icon {
+    color: #FF9800;
+  }
+
+  .schedule-dashboard .no-conflict {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.85rem;
+    padding: 1rem;
+  }
+
+  .schedule-dashboard .success-icon {
+    color: #4CAF50;
+  }
+
+  .schedule-dashboard .conflict-types {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .schedule-dashboard .type-badge {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.25rem;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .schedule-dashboard .type-badge.time { background: rgba(33, 150, 243, 0.3); }
+  .schedule-dashboard .type-badge.resource { background: rgba(156, 39, 176, 0.3); }
+  .schedule-dashboard .type-badge.capacity { background: rgba(255, 152, 0, 0.3); }
+
+  /* 派工列表 */
+  .schedule-dashboard .dispatch-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .schedule-dashboard .dispatch-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.6rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  .schedule-dashboard .dispatch-status {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4CAF50;
+  }
+
+  .schedule-dashboard .dispatch-status.pending { background: #9e9e9e; }
+  .schedule-dashboard .dispatch-status.in_progress { background: #2196F3; }
+  .schedule-dashboard .dispatch-status.completed { background: #4CAF50; }
+
+  .schedule-dashboard .dispatch-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .schedule-dashboard .dispatch-wo {
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .schedule-dashboard .dispatch-station {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .schedule-dashboard .dispatch-qty {
+    font-size: 0.85rem;
+  }
+
+  .schedule-dashboard .qty-completed {
+    color: #4CAF50;
+    font-weight: 600;
+  }
+
+  .schedule-dashboard .qty-separator {
+    color: rgba(255, 255, 255, 0.4);
+    margin: 0 0.2rem;
+  }
+
+  .schedule-dashboard .qty-target {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .schedule-dashboard .dispatch-operator {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.75rem;
+  }
+
+  .schedule-dashboard .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    color: rgba(255, 255, 255, 0.4);
+    gap: 0.5rem;
+  }
+
+  /* 站點負載圖 */
+  .schedule-dashboard .station-load-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .schedule-dashboard .station-bar-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .schedule-dashboard .station-name {
+    width: 70px;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.7);
+    text-align: right;
+  }
+
+  .schedule-dashboard .station-bar-container {
+    flex: 1;
+    height: 16px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .schedule-dashboard .station-bar {
+    height: 100%;
+    border-radius: 8px;
+    background: linear-gradient(90deg, #00d4ff, #0099cc);
+    transition: width 0.5s;
+  }
+
+  .schedule-dashboard .station-bar.high { background: linear-gradient(90deg, #f44336, #d32f2f); }
+  .schedule-dashboard .station-bar.medium { background: linear-gradient(90deg, #FF9800, #f57c00); }
+
+  .schedule-dashboard .station-load-value {
+    width: 40px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #00d4ff;
+  }
+
+  /* 班次狀態顏色 */
+  .shift-day { background: rgba(76, 175, 80, 0.2); border-left: 3px solid #4CAF50; }
+  .shift-evening { background: rgba(255, 152, 0, 0.2); border-left: 3px solid #FF9800; }
+  .shift-night { background: rgba(33, 150, 243, 0.2); border-left: 3px solid #2196F3; }
+
+  .shift-card {
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    margin-bottom: 0.5rem;
+    color: #fff;
+  }
+
+  .shift-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .shift-card-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .shift-card-time {
+    font-size: 0.75rem;
+    opacity: 0.8;
+  }
+
+  .shift-card-station {
+    font-size: 0.75rem;
+    opacity: 0.7;
+  }
+
+  /* 進度條 (深色主題) */
+  .schedule-progress {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 0.5rem 0;
+  }
+
+  .schedule-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #00d4ff, #0099cc);
+    border-radius: 3px;
+    transition: width 0.5s;
+  }
+
+  /* 甘特圖樣式 (參考 MSW) */
+  .gantt-container {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 0.5rem;
+    overflow: hidden;
+  }
+
+  .gantt-header {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    background: rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  .gantt-label-col {
+    padding: 0.75rem;
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: #e8f4ff;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .gantt-header .gantt-timeline {
+    display: flex;
+    background: transparent;
+    height: auto;
+    border-radius: 0;
+  }
+
+  .gantt-hour {
+    flex: 1;
+    padding: 0.5rem 0;
+    text-align: center;
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.6);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .gantt-hour:last-child {
+    border-right: none;
+  }
+
+  .gantt-body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .gantt-row {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    min-height: 40px;
+  }
+
+  .gantt-row:last-child {
+    border-bottom: none;
+  }
+
+  .gantt-row:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .gantt-label {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.7rem;
+    color: #fff;
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    word-break: break-all;
+  }
+
+  .gantt-row .gantt-timeline {
+    position: relative;
+    height: 28px;
+    background: repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.02) 0%,
+      rgba(255, 255, 255, 0.02) calc(100% / 12 - 1px),
+      rgba(255, 255, 255, 0.08) calc(100% / 12 - 1px),
+      rgba(255, 255, 255, 0.08) calc(100% / 12)
+    );
+    border-radius: 0;
+  }
+
+  .gantt-bar {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #00d4ff, #0099cc);
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    min-width: 60px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  .gantt-bar-label {
+    font-size: 0.65rem;
+    color: white;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+
+  .gantt-bar.pending {
+    background: linear-gradient(90deg, #6b7280, #4b5563);
+  }
+
+  .gantt-bar.in_progress {
+    background: linear-gradient(90deg, #FF9800, #f57c00);
+  }
+
+  .gantt-bar.completed {
+    background: linear-gradient(90deg, #4CAF50, #388e3c);
+  }
+
+  .gantt-empty {
+    padding: 2rem;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.85rem;
+  }
+
+  /* 週曆視圖 (班次週曆) */
+  .week-calendar {
+    display: flex;
+    flex-direction: column;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 0.5rem;
+    overflow: hidden;
+  }
+
+  .week-header {
+    display: grid;
+    grid-template-columns: 100px repeat(7, 1fr);
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .week-body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .week-row {
+    display: grid;
+    grid-template-columns: 100px repeat(7, 1fr);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .week-row:last-child {
+    border-bottom: none;
+  }
+
+  .week-cell {
+    padding: 0.5rem;
+    text-align: center;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    min-height: 50px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .week-cell:last-child {
+    border-right: none;
+  }
+
+  .week-cell.header {
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: #e8f4ff;
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .week-cell.header .day-name {
+    display: block;
+    margin-bottom: 0.25rem;
+  }
+
+  .week-cell.header .day-date {
+    font-size: 0.7rem;
+    opacity: 0.7;
+  }
+
+  .week-cell.operator-name {
+    text-align: left;
+    justify-content: center;
+    align-items: flex-start;
+    padding-left: 1rem;
+    font-weight: 500;
+    color: #fff;
+  }
+
+  .week-cell.shift-cell {
+    cursor: pointer;
+  }
+
+  .week-cell.shift-cell:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .week-cell.today {
+    background: rgba(0, 212, 255, 0.1);
+  }
+
+  .shift-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .shift-badge.day {
+    background: rgba(255, 193, 7, 0.3);
+    color: #ffc107;
+  }
+
+  .shift-badge.evening {
+    background: rgba(255, 152, 0, 0.3);
+    color: #ff9800;
+  }
+
+  .shift-badge.night {
+    background: rgba(63, 81, 181, 0.3);
+    color: #7986cb;
+  }
+
+  .shift-empty {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.4);
+    transition: all 0.2s;
+  }
+
+  .shift-empty:hover {
+    background: rgba(0, 212, 255, 0.2);
+    color: #00d4ff;
+  }
+
+  .week-empty {
+    padding: 2rem;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  /* 設備時間軸 (表格式佈局) */
+  .equipment-timeline {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 0.5rem;
+    overflow-x: auto;
+  }
+
+  .timeline-header {
+    display: grid;
+    grid-template-columns: 80px repeat(12, 1fr);
+    background: rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    min-width: 800px;
+  }
+
+  .timeline-header .timeline-label {
+    padding: 0.5rem;
+    font-weight: 600;
+    font-size: 0.7rem;
+    color: #e8f4ff;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .timeline-hours {
+    display: contents;
+  }
+
+  .timeline-hour {
+    padding: 0.5rem 0.25rem;
+    text-align: center;
+    font-size: 0.6rem;
+    color: rgba(255, 255, 255, 0.7);
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .timeline-hour:last-child {
+    border-right: none;
+  }
+
+  .timeline-body {
+    display: flex;
+    flex-direction: column;
+    min-width: 800px;
+  }
+
+  .timeline-row {
+    display: grid;
+    grid-template-columns: 80px repeat(12, 1fr);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    min-height: 36px;
+  }
+
+  .timeline-row:last-child {
+    border-bottom: none;
+  }
+
+  .timeline-row:hover {
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .timeline-row .timeline-label {
+    padding: 0.5rem;
+    font-size: 0.7rem;
+    color: #fff;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    font-weight: 500;
+  }
+
+  .timeline-track {
+    grid-column: span 12;
+    position: relative;
+    background: repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.02) 0%,
+      rgba(255, 255, 255, 0.02) calc(100% / 12 - 1px),
+      rgba(255, 255, 255, 0.06) calc(100% / 12 - 1px),
+      rgba(255, 255, 255, 0.06) calc(100% / 12)
+    );
+    min-height: 36px;
+  }
+
+  .timeline-block {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+    border-radius: 4px;
+    padding: 0 0.5rem;
+    font-size: 0.6rem;
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  .timeline-block.pending {
+    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+  }
+
+  .timeline-block.in_progress {
+    background: linear-gradient(135deg, #FF9800 0%, #f57c00 100%);
+  }
+
+  .timeline-block.completed {
+    background: linear-gradient(135deg, #4CAF50 0%, #388e3c 100%);
+  }
+
+  .block-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+
+  /* 設備使用率統計 */
+  .usage-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .usage-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .usage-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .usage-name {
+    font-size: 0.75rem;
+    color: #fff;
+    font-weight: 500;
+  }
+
+  .usage-percent {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #00d4ff;
+    font-family: 'Courier New', monospace;
+  }
+
+  .usage-bar-bg {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .usage-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+  }
+
+  .usage-bar-fill.low {
+    background: linear-gradient(90deg, #4CAF50, #8BC34A);
+  }
+
+  .usage-bar-fill.medium {
+    background: linear-gradient(90deg, #FF9800, #FFC107);
+  }
+
+  .usage-bar-fill.high {
+    background: linear-gradient(90deg, #f44336, #FF5722);
+  }
+
+  /* 維護提醒 */
+  .maintenance-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .maintenance-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 0.5rem;
+    border-left: 3px solid #6b7280;
+  }
+
+  .maintenance-item.urgent {
+    border-left-color: #f44336;
+    background: rgba(244, 67, 54, 0.1);
+  }
+
+  .maintenance-item.warning {
+    border-left-color: #FF9800;
+    background: rgba(255, 152, 0, 0.1);
+  }
+
+  .maintenance-item.normal {
+    border-left-color: #4CAF50;
+    background: rgba(76, 175, 80, 0.1);
+  }
+
+  .maint-icon {
+    flex-shrink: 0;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .maintenance-item.urgent .maint-icon {
+    color: #f44336;
+  }
+
+  .maintenance-item.warning .maint-icon {
+    color: #FF9800;
+  }
+
+  .maint-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+
+  .maint-name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .maint-desc {
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.6);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .maint-date {
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.5);
+    white-space: nowrap;
+  }
+
+  .no-maintenance {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1.5rem;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.8rem;
+  }
+
+  .no-maintenance i {
+    color: #4CAF50;
+  }
+
+  /* 排程表格 (生產排程) */
+  .schedule-table-container {
+    overflow-x: auto;
+  }
+
+  .schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+  }
+
+  .schedule-table th,
+  .schedule-table td {
+    padding: 0.75rem 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+  }
+
+  .schedule-table th {
+    background: rgba(255, 255, 255, 0.1);
+    font-weight: 600;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    color: #e8f4ff;
+  }
+
+  .schedule-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .schedule-table .priority-cell {
+    width: 60px;
+    text-align: center;
+  }
+
+  .schedule-table .priority-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 0.75rem;
+    color: white;
+  }
+
+  .schedule-table .action-cell {
+    width: 60px;
+    text-align: center;
+  }
+
+  .schedule-table .status-tag {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.65rem;
+    font-weight: 600;
+  }
+
+  .schedule-table .status-tag.pending {
+    background: rgba(156, 163, 175, 0.3);
+    color: #9ca3af;
+  }
+
+  .schedule-table .status-tag.in_progress {
+    background: rgba(255, 152, 0, 0.3);
+    color: #ff9800;
+  }
+
+  .schedule-table .status-tag.completed {
+    background: rgba(76, 175, 80, 0.3);
+    color: #4caf50;
+  }
+
+  .schedule-table .empty-cell {
+    text-align: center;
+    padding: 2rem;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  /* 技能矩陣 */
+  .skill-matrix-container {
+    overflow-x: auto;
+  }
+
+  .skill-matrix {
+    font-size: 0.75rem;
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .skill-matrix th,
+  .skill-matrix td {
+    padding: 0.5rem 0.25rem;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+  }
+
+  .skill-matrix th {
+    background: rgba(255, 255, 255, 0.1);
+    font-weight: 600;
+    font-size: 0.65rem;
+    white-space: nowrap;
+  }
+
+  /* 人員欄位固定寬度 */
+  .skill-matrix th:first-child,
+  .skill-matrix td:first-child {
+    width: 80px;
+    min-width: 80px;
+    text-align: left;
+    padding-left: 0.75rem;
+  }
+
+  /* 站點欄位等寬 */
+  .skill-matrix th:not(:first-child),
+  .skill-matrix td:not(:first-child) {
+    width: 50px;
+    min-width: 50px;
+  }
+
+  .skill-matrix .operator-cell {
+    font-weight: 500;
+    text-align: left;
+    padding-left: 0.75rem;
+  }
+
+  .skill-matrix .skill-cell {
+    padding: 0.25rem;
+  }
+
+  .skill-yes {
+    color: #4CAF50;
+  }
+
+  .skill-no {
+    color: rgba(255, 255, 255, 0.2);
+  }
+
+  .skill-cell.certified {
+    background: #4CAF50;
+  }
+
+  .skill-cell.training {
+    background: #FF9800;
+  }
+
+  .skill-cell.none {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  /* 響應式 */
+  @media (max-width: 768px) {
+    .schedule-grid {
+      grid-template-columns: 1fr;
+    }
+    .schedule-widget.span-2 {
+      grid-column: span 1;
+    }
+    .week-calendar {
+      grid-template-columns: repeat(4, 1fr);
+    }
+    .schedule-tabs {
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      padding-bottom: 0.5rem;
+    }
+    .schedule-tab {
+      white-space: nowrap;
+    }
+  }
 </style>

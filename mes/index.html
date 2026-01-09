@@ -142,6 +142,7 @@
     <div class="content-card">
       <!-- Tabs Navigation -->
       <div class="tabs-nav">
+        <a href="#" :class="['nav-tab', currentTab === 'schedule' ? 'active' : '']" @click.prevent="currentTab = 'schedule'"><span>排程看板</span></a>
         <a href="#" :class="['nav-tab', currentTab === 'work-orders' ? 'active' : '']" @click.prevent="currentTab = 'work-orders'"><span>工單管理</span></a>
         <a href="#" :class="['nav-tab', currentTab === 'dispatches' ? 'active' : '']" @click.prevent="currentTab = 'dispatches'"><span>現場派工</span></a>
         <a href="#" :class="['nav-tab', currentTab === 'reports' ? 'active' : '']" @click.prevent="currentTab = 'reports'"><span>報工紀錄</span></a>
@@ -156,6 +157,7 @@
 
       <!-- Tab Panels -->
       <div class="tab-content">
+        <?!= include('tab-schedule'); ?>
         <?!= include('tab-work-orders'); ?>
         <?!= include('tab-dispatches'); ?>
         <?!= include('tab-reports'); ?>
