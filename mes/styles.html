@@ -56,61 +56,222 @@
     margin-left: 0.5rem;
   }
 
-  /* System Info Trigger (緊急狀態提示) */
+  /* System Info Trigger (低調版 - hover 才顯示) */
   .system-info-trigger {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
     cursor: help;
-    color: #444;
-    font-size: 13px;
-    padding: 4px 12px;
-    border: 1px dashed #cc0000;
-    border-radius: 4px;
-    background: #fff5f5;
     position: relative;
-    font-weight: bold;
-    margin-top: 0.5rem;
+    margin-top: 0.25rem;
   }
 
-  .system-info-trigger .tooltip-content {
+  .system-info-trigger .trigger-text {
+    color: #64748b;
+    font-size: 0.875rem;
+  }
+
+  /* 賽博龐克 Tooltip */
+  .cyber-tooltip {
     visibility: hidden;
-    width: 480px;
-    background-color: #1a1a1a;
-    color: #e0e0e0;
+    width: 420px;
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+    color: #00ff41;
     text-align: left;
     border-radius: 4px;
-    padding: 15px;
+    padding: 0;
     position: absolute;
     z-index: 1000;
-    top: 125%;
+    top: 130%;
     left: 0;
     opacity: 0;
-    transition: all 0.2s ease-in-out;
-    box-shadow: 0px 8px 20px rgba(0,0,0,0.5);
-    border-left: 5px solid #cc0000;
-    font-weight: normal;
+    transform: translateY(-10px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 30px rgba(0, 255, 65, 0.3), 0 10px 40px rgba(0,0,0,0.8);
+    border: 1px solid #00ff41;
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+  }
+
+  .cyber-tooltip::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #00ff41, transparent);
+    animation: scanline 2s linear infinite;
+  }
+
+  @keyframes scanline {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  .system-info-trigger:hover .cyber-tooltip {
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .cyber-header {
+    padding: 12px 15px;
+    background: rgba(0, 255, 65, 0.1);
+    border-bottom: 1px solid rgba(0, 255, 65, 0.3);
+  }
+
+  .cyber-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #00ff41;
+    text-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+    letter-spacing: 2px;
+  }
+
+  .cyber-subtitle {
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+    letter-spacing: 1px;
+  }
+
+  .cyber-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0, 255, 65, 0.5), transparent);
+  }
+
+  .cyber-desc {
+    padding: 12px 15px;
+    font-size: 12px;
+    color: #ccc;
     line-height: 1.6;
   }
 
-  .system-info-trigger:hover .tooltip-content {
-    visibility: visible;
-    opacity: 1;
+  .cyber-label {
+    display: block;
+    font-size: 10px;
+    color: #00ff41;
+    margin-bottom: 4px;
+    letter-spacing: 1px;
   }
 
-  .system-info-trigger .subtitle-tooltip {
-    display: block;
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid #333;
+  /* 倒數計時器 */
+  .cyber-countdown-container {
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  .cyber-countdown {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    margin: 10px 0;
+  }
+
+  .countdown-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(0, 255, 65, 0.1);
+    border: 1px solid rgba(0, 255, 65, 0.3);
+    padding: 8px 10px;
+    border-radius: 4px;
+    min-width: 50px;
+  }
+
+  .countdown-block.countdown-ms {
+    min-width: 45px;
+    background: rgba(255, 0, 65, 0.1);
+    border-color: rgba(255, 0, 65, 0.3);
+  }
+
+  .countdown-value {
+    font-size: 20px;
+    font-weight: bold;
+    color: #00ff41;
+    text-shadow: 0 0 10px rgba(0, 255, 65, 0.8);
+    font-family: 'Courier New', monospace;
+    animation: pulse 1s ease-in-out infinite;
+  }
+
+  .countdown-ms .countdown-value {
+    font-size: 16px;
+    color: #ff4141;
+    text-shadow: 0 0 10px rgba(255, 65, 65, 0.8);
+    animation: pulse-fast 0.1s linear infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+  }
+
+  @keyframes pulse-fast {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  .countdown-label {
+    font-size: 8px;
+    color: #666;
+    margin-top: 2px;
+    letter-spacing: 1px;
+  }
+
+  .countdown-separator {
+    font-size: 20px;
+    color: #00ff41;
+    font-weight: bold;
+  }
+
+  .cyber-target {
+    text-align: center;
+    font-size: 10px;
+    color: #666;
+    letter-spacing: 1px;
+  }
+
+  .cyber-footer {
+    padding: 10px 15px;
+    background: rgba(0, 255, 65, 0.05);
+  }
+
+  .cyber-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
     color: #00ff41;
   }
 
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    background: #00ff41;
+    border-radius: 50%;
+    animation: blink 1s ease-in-out infinite;
+    box-shadow: 0 0 10px #00ff41;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .cyber-note {
+    font-size: 9px;
+    color: #666;
+    margin-top: 5px;
+  }
+
   @media (max-width: 768px) {
-    .system-info-trigger .tooltip-content {
+    .cyber-tooltip {
       display: none !important;
     }
-    .system-info-trigger {
-      font-size: 11px;
-      padding: 3px 8px;
+    .system-info-trigger .trigger-text {
+      font-size: 0.75rem;
     }
   }
 

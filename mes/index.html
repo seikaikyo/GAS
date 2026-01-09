@@ -20,15 +20,66 @@
       <div>
         <h1>SMAI - MES 線外表單</h1>
         <div class="system-info-trigger">
-          系統狀態：SMAI-MES v{{ version || '...' }} (備援模式已啟動)
-          <div class="tooltip-content">
-            <strong>(主標) SMAI-Emergency Lite：</strong><br>
-            非正式、臨時性、純手工刻製之「極限生存」自動化線外作業數據矩陣系統
-            <span class="subtitle-tooltip">
-              <strong>(副標) SMAI-Vanguard：</strong><br>
-              前衛者先遣生命維持模組 — <span id="countdown-text">計算中...</span>
-            </span>
-            <div style="font-size: 10px; color: #888; margin-top: 5px;">* 起算日：2025/01/01 | 目標期限：7個月 (2025/08/01)</div>
+          <span class="trigger-text">緊急備援作業模式</span>
+          <span class="version-badge">v{{ version || '...' }}</span>
+
+          <!-- 賽博龐克 Tooltip -->
+          <div class="cyber-tooltip">
+            <div class="cyber-header">
+              <div class="cyber-title">SMAI-EMERGENCY LITE</div>
+              <div class="cyber-subtitle">Strategic Manufacturing AI - Improvised Countermeasure Division</div>
+            </div>
+
+            <div class="cyber-divider"></div>
+
+            <div class="cyber-desc">
+              <span class="cyber-label">SYSTEM DESIGNATION:</span>
+              「七個月技術真空期」緊急應變作戰方案<br>
+              <span style="color: #666; font-size: 11px;">非正式、臨時性、純手工刻製之極限生存自動化數據矩陣</span>
+            </div>
+
+            <div class="cyber-divider"></div>
+
+            <div class="cyber-countdown-container">
+              <div class="cyber-label">DEADLINE COUNTDOWN</div>
+              <div class="cyber-countdown">
+                <div class="countdown-block">
+                  <span class="countdown-value" id="countdown-days">---</span>
+                  <span class="countdown-label">DAYS</span>
+                </div>
+                <div class="countdown-separator">:</div>
+                <div class="countdown-block">
+                  <span class="countdown-value" id="countdown-hours">--</span>
+                  <span class="countdown-label">HRS</span>
+                </div>
+                <div class="countdown-separator">:</div>
+                <div class="countdown-block">
+                  <span class="countdown-value" id="countdown-mins">--</span>
+                  <span class="countdown-label">MIN</span>
+                </div>
+                <div class="countdown-separator">:</div>
+                <div class="countdown-block">
+                  <span class="countdown-value" id="countdown-secs">--</span>
+                  <span class="countdown-label">SEC</span>
+                </div>
+                <div class="countdown-separator">.</div>
+                <div class="countdown-block countdown-ms">
+                  <span class="countdown-value" id="countdown-ms">---</span>
+                  <span class="countdown-label">MS</span>
+                </div>
+              </div>
+              <div class="cyber-target">TARGET: 2025/08/01 00:00:00 TST</div>
+            </div>
+
+            <div class="cyber-divider"></div>
+
+            <div class="cyber-footer">
+              <div class="cyber-status">
+                <span class="status-dot"></span>
+                BACKUP SYSTEM ACTIVE
+              </div>
+              <div class="cyber-note">* 此為第三代重構版本 (Vite → Angular → GAS)</div>
+            </div>
           </div>
         </div>
       </div>

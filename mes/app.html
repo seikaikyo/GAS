@@ -2385,23 +2385,45 @@
         // Initialize Lucide icons
         if (window.lucide) lucide.createIcons();
 
-        // 更新倒數計時
-        const updateCountdown = () => {
+        // 賽博龐克倒數計時器 (含毫秒)
+        const updateCyberCountdown = () => {
           const targetDate = new Date('2025-08-01T00:00:00');
           const now = new Date();
-          const diffTime = targetDate - now;
-          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          const el = document.getElementById('countdown-text');
-          if (!el) return;
-          if (diffDays > 0) {
-            el.innerHTML = `針對「七個月技術真空期」之補償方案 (距離廠商承諾交付剩餘 <strong>${diffDays}</strong> 天)`;
-          } else if (diffDays === 0) {
-            el.innerHTML = `今日為廠商承諾之「七個月」交付期限，目前進入最終驗收校對期`;
+          const diff = targetDate - now;
+
+          const elDays = document.getElementById('countdown-days');
+          const elHours = document.getElementById('countdown-hours');
+          const elMins = document.getElementById('countdown-mins');
+          const elSecs = document.getElementById('countdown-secs');
+          const elMs = document.getElementById('countdown-ms');
+
+          if (!elDays) return;
+
+          if (diff > 0) {
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const secs = Math.floor((diff % (1000 * 60)) / 1000);
+            const ms = Math.floor(diff % 1000);
+
+            elDays.textContent = String(days).padStart(3, '0');
+            elHours.textContent = String(hours).padStart(2, '0');
+            elMins.textContent = String(mins).padStart(2, '0');
+            elSecs.textContent = String(secs).padStart(2, '0');
+            elMs.textContent = String(ms).padStart(3, '0');
           } else {
-            el.innerHTML = `廠商已逾期 <strong>${Math.abs(diffDays)}</strong> 天 — 營運補償方案無限期延長中`;
+            const overdue = Math.abs(diff);
+            const days = Math.floor(overdue / (1000 * 60 * 60 * 24));
+            elDays.textContent = '-' + days;
+            elHours.textContent = '--';
+            elMins.textContent = '--';
+            elSecs.textContent = '--';
+            elMs.textContent = '!!!';
           }
         };
-        updateCountdown();
+        // 每 37ms 更新一次 (視覺上夠快但不會太耗效能)
+        setInterval(updateCyberCountdown, 37);
+        updateCyberCountdown();
       });
 
       return {
