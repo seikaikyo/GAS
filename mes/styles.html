@@ -286,6 +286,124 @@
     color: #1e293b;
   }
 
+  .wo-create-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .wo-create-buttons .btn {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .wms-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .wms-actions .btn {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  /* WMS Location Grid */
+  .wms-location-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    padding: 1rem 0;
+  }
+
+  .wms-location-card {
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .wms-location-card:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+    transform: translateY(-2px);
+  }
+
+  .wms-loc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .wms-loc-code {
+    font-family: monospace;
+    font-weight: 700;
+    font-size: 0.875rem;
+    color: #1e293b;
+  }
+
+  .wms-loc-type {
+    font-size: 0.65rem;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    background: #f1f5f9;
+    color: #64748b;
+  }
+
+  .wms-loc-name {
+    font-size: 0.875rem;
+    color: #475569;
+    margin-bottom: 0.75rem;
+  }
+
+  .wms-loc-stats {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .wms-stat {
+    display: flex;
+    align-items: baseline;
+    gap: 0.25rem;
+  }
+
+  .wms-stat-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+  }
+
+  .wms-stat-label {
+    font-size: 0.75rem;
+    color: #94a3b8;
+  }
+
+  /* WMS Location Type Colors */
+  .wms-type-inbound { border-left: 4px solid #22c55e; }
+  .wms-type-storage { border-left: 4px solid #3b82f6; }
+  .wms-type-staging { border-left: 4px solid #8b5cf6; }
+  .wms-type-outbound { border-left: 4px solid #f59e0b; }
+  .wms-type-qc { border-left: 4px solid #06b6d4; }
+  .wms-type-special { border-left: 4px solid #ef4444; }
+
+  .wms-barcode-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0.5rem;
+  }
+
+  .wms-movements-section {
+    border-top: 1px solid #e2e8f0;
+    margin-top: 1rem;
+    padding-top: 1rem;
+  }
+
   /* Form Sections */
   .form-section {
     background: #f8fafc;
@@ -796,6 +914,37 @@
 
     .section-header h2 {
       font-size: 1.1rem;
+    }
+
+    .wo-create-buttons {
+      flex-direction: column;
+    }
+
+    .wo-create-buttons .btn {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .wms-actions {
+      flex-direction: column;
+    }
+
+    .wms-actions .btn {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .wms-location-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+    }
+
+    .wms-location-card {
+      padding: 0.75rem;
+    }
+
+    .wms-loc-name {
+      font-size: 0.75rem;
     }
 
     .card-grid {

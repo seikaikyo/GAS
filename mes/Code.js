@@ -94,7 +94,7 @@ function api(action, payload) {
     let result;
     switch (action) {
       case 'getVersion':
-        return { success: true, data: '5.11.0' };
+        return { success: true, data: '5.16.0' };
 
       // 效能優化：單次載入所有資料 (含快取)
       case 'getAllData':
@@ -253,6 +253,47 @@ function api(action, payload) {
         break;
       case 'syncR0Labels':
         result = dbSyncR0Labels(payload.labels);
+        break;
+
+      // WMS 倉儲管理
+      case 'getWmsLocations':
+        result = dbGetWmsLocations().filter(l => l.isActive !== 'FALSE' && l.isActive !== false);
+        break;
+      case 'createWmsLocation':
+        result = dbCreateWmsLocation(payload);
+        break;
+      case 'updateWmsLocation':
+        result = dbUpdateWmsLocation(payload.id, payload.data);
+        break;
+      case 'deleteWmsLocation':
+        result = dbDeleteWmsLocation(payload.id);
+        break;
+      case 'initWmsLocations':
+        result = dbInitWmsLocations();
+        break;
+      case 'getWmsInventory':
+        result = dbGetWmsInventory();
+        break;
+      case 'getWmsLocationSummary':
+        result = dbGetWmsLocationSummary();
+        break;
+      case 'getWmsMovements':
+        result = dbGetWmsMovements();
+        break;
+      case 'wmsInbound':
+        result = dbWmsInbound(payload);
+        break;
+      case 'wmsOutbound':
+        result = dbWmsOutbound(payload);
+        break;
+      case 'wmsTransfer':
+        result = dbWmsTransfer(payload);
+        break;
+      case 'getWmsStockTakes':
+        result = dbGetWmsStockTakes();
+        break;
+      case 'createWmsStockTake':
+        result = dbCreateWmsStockTake(payload);
         break;
 
       // Admin / Tools

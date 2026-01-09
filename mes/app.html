@@ -42,6 +42,24 @@
         try { return JSON.parse(cust.sites); } catch { return []; }
       });
 
+      // 依工單類型過濾可用站點
+      const availableStations = Vue.computed(() => {
+        if (!selectedWo.value) return [];
+        const type = selectedWo.value.orderType;
+        if (type === 'deglue') {
+          // 除膠工單流程：除膠站 → 烘箱站 → OQC檢驗 → 包裝站
+          return ['除膠站', '烘箱站', 'OQC檢驗', '包裝站'];
+        } else if (type === 'regeneration') {
+          // 再生工單流程：烘箱站 → AOI檢驗 → 釋氣檢驗 → RFID更換 → 包裝站
+          return ['烘箱站', 'AOI檢驗', '釋氣檢驗', 'RFID更換', '包裝站'];
+        } else if (type === 'rework') {
+          // 重工工單：僅烘箱站
+          return ['烘箱站'];
+        }
+        // 預設（不應該到這裡）
+        return ['除膠站', '烘箱站', 'OQC檢驗', 'RFID更換', '包裝站'];
+      });
+
       const filteredOutgassingTests = Vue.computed(() => {
         if (!formOutgassing.value.workOrderId) return outgassingTests.value;
         return outgassingTests.value.filter(t => t.workOrderId === formOutgassing.value.workOrderId);
@@ -273,6 +291,39 @@
       const adminMessage = ref('');
       const adminMessageType = ref('success');
       const systemVersion = ref('5.1.0');
+
+      // WMS 倉儲管理
+      const wmsLocations = ref([]);
+      const wmsInventory = ref([]);
+      const wmsMovements = ref([]);
+      const wmsLocationSummary = ref([]);
+      const wmsInventoryList = ref([]); // 當前選擇倉區的庫存列表
+      const showWmsInboundModal = ref(false);
+      const showWmsTransferModal = ref(false);
+      const showWmsOutboundModal = ref(false);
+      const showLocationDetailModal = ref(false);
+      const selectedLocation = ref(null);
+      const formWms = ref({
+        locationCode: '',
+        workOrderId: '',
+        quantity: 1,
+        barcode: '',
+        barcodes: [],
+        operatorName: '',
+        fromLocation: '',
+        toLocation: '',
+        inventoryId: '',
+        reason: ''
+      });
+
+      // 盤點相關
+      const showWmsStockTakeModal = ref(false);
+      const stockTakeItems = ref([]);
+      const formStockTake = ref({
+        locationCode: '',
+        operatorName: '',
+        notes: ''
+      });
 
       // Reinitialize Lucide icons when DOM updates
       function refreshIcons() {
@@ -577,6 +628,17 @@
         showCreateWoModal.value = true;
       };
 
+      // 快速建立工單（指定類型）
+      const openCreateWoModal = (orderType) => {
+        editingWorkOrderId.value = null;
+        formWo.value = {
+          customerName: '', customerSite: '', productModel: '', quantity: 10,
+          orderType: orderType,
+          priority: 'normal', targetRegenerationCount: 1, sourceWorkOrderId: ''
+        };
+        showCreateWoModal.value = true;
+      };
+
       const cancelEditWorkOrder = () => {
         editingWorkOrderId.value = null;
         formWo.value = { customerName: '', customerSite: '', productModel: '', quantity: 10, orderType: 'deglue', priority: 'normal', targetRegenerationCount: 1, sourceWorkOrderId: '' };
@@ -590,8 +652,10 @@
 
       const openDispatchModal = (wo) => {
         selectedWo.value = wo;
-        // 重工工單預設站點為「烘箱站」（回爐重烤），其他為「除膠站」
-        const defaultStation = wo.orderType === 'rework' ? '烘箱站' : '除膠站';
+        // 依工單類型設定預設站點
+        let defaultStation = '除膠站';
+        if (wo.orderType === 'regeneration') defaultStation = '烘箱站';
+        else if (wo.orderType === 'rework') defaultStation = '烘箱站';
         formDispatch.value = { workOrderId: wo.id, stationName: defaultStation, operatorName: '', quantity: wo.quantity - wo.completedQty };
         showDispatchModal.value = true;
       };
@@ -2094,9 +2158,213 @@
         });
       };
 
+      // ========== WMS 倉儲管理 ==========
+      const formatTime = (isoString) => {
+        if (!isoString) return '-';
+        const d = new Date(isoString);
+        return `${d.getMonth()+1}/${d.getDate()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+      };
+
+      const formatDate = (isoString) => {
+        if (!isoString) return '-';
+        const d = new Date(isoString);
+        return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
+      };
+
+      const loadWmsData = async () => {
+        try {
+          const [locations, summary, movements, inventory] = await Promise.all([
+            callApi('getWmsLocations', null, false),
+            callApi('getWmsLocationSummary', null, false),
+            callApi('getWmsMovements', null, false),
+            callApi('getWmsInventory', null, false)
+          ]);
+          wmsLocations.value = locations || [];
+          wmsLocationSummary.value = summary || [];
+          wmsMovements.value = movements || [];
+          wmsInventory.value = inventory || [];
+        } catch (e) { console.error('WMS 載入失敗:', e); }
+      };
+
+      const initWmsLocations = async () => {
+        try {
+          await callApi('initWmsLocations', {});
+          await loadWmsData();
+          alert('倉區初始化完成');
+        } catch (e) { alert('初始化失敗: ' + e); }
+      };
+
+      const wmsLocationTypeLabel = (type) => {
+        const labels = { inbound: '入庫', storage: '暫存', staging: '前置', outbound: '出庫', qc: '品檢', special: '特殊' };
+        return labels[type] || type;
+      };
+
+      const wmsMovementTypeLabel = (type) => {
+        const labels = { inbound: '入庫', outbound: '出庫', transfer: '調撥', adjustment: '盤點調整' };
+        return labels[type] || type;
+      };
+
+      const wmsMovementTypeBadge = (type) => {
+        const badges = { inbound: 'success', outbound: 'error', transfer: 'warning', adjustment: 'info' };
+        return badges[type] || 'ghost';
+      };
+
+      const openWmsModal = (type) => {
+        formWms.value = { locationCode: '', workOrderId: '', quantity: 1, barcode: '', barcodes: [], operatorName: '', fromLocation: '', toLocation: '', inventoryId: '', reason: '' };
+        wmsInventoryList.value = [];
+        if (type === 'inbound') showWmsInboundModal.value = true;
+        else if (type === 'transfer') showWmsTransferModal.value = true;
+        else if (type === 'outbound') showWmsOutboundModal.value = true;
+        else if (type === 'stocktake') {
+          formStockTake.value = { locationCode: '', operatorName: '', notes: '' };
+          stockTakeItems.value = [];
+          showWmsStockTakeModal.value = true;
+        }
+      };
+
+      const openLocationDetail = async (loc) => {
+        selectedLocation.value = loc;
+        wmsInventoryList.value = wmsInventory.value.filter(inv => inv.locationCode === loc.code);
+        // 如果沒有載入過庫存，先載入
+        if (wmsInventory.value.length === 0) {
+          try {
+            wmsInventory.value = await callApi('getWmsInventory', null, false);
+            wmsInventoryList.value = wmsInventory.value.filter(inv => inv.locationCode === loc.code);
+          } catch (e) { console.error(e); }
+        }
+        showLocationDetailModal.value = true;
+      };
+
+      const loadLocationInventory = async () => {
+        const locCode = formWms.value.fromLocation;
+        if (!locCode) { wmsInventoryList.value = []; return; }
+        try {
+          if (wmsInventory.value.length === 0) {
+            wmsInventory.value = await callApi('getWmsInventory', null, false);
+          }
+          wmsInventoryList.value = wmsInventory.value.filter(inv => inv.locationCode === locCode);
+        } catch (e) { console.error(e); }
+      };
+
+      const wmsAddBarcode = () => {
+        if (formWms.value.barcode && !formWms.value.barcodes.includes(formWms.value.barcode)) {
+          formWms.value.barcodes.push(formWms.value.barcode);
+          formWms.value.barcode = '';
+        }
+      };
+
+      const submitWmsInbound = async () => {
+        try {
+          await callApi('wmsInbound', {
+            locationCode: formWms.value.locationCode,
+            workOrderId: formWms.value.workOrderId || null,
+            quantity: formWms.value.quantity,
+            barcode: formWms.value.barcodes.length > 0 ? formWms.value.barcodes.join(',') : formWms.value.barcode,
+            operatorName: formWms.value.operatorName
+          });
+          showWmsInboundModal.value = false;
+          await loadWmsData();
+          alert('入庫成功');
+        } catch (e) { alert('入庫失敗: ' + e); }
+      };
+
+      const submitWmsTransfer = async () => {
+        try {
+          await callApi('wmsTransfer', {
+            inventoryId: formWms.value.inventoryId,
+            toLocation: formWms.value.toLocation,
+            operatorName: formWms.value.operatorName,
+            reason: formWms.value.reason
+          });
+          showWmsTransferModal.value = false;
+          await loadWmsData();
+          wmsInventory.value = await callApi('getWmsInventory', null, false);
+          alert('調撥成功');
+        } catch (e) { alert('調撥失敗: ' + e); }
+      };
+
+      const submitWmsOutbound = async () => {
+        try {
+          await callApi('wmsOutbound', {
+            inventoryId: formWms.value.inventoryId,
+            operatorName: formWms.value.operatorName,
+            reason: formWms.value.reason
+          });
+          showWmsOutboundModal.value = false;
+          await loadWmsData();
+          wmsInventory.value = await callApi('getWmsInventory', null, false);
+          alert('出庫成功');
+        } catch (e) { alert('出庫失敗: ' + e); }
+      };
+
+      // 盤點功能
+      const loadStockTakeInventory = async () => {
+        const locCode = formStockTake.value.locationCode;
+        if (!locCode) {
+          stockTakeItems.value = [];
+          return;
+        }
+        try {
+          // 確保有最新庫存資料
+          if (wmsInventory.value.length === 0) {
+            wmsInventory.value = await callApi('getWmsInventory', null, false);
+          }
+          // 篩選該倉區庫存並加入實際數量欄位
+          stockTakeItems.value = wmsInventory.value
+            .filter(inv => inv.locationCode === locCode)
+            .map(inv => ({
+              id: inv.id,
+              barcode: inv.barcode || '',
+              orderNumber: inv.orderNumber || '',
+              productModel: inv.productModel || '',
+              systemQty: Number(inv.quantity) || 0,
+              actualQty: null
+            }));
+        } catch (e) {
+          console.error('載入盤點庫存失敗:', e);
+          stockTakeItems.value = [];
+        }
+      };
+
+      const submitWmsStockTake = async () => {
+        // 過濾有輸入實際數量的項目
+        const filledItems = stockTakeItems.value.filter(item => item.actualQty !== null && item.actualQty !== '');
+        if (filledItems.length === 0) {
+          alert('請至少輸入一項實際數量');
+          return;
+        }
+        try {
+          const location = wmsLocations.value.find(l => l.code === formStockTake.value.locationCode);
+          const result = await callApi('createWmsStockTake', {
+            locationCode: formStockTake.value.locationCode,
+            locationName: location?.name || '',
+            operatorName: formStockTake.value.operatorName,
+            notes: formStockTake.value.notes,
+            details: filledItems.map(item => ({
+              inventoryId: item.id,
+              actualQty: item.actualQty
+            }))
+          });
+          showWmsStockTakeModal.value = false;
+          await loadWmsData();
+          const adjustedCount = result.adjustedItems || 0;
+          if (adjustedCount > 0) {
+            alert(`盤點完成，共調整 ${adjustedCount} 筆庫存`);
+          } else {
+            alert('盤點完成，庫存數量無差異');
+          }
+        } catch (e) {
+          alert('盤點失敗: ' + e);
+        }
+      };
+
       // Watch for tab change to refresh icons
       watch(currentTab, (newTab) => {
         if (newTab === 'oven') {
+          nextTick(() => { if (window.lucide) lucide.createIcons(); });
+        }
+        if (newTab === 'wms') {
+          loadWmsData();
           nextTick(() => { if (window.lucide) lucide.createIcons(); });
         }
       });
@@ -2127,8 +2395,8 @@
         currentNgReason, currentNgQty, currentNgBarcodes, currentNgBarcodeInput,
         scanNgBarcode, removeNgBarcode, addNgDetail, removeNgDetail, resetNgDetailForm,
         editingOperatorId, editingCustomerId, editingProductId, editingNgReasonId, editingWorkOrderId,
-        regenerationOrders, completedDeglueOrders, reworkableOrders, aoiPassedOrders, epcHistory, operators, customers, products, customerSites, epcCheckStatus, epcCheckInfo,
-        refreshData, submitWorkOrder, openDispatchModal, submitDispatch, openReportModal, submitReport,
+        regenerationOrders, completedDeglueOrders, reworkableOrders, aoiPassedOrders, epcHistory, operators, customers, products, customerSites, availableStations, epcCheckStatus, epcCheckInfo,
+        refreshData, openCreateWoModal, submitWorkOrder, openDispatchModal, submitDispatch, openReportModal, submitReport,
         startEditWorkOrder, cancelEditWorkOrder, deleteWorkOrder, deleteDispatch,
         submitEpcChange, onWoSelect, onCustomerSelect, onSourceWorkOrderSelect, checkOldEpc,
         submitOperator, deleteOperator, startEditOperator, cancelEditOperator,
@@ -2170,7 +2438,17 @@
         previewWorkOrderId, previewData, canvasScale,
         dragStart, dragStartField, dropElement, selectElement, deselectAll, deleteElement,
         getElementStyle, startDrag, startResize, resolveFieldValue,
-        loadTemplate, saveTemplate, previewLabel, loadPreviewData, generateSBPL
+        loadTemplate, saveTemplate, previewLabel, loadPreviewData, generateSBPL,
+        // WMS 倉儲管理
+        wmsLocations, wmsInventory, wmsMovements, wmsLocationSummary, wmsInventoryList,
+        showWmsInboundModal, showWmsTransferModal, showWmsOutboundModal, showLocationDetailModal,
+        selectedLocation, formWms, formatTime, formatDate,
+        loadWmsData, initWmsLocations, wmsLocationTypeLabel, wmsMovementTypeLabel, wmsMovementTypeBadge,
+        openWmsModal, openLocationDetail, loadLocationInventory, wmsAddBarcode,
+        submitWmsInbound, submitWmsTransfer, submitWmsOutbound,
+        // 盤點
+        showWmsStockTakeModal, stockTakeItems, formStockTake,
+        loadStockTakeInventory, submitWmsStockTake
       };
     }
   });

@@ -88,10 +88,17 @@
         </div>
       </div>
 
-      <!-- 4. Order Type -->
+      <!-- 4. Order Type (編輯模式可切換，新建模式顯示固定標籤) -->
       <div style="margin-bottom: 1rem;">
         <label class="input-label">工單類型</label>
-        <div class="chip-group">
+        <!-- 新建模式：顯示固定標籤 -->
+        <div v-if="!editingWorkOrderId">
+          <span :class="['badge', 'badge-lg', formWo.orderType === 'deglue' ? 'badge-primary' : formWo.orderType === 'regeneration' ? 'badge-warning' : 'badge-error']">
+            {{ { deglue: '除膠工單', regeneration: '再生工單', rework: '重工工單' }[formWo.orderType] }}
+          </span>
+        </div>
+        <!-- 編輯模式：可切換類型 -->
+        <div v-else class="chip-group">
           <div :class="['chip', formWo.orderType === 'deglue' ? 'selected' : '']"
                @click="formWo.orderType = 'deglue'; formWo.sourceWorkOrderId = ''">除膠</div>
           <div :class="['chip', formWo.orderType === 'regeneration' ? 'selected' : '']"
@@ -205,16 +212,15 @@
       <div style="margin-bottom: 1rem;">
         <label class="input-label">工作站點</label>
         <div class="chip-group">
-          <!-- 重工工單只能選烘箱站（再次烘烤） -->
-          <template v-if="selectedWo?.orderType === 'rework'">
-            <div class="chip selected">烘箱站</div>
-            <span style="color: #94a3b8; font-size: 0.75rem; margin-left: 0.5rem;">重工僅限烘箱站（回爐重烤）</span>
-          </template>
-          <template v-else>
-            <div v-for="st in ['除膠站', '烘箱站', 'OQC檢驗', 'RFID更換', '包裝站']" :key="st"
-                 :class="['chip', formDispatch.stationName === st ? 'selected' : '']"
-                 @click="formDispatch.stationName = st">{{ st }}</div>
-          </template>
+          <div v-for="st in availableStations" :key="st"
+               :class="['chip', formDispatch.stationName === st ? 'selected' : '']"
+               @click="formDispatch.stationName = st">{{ st }}</div>
+        </div>
+        <div v-if="selectedWo?.orderType === 'rework'" style="color: #94a3b8; font-size: 0.75rem; margin-top: 0.5rem;">
+          重工僅限烘箱站（回爐重烤）
+        </div>
+        <div v-else-if="selectedWo?.orderType" style="color: #94a3b8; font-size: 0.75rem; margin-top: 0.5rem;">
+          {{ { deglue: '除膠流程', regeneration: '再生流程' }[selectedWo.orderType] }}
         </div>
       </div>
 

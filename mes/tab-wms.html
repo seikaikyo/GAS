@@ -1,0 +1,376 @@
+<!-- Tab: WMS 倉儲管理 -->
+<div v-show="currentTab === 'wms'">
+  <div class="section-header">
+    <h2>倉儲管理</h2>
+    <div class="wms-actions">
+      <button class="btn btn-primary" @click="openWmsModal('inbound')">
+        <i data-lucide="package-plus" class="w-4 h-4"></i>
+        入庫
+      </button>
+      <button class="btn btn-warning" @click="openWmsModal('transfer')">
+        <i data-lucide="arrow-right-left" class="w-4 h-4"></i>
+        調撥
+      </button>
+      <button class="btn btn-error" @click="openWmsModal('outbound')">
+        <i data-lucide="package-minus" class="w-4 h-4"></i>
+        出庫
+      </button>
+      <button class="btn btn-info" @click="openWmsModal('stocktake')">
+        <i data-lucide="clipboard-check" class="w-4 h-4"></i>
+        盤點
+      </button>
+    </div>
+  </div>
+
+  <!-- 倉區總覽 -->
+  <div class="wms-location-grid">
+    <div v-for="loc in wmsLocationSummary" :key="loc.id"
+         class="wms-location-card"
+         :class="'wms-type-' + loc.locationType"
+         @click="openLocationDetail(loc)">
+      <div class="wms-loc-header">
+        <span class="wms-loc-code">{{ loc.code }}</span>
+        <span class="wms-loc-type">{{ wmsLocationTypeLabel(loc.locationType) }}</span>
+      </div>
+      <div class="wms-loc-name">{{ loc.name }}</div>
+      <div class="wms-loc-stats">
+        <div class="wms-stat">
+          <span class="wms-stat-value">{{ loc.itemCount }}</span>
+          <span class="wms-stat-label">筆</span>
+        </div>
+        <div class="wms-stat">
+          <span class="wms-stat-value">{{ loc.totalQty }}</span>
+          <span class="wms-stat-label">件</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 空狀態 -->
+  <div v-if="wmsLocationSummary.length === 0" class="empty-state" style="padding: 3rem;">
+    <i data-lucide="warehouse" class="w-12 h-12 mx-auto mb-4 opacity-50"></i>
+    <div>尚未設定倉區</div>
+    <button class="btn btn-primary mt-4" @click="initWmsLocations">
+      初始化柳工再生廠倉區
+    </button>
+  </div>
+
+  <!-- 最近異動 -->
+  <div v-if="wmsMovements.length > 0" class="wms-movements-section">
+    <h3 style="font-size: 1rem; margin: 1.5rem 0 1rem;">最近異動</h3>
+    <div class="scrollable" style="max-height: 300px;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>時間</th>
+            <th>類型</th>
+            <th>來源</th>
+            <th>目的</th>
+            <th>工單/條碼</th>
+            <th>數量</th>
+            <th>操作人</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="mv in wmsMovements.slice(0, 20)" :key="mv.id">
+            <td style="font-size: 0.75rem; color: #64748b;">{{ formatTime(mv.createdAt) }}</td>
+            <td>
+              <span :class="'badge badge-' + wmsMovementTypeBadge(mv.movementType)">
+                {{ wmsMovementTypeLabel(mv.movementType) }}
+              </span>
+            </td>
+            <td><code>{{ mv.fromLocation }}</code></td>
+            <td><code>{{ mv.toLocation }}</code></td>
+            <td>
+              <div v-if="mv.orderNumber" style="font-size: 0.75rem;">{{ mv.orderNumber }}</div>
+              <div v-if="mv.barcode" style="font-size: 0.7rem; color: #64748b;">{{ mv.barcode }}</div>
+            </td>
+            <td style="font-weight: 600;">{{ mv.quantity }}</td>
+            <td>{{ mv.operatorName }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- WMS 入庫 Modal -->
+<dialog class="modal" :class="{ 'modal-open': showWmsInboundModal }">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-4">入庫作業</h3>
+    <form @submit.prevent="submitWmsInbound">
+      <div style="margin-bottom: 1rem;">
+        <label class="input-label">目的倉區 *</label>
+        <select class="select select-bordered w-full" v-model="formWms.locationCode" required>
+          <option value="">請選擇倉區</option>
+          <option v-for="loc in wmsLocations" :key="loc.code" :value="loc.code">
+            {{ loc.code }} - {{ loc.name }}
+          </option>
+        </select>
+      </div>
+      <div style="margin-bottom: 1rem;">
+        <label class="input-label">關聯工單</label>
+        <select class="select select-bordered w-full" v-model="formWms.workOrderId">
+          <option value="">無（散料）</option>
+          <option v-for="wo in workOrders" :key="wo.id" :value="wo.id">
+            {{ wo.orderNumber }} - {{ wo.productModel }}
+          </option>
+        </select>
+      </div>
+      <div style="margin-bottom: 1rem;">
+        <label class="input-label">條碼掃描</label>
+        <input type="text" class="input input-bordered w-full" v-model="formWms.barcode"
+               placeholder="掃描或輸入條碼" @keyup.enter.prevent="wmsAddBarcode">
+        <div v-if="formWms.barcodes && formWms.barcodes.length > 0" class="wms-barcode-list">
+          <span v-for="(bc, idx) in formWms.barcodes" :key="idx" class="badge badge-ghost">
+            {{ bc }} <span @click="formWms.barcodes.splice(idx, 1)" style="cursor:pointer;">&times;</span>
+          </span>
+        </div>
+      </div>
+      <div style="margin-bottom: 1rem;">
+        <label class="input-label">數量</label>
+        <input type="number" class="input input-bordered w-full" v-model.number="formWms.quantity" min="1">
+      </div>
+      <div style="margin-bottom: 1rem;">
+        <label class="input-label">操作人員 *</label>
+        <select class="select select-bordered w-full" v-model="formWms.operatorName" required>
+          <option value="">請選擇</option>
+          <option v-for="op in operators" :key="op.id" :value="op.name">{{ op.name }}</option>
+        </select>
+      </div>
+    </form>
+    <div class="modal-action">
+      <button class="btn btn-ghost" @click="showWmsInboundModal = false">取消</button>
+      <button class="btn btn-primary" @click="submitWmsInbound" :disabled="!formWms.locationCode || !formWms.operatorName">
+        確認入庫
+      </button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop" @click="showWmsInboundModal = false"><button>close</button></form>
+</dialog>
+
+<!-- WMS 調撥 Modal -->
+<dialog class="modal" :class="{ 'modal-open': showWmsTransferModal }">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-4">調撥作業</h3>
+    <form @submit.prevent="submitWmsTransfer">
+      <div style="margin-bottom: 1rem;">
+        <label class="input-label">來源倉區 *</label>
+        <select class="select select-bordered w-full" v-model="formWms.fromLocation" @change="loadLocationInventory" required>
+          <option value="">請選擇倉區</option>
+          <option v-for="loc in wmsLocations" :key="loc.code" :value="loc.code">
+            {{ loc.code }} - {{ loc.name }}
+          </option>
+        </select>
+      </div>
+      <div v-if="formWms.fromLocation && wmsInventoryList.length > 0" style="margin-bottom: 1rem;">
+        <label class="input-label">選擇物品 *</label>
+        <select class="select select-bordered w-full" v-model="formWms.inventoryId" required>
+          <option value="">請選擇</option>
+          <option v-for="inv in wmsInventoryList" :key="inv.id" :value="inv.id">
+            {{ inv.barcode || inv.orderNumber || '未標示' }} ({{ inv.quantity }}件)
+          </option>
+        </select>
+      </div>
+      <div v-if="formWms.fromLocation && wmsInventoryList.length === 0" class="alert alert-warning mb-4">
+        <span>此倉區目前無庫存</span>
+      </div>
+      <div style="margin-bottom: 1rem;">
+        <label class="input-label">目的倉區 *</label>
+        <select class="select select-bordered w-full" v-model="formWms.toLocation" required>
+          <option value="">請選擇倉區</option>
+          <option v-for="loc in wmsLocations.filter(l => l.code !== formWms.fromLocation)"
+                  :key="loc.code" :value="loc.code">
+            {{ loc.code }} - {{ loc.name }}
+          </option>
+        </select>
+      </div>
+      <div style="margin-bottom: 1rem;">
+        <label class="input-label">操作人員 *</label>
+        <select class="select select-bordered w-full" v-model="formWms.operatorName" required>
+          <option value="">請選擇</option>
+          <option v-for="op in operators" :key="op.id" :value="op.name">{{ op.name }}</option>
+        </select>
+      </div>
+      <div style="margin-bottom: 1rem;">
+        <label class="input-label">原因備註</label>
+        <input type="text" class="input input-bordered w-full" v-model="formWms.reason" placeholder="選填">
+      </div>
+    </form>
+    <div class="modal-action">
+      <button class="btn btn-ghost" @click="showWmsTransferModal = false">取消</button>
+      <button class="btn btn-warning" @click="submitWmsTransfer"
+              :disabled="!formWms.inventoryId || !formWms.toLocation || !formWms.operatorName">
+        確認調撥
+      </button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop" @click="showWmsTransferModal = false"><button>close</button></form>
+</dialog>
+
+<!-- WMS 出庫 Modal -->
+<dialog class="modal" :class="{ 'modal-open': showWmsOutboundModal }">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-4">出庫作業</h3>
+    <form @submit.prevent="submitWmsOutbound">
+      <div style="margin-bottom: 1rem;">
+        <label class="input-label">來源倉區 *</label>
+        <select class="select select-bordered w-full" v-model="formWms.fromLocation" @change="loadLocationInventory" required>
+          <option value="">請選擇倉區</option>
+          <option v-for="loc in wmsLocations" :key="loc.code" :value="loc.code">
+            {{ loc.code }} - {{ loc.name }}
+          </option>
+        </select>
+      </div>
+      <div v-if="formWms.fromLocation && wmsInventoryList.length > 0" style="margin-bottom: 1rem;">
+        <label class="input-label">選擇物品 *</label>
+        <select class="select select-bordered w-full" v-model="formWms.inventoryId" required>
+          <option value="">請選擇</option>
+          <option v-for="inv in wmsInventoryList" :key="inv.id" :value="inv.id">
+            {{ inv.barcode || inv.orderNumber || '未標示' }} ({{ inv.quantity }}件)
+          </option>
+        </select>
+      </div>
+      <div v-if="formWms.fromLocation && wmsInventoryList.length === 0" class="alert alert-warning mb-4">
+        <span>此倉區目前無庫存</span>
+      </div>
+      <div style="margin-bottom: 1rem;">
+        <label class="input-label">操作人員 *</label>
+        <select class="select select-bordered w-full" v-model="formWms.operatorName" required>
+          <option value="">請選擇</option>
+          <option v-for="op in operators" :key="op.id" :value="op.name">{{ op.name }}</option>
+        </select>
+      </div>
+      <div style="margin-bottom: 1rem;">
+        <label class="input-label">出庫原因</label>
+        <input type="text" class="input input-bordered w-full" v-model="formWms.reason" placeholder="例：出貨、報廢">
+      </div>
+    </form>
+    <div class="modal-action">
+      <button class="btn btn-ghost" @click="showWmsOutboundModal = false">取消</button>
+      <button class="btn btn-error" @click="submitWmsOutbound"
+              :disabled="!formWms.inventoryId || !formWms.operatorName">
+        確認出庫
+      </button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop" @click="showWmsOutboundModal = false"><button>close</button></form>
+</dialog>
+
+<!-- 倉區明細 Modal -->
+<dialog class="modal" :class="{ 'modal-open': showLocationDetailModal }">
+  <div class="modal-box max-w-2xl">
+    <h3 class="font-bold text-lg mb-4">{{ selectedLocation?.code }} - {{ selectedLocation?.name }}</h3>
+    <div v-if="wmsInventoryList.length === 0" class="empty-state" style="padding: 2rem;">
+      <i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 opacity-50"></i>
+      <div>此倉區目前無庫存</div>
+    </div>
+    <table v-else class="data-table">
+      <thead>
+        <tr>
+          <th>條碼</th>
+          <th>工單</th>
+          <th>產品</th>
+          <th>數量</th>
+          <th>入庫日期</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="inv in wmsInventoryList" :key="inv.id">
+          <td><code>{{ inv.barcode || '-' }}</code></td>
+          <td>{{ inv.orderNumber || '-' }}</td>
+          <td>{{ inv.productModel || '-' }}</td>
+          <td style="font-weight: 600;">{{ inv.quantity }}</td>
+          <td style="font-size: 0.75rem; color: #64748b;">{{ formatDate(inv.inboundDate) }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="modal-action">
+      <button class="btn btn-ghost" @click="showLocationDetailModal = false">關閉</button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop" @click="showLocationDetailModal = false"><button>close</button></form>
+</dialog>
+
+<!-- WMS 盤點 Modal -->
+<dialog class="modal" :class="{ 'modal-open': showWmsStockTakeModal }">
+  <div class="modal-box max-w-3xl">
+    <h3 class="font-bold text-lg mb-4">盤點作業</h3>
+    <form @submit.prevent="submitWmsStockTake">
+      <div style="margin-bottom: 1rem;">
+        <label class="input-label">選擇倉區 *</label>
+        <select class="select select-bordered w-full" v-model="formStockTake.locationCode" @change="loadStockTakeInventory" required>
+          <option value="">請選擇倉區</option>
+          <option v-for="loc in wmsLocations" :key="loc.code" :value="loc.code">
+            {{ loc.code }} - {{ loc.name }}
+          </option>
+        </select>
+      </div>
+
+      <div v-if="formStockTake.locationCode && stockTakeItems.length === 0" class="alert alert-warning mb-4">
+        <span>此倉區目前無庫存可盤點</span>
+      </div>
+
+      <div v-if="stockTakeItems.length > 0" style="margin-bottom: 1rem;">
+        <label class="input-label">庫存盤點 ({{ stockTakeItems.length }} 項)</label>
+        <div class="scrollable" style="max-height: 300px; border: 1px solid #e2e8f0; border-radius: 0.5rem;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>條碼/工單</th>
+                <th>產品</th>
+                <th style="text-align: center;">系統數量</th>
+                <th style="text-align: center; width: 100px;">實際數量</th>
+                <th style="text-align: center;">差異</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(item, idx) in stockTakeItems" :key="item.id"
+                  :class="{ 'bg-red-50': item.actualQty !== null && item.actualQty !== item.systemQty }">
+                <td>
+                  <code v-if="item.barcode">{{ item.barcode }}</code>
+                  <span v-else>{{ item.orderNumber || '-' }}</span>
+                </td>
+                <td>{{ item.productModel || '-' }}</td>
+                <td style="text-align: center; font-weight: 600;">{{ item.systemQty }}</td>
+                <td style="text-align: center;">
+                  <input type="number" class="input input-bordered input-sm w-20"
+                         v-model.number="stockTakeItems[idx].actualQty" min="0" placeholder="-">
+                </td>
+                <td style="text-align: center;">
+                  <span v-if="item.actualQty !== null && item.actualQty !== item.systemQty"
+                        :class="item.actualQty > item.systemQty ? 'text-green-600' : 'text-red-600'"
+                        style="font-weight: 600;">
+                    {{ item.actualQty > item.systemQty ? '+' : '' }}{{ item.actualQty - item.systemQty }}
+                  </span>
+                  <span v-else style="color: #94a3b8;">-</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 1rem;">
+        <label class="input-label">操作人員 *</label>
+        <select class="select select-bordered w-full" v-model="formStockTake.operatorName" required>
+          <option value="">請選擇</option>
+          <option v-for="op in operators" :key="op.id" :value="op.name">{{ op.name }}</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 1rem;">
+        <label class="input-label">備註</label>
+        <input type="text" class="input input-bordered w-full" v-model="formStockTake.notes" placeholder="選填">
+      </div>
+    </form>
+    <div class="modal-action">
+      <button class="btn btn-ghost" @click="showWmsStockTakeModal = false">取消</button>
+      <button class="btn btn-info" @click="submitWmsStockTake"
+              :disabled="!formStockTake.locationCode || !formStockTake.operatorName || stockTakeItems.length === 0">
+        確認盤點
+      </button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop" @click="showWmsStockTakeModal = false"><button>close</button></form>
+</dialog>

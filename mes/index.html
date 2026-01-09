@@ -48,6 +48,7 @@
         <a href="#" :class="['nav-tab', currentTab === 'r0' ? 'active' : '']" @click.prevent="currentTab = 'r0'"><span>標籤管理</span></a>
         <a href="#" :class="['nav-tab', currentTab === 'label-editor' ? 'active' : '']" @click.prevent="currentTab = 'label-editor'"><span>樣式設計</span></a>
         <a href="#" :class="['nav-tab', currentTab === 'oven' ? 'active' : '']" @click.prevent="currentTab = 'oven'"><span>烘箱監控</span></a>
+        <a href="#" :class="['nav-tab', currentTab === 'wms' ? 'active' : '']" @click.prevent="currentTab = 'wms'"><span>倉儲管理</span></a>
         <a href="#" :class="['nav-tab', currentTab === 'settings' ? 'active' : '']" @click.prevent="currentTab = 'settings'"><span>設定</span></a>
       </div>
 
@@ -61,6 +62,7 @@
         <?!= include('tab-r0'); ?>
         <?!= include('tab-label-editor'); ?>
         <?!= include('tab-oven'); ?>
+        <?!= include('tab-wms'); ?>
         <?!= include('tab-settings'); ?>
       </div>
     </div>

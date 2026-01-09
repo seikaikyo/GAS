@@ -2,10 +2,20 @@
 <div v-show="currentTab === 'work-orders'">
   <div class="section-header">
     <h2>工單列表</h2>
-    <button class="btn btn-success" @click="showCreateWoModal = true">
-      <i data-lucide="plus" class="w-4 h-4"></i>
-      建立工單
-    </button>
+    <div class="wo-create-buttons">
+      <button class="btn btn-primary" @click="openCreateWoModal('deglue')">
+        <i data-lucide="droplets" class="w-4 h-4"></i>
+        除膠
+      </button>
+      <button class="btn btn-warning" @click="openCreateWoModal('regeneration')">
+        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+        再生
+      </button>
+      <button class="btn btn-error" @click="openCreateWoModal('rework')">
+        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+        重工
+      </button>
+    </div>
   </div>
 
   <div class="scrollable">

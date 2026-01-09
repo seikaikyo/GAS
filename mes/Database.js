@@ -84,6 +84,39 @@ const DB_CONFIG = {
         'id', 'reportId', 'dispatchId', 'workOrderId', 'reasonId', 'reasonName',
         'quantity', 'barcodes', 'notes', 'createdAt'
       ]
+    },
+    // WMS 倉儲管理
+    wmsLocations: {
+      name: 'WmsLocations',
+      headers: ['id', 'code', 'name', 'factory', 'locationType', 'capacity', 'isActive', 'sortOrder', 'createdAt']
+    },
+    wmsInventory: {
+      name: 'WmsInventory',
+      headers: [
+        'id', 'locationCode', 'workOrderId', 'orderNumber', 'productModel', 'customerName',
+        'quantity', 'barcode', 'status', 'inboundDate', 'createdAt', 'updatedAt'
+      ]
+    },
+    wmsMovements: {
+      name: 'WmsMovements',
+      headers: [
+        'id', 'movementNumber', 'fromLocation', 'toLocation', 'workOrderId', 'orderNumber',
+        'productModel', 'quantity', 'barcode', 'movementType', 'operatorName', 'reason', 'createdAt'
+      ]
+    },
+    wmsStockTakes: {
+      name: 'WmsStockTakes',
+      headers: [
+        'id', 'stockTakeNumber', 'locationCode', 'locationName', 'operatorName',
+        'totalItems', 'adjustedItems', 'status', 'notes', 'createdAt'
+      ]
+    },
+    wmsStockTakeDetails: {
+      name: 'WmsStockTakeDetails',
+      headers: [
+        'id', 'stockTakeId', 'inventoryId', 'barcode', 'orderNumber', 'productModel',
+        'systemQty', 'actualQty', 'diffQty', 'notes', 'createdAt'
+      ]
     }
   }
 };
@@ -1039,4 +1072,260 @@ function dbSyncR0Labels(labels) {
 
   CacheService.getScriptCache().remove('MES_ALL_DATA_V1');
   return { created, updated, total: labels.length };
+}
+
+// ========== WMS 倉儲管理 ==========
+
+// 倉區位置
+function dbGetWmsLocations() { return getTableData('WmsLocations'); }
+
+function dbCreateWmsLocation(data) {
+  data.isActive = true;
+  data.sortOrder = data.sortOrder || 0;
+  return insertRecord('WmsLocations', data);
+}
+
+function dbUpdateWmsLocation(id, data) {
+  return updateRecord('WmsLocations', id, data);
+}
+
+function dbDeleteWmsLocation(id) {
+  return updateRecord('WmsLocations', id, { isActive: false });
+}
+
+// 初始化預設倉區 (柳工再生廠)
+function dbInitWmsLocations() {
+  const existing = dbGetWmsLocations();
+  if (existing.length > 0) return { message: '倉區已存在', count: existing.length };
+
+  const defaultLocations = [
+    { code: 'Y3-3RA', name: '客戶來料暫存區', factory: '柳工再生廠', locationType: 'inbound', sortOrder: 1 },
+    { code: 'Y3-3RB', name: '待再生倉', factory: '柳工再生廠', locationType: 'storage', sortOrder: 2 },
+    { code: 'Y3-3RC', name: '進料前的安裝區', factory: '柳工再生廠', locationType: 'staging', sortOrder: 3 },
+    { code: 'Y3-1RD', name: '成品堆棧區', factory: '柳工再生廠', locationType: 'outbound', sortOrder: 4 },
+    { code: 'Y3-1RE', name: '成品倉', factory: '柳工再生廠', locationType: 'outbound', sortOrder: 5 },
+    { code: 'Y3-3RF', name: '退運區', factory: '柳工再生廠', locationType: 'special', sortOrder: 6 },
+    { code: 'Y3-6RG', name: '待驗區', factory: '柳工再生廠', locationType: 'qc', sortOrder: 7 },
+    { code: 'Y3-2RH', name: '重工區', factory: '柳工再生廠', locationType: 'special', sortOrder: 8 },
+    { code: 'Y3-8RI', name: '待除帳的報廢區', factory: '柳工再生廠', locationType: 'special', sortOrder: 9 }
+  ];
+
+  defaultLocations.forEach(loc => dbCreateWmsLocation(loc));
+  return { message: '倉區初始化完成', count: defaultLocations.length };
+}
+
+// 庫存
+function dbGetWmsInventory() { return getTableData('WmsInventory'); }
+
+function dbCreateWmsInventory(data) {
+  data.status = data.status || 'in_stock';
+  data.inboundDate = data.inboundDate || new Date().toISOString();
+
+  // 自動補全工單資訊
+  if (data.workOrderId) {
+    const workOrders = dbGetWorkOrders();
+    const wo = workOrders.find(w => w.id === data.workOrderId);
+    if (wo) {
+      data.orderNumber = wo.orderNumber;
+      data.productModel = wo.productModel;
+      data.customerName = wo.customerName;
+    }
+  }
+
+  return insertRecord('WmsInventory', data);
+}
+
+function dbUpdateWmsInventory(id, data) {
+  data.updatedAt = new Date().toISOString();
+  return updateRecord('WmsInventory', id, data);
+}
+
+function dbDeleteWmsInventory(id) {
+  return deleteRecord('WmsInventory', id);
+}
+
+// 取得各倉區庫存統計
+function dbGetWmsLocationSummary() {
+  const locations = dbGetWmsLocations().filter(l => l.isActive !== 'FALSE' && l.isActive !== false);
+  const inventory = dbGetWmsInventory();
+
+  return locations.map(loc => {
+    const items = inventory.filter(inv => inv.locationCode === loc.code);
+    const totalQty = items.reduce((sum, inv) => sum + Number(inv.quantity || 0), 0);
+    return {
+      ...loc,
+      itemCount: items.length,
+      totalQty: totalQty
+    };
+  }).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+}
+
+// 移動紀錄
+function dbGetWmsMovements() { return getTableData('WmsMovements'); }
+
+function dbCreateWmsMovement(data) {
+  if (!data.movementNumber) {
+    const dateStr = Utilities.formatDate(new Date(), 'GMT+8', 'yyyyMMdd');
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    data.movementNumber = `MV-${dateStr}-${random}`;
+  }
+
+  // 自動補全工單資訊
+  if (data.workOrderId) {
+    const workOrders = dbGetWorkOrders();
+    const wo = workOrders.find(w => w.id === data.workOrderId);
+    if (wo) {
+      data.orderNumber = wo.orderNumber;
+      data.productModel = wo.productModel;
+    }
+  }
+
+  return insertRecord('WmsMovements', data);
+}
+
+// 入庫作業
+function dbWmsInbound(data) {
+  // data: { locationCode, workOrderId, quantity, barcode, operatorName }
+
+  // 建立庫存紀錄
+  const inventory = dbCreateWmsInventory({
+    locationCode: data.locationCode,
+    workOrderId: data.workOrderId,
+    quantity: data.quantity || 1,
+    barcode: data.barcode
+  });
+
+  // 建立移動紀錄
+  dbCreateWmsMovement({
+    fromLocation: 'EXTERNAL',
+    toLocation: data.locationCode,
+    workOrderId: data.workOrderId,
+    quantity: data.quantity || 1,
+    barcode: data.barcode,
+    movementType: 'inbound',
+    operatorName: data.operatorName,
+    reason: data.reason || '入庫'
+  });
+
+  return inventory;
+}
+
+// 出庫作業
+function dbWmsOutbound(data) {
+  // data: { inventoryId, operatorName, reason }
+  const inventory = dbGetWmsInventory().find(inv => inv.id === data.inventoryId);
+  if (!inventory) throw new Error('找不到庫存紀錄');
+
+  // 建立移動紀錄
+  dbCreateWmsMovement({
+    fromLocation: inventory.locationCode,
+    toLocation: 'EXTERNAL',
+    workOrderId: inventory.workOrderId,
+    quantity: inventory.quantity,
+    barcode: inventory.barcode,
+    movementType: 'outbound',
+    operatorName: data.operatorName,
+    reason: data.reason || '出庫'
+  });
+
+  // 刪除庫存紀錄
+  dbDeleteWmsInventory(data.inventoryId);
+  return { success: true };
+}
+
+// 移轉作業
+function dbWmsTransfer(data) {
+  // data: { inventoryId, toLocation, operatorName, reason }
+  const inventory = dbGetWmsInventory().find(inv => inv.id === data.inventoryId);
+  if (!inventory) throw new Error('找不到庫存紀錄');
+
+  const fromLocation = inventory.locationCode;
+
+  // 建立移動紀錄
+  dbCreateWmsMovement({
+    fromLocation: fromLocation,
+    toLocation: data.toLocation,
+    workOrderId: inventory.workOrderId,
+    quantity: inventory.quantity,
+    barcode: inventory.barcode,
+    movementType: 'transfer',
+    operatorName: data.operatorName,
+    reason: data.reason || '移轉'
+  });
+
+  // 更新庫存位置
+  dbUpdateWmsInventory(data.inventoryId, { locationCode: data.toLocation });
+  return { success: true, fromLocation, toLocation: data.toLocation };
+}
+
+// === 盤點功能 ===
+function dbGetWmsStockTakes() { return getTableData('WmsStockTakes'); }
+
+function dbCreateWmsStockTake(data) {
+  // data: { locationCode, locationName, operatorName, details: [{ inventoryId, actualQty }], notes }
+  const stockTakeNumber = 'ST' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyyMMddHHmmss');
+
+  const details = data.details || [];
+  let adjustedItems = 0;
+
+  // 處理每個盤點項目
+  details.forEach(item => {
+    const inventory = dbGetWmsInventory().find(inv => inv.id === item.inventoryId);
+    if (!inventory) return;
+
+    const systemQty = Number(inventory.quantity) || 0;
+    const actualQty = Number(item.actualQty) || 0;
+    const diffQty = actualQty - systemQty;
+
+    // 記錄盤點明細
+    insertRecord('WmsStockTakeDetails', {
+      stockTakeId: stockTakeNumber,
+      inventoryId: item.inventoryId,
+      barcode: inventory.barcode || '',
+      orderNumber: inventory.orderNumber || '',
+      productModel: inventory.productModel || '',
+      systemQty: systemQty,
+      actualQty: actualQty,
+      diffQty: diffQty,
+      notes: item.notes || ''
+    });
+
+    // 如有差異，更新庫存數量並記錄異動
+    if (diffQty !== 0) {
+      adjustedItems++;
+
+      // 更新庫存數量
+      dbUpdateWmsInventory(item.inventoryId, { quantity: actualQty });
+
+      // 記錄調整移動
+      dbCreateWmsMovement({
+        fromLocation: data.locationCode,
+        toLocation: data.locationCode,
+        workOrderId: inventory.workOrderId,
+        quantity: diffQty,
+        barcode: inventory.barcode,
+        movementType: 'adjustment',
+        operatorName: data.operatorName,
+        reason: '盤點調整: ' + (diffQty > 0 ? '+' : '') + diffQty
+      });
+    }
+  });
+
+  // 建立盤點主記錄
+  const stockTake = insertRecord('WmsStockTakes', {
+    stockTakeNumber: stockTakeNumber,
+    locationCode: data.locationCode,
+    locationName: data.locationName || '',
+    operatorName: data.operatorName,
+    totalItems: details.length,
+    adjustedItems: adjustedItems,
+    status: 'completed',
+    notes: data.notes || ''
+  });
+
+  return { ...stockTake, adjustedItems };
+}
+
+function dbGetWmsStockTakeDetails(stockTakeId) {
+  return getTableData('WmsStockTakeDetails').filter(d => d.stockTakeId === stockTakeId);
 }
