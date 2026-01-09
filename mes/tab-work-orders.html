@@ -38,8 +38,8 @@
             </span>
           </td>
           <td>
-            <span :class="'status-badge status-' + wo.status">
-              {{ { draft: '草稿', pending: '待處理', in_progress: '進行中', completed: '已完成', paused: '暫停' }[wo.status] || wo.status }}
+            <span :class="'status-badge status-' + (wo.status || 'unknown')">
+              {{ { draft: '草稿', pending: '待處理', in_progress: '進行中', completed: '已完成', paused: '暫停' }[wo.status] || wo.status || '未知' }}
             </span>
           </td>
           <td>
@@ -47,7 +47,7 @@
             <span style="color: #94a3b8;"> / {{ wo.quantity }}</span>
           </td>
           <td>
-            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="display: flex; flex-direction: row; gap: 0.5rem; flex-wrap: nowrap;">
               <button v-if="wo.status !== 'completed'" class="btn btn-sm btn-primary" @click="openDispatchModal(wo)">
                 派工
               </button>
