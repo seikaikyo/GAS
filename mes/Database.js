@@ -1218,6 +1218,65 @@ function dbInitWmsLocations() {
   return { message: '倉區初始化完成', count: defaultLocations.length };
 }
 
+// 重置 MES（清空所有業務資料並恢復預設）
+// 保留：Operators, Customers, Products, NgReasons（基礎設定）
+function dbResetMes(options = {}) {
+  const ss = getDbSpreadsheet();
+  const deleted = {};
+
+  // 業務資料表（會被清空）
+  const businessTables = [
+    'WorkOrders', 'Dispatches', 'Reports', 'EpcHistory',
+    'OutgassingTests', 'AoiInspections', 'R0Labels', 'NgDetails',
+    'WmsLocations', 'WmsInventory', 'WmsMovements', 'WmsStockTakes',
+    'Shifts', 'EquipmentSchedules', 'SchedulePlans'
+  ];
+
+  // 審計紀錄預設保留，除非明確要求刪除
+  if (options.clearAuditLogs) {
+    businessTables.push('AuditLogs');
+  }
+
+  businessTables.forEach(tableName => {
+    const sheet = ss.getSheetByName(tableName);
+    if (sheet && sheet.getLastRow() > 1) {
+      const count = sheet.getLastRow() - 1;
+      sheet.deleteRows(2, count);
+      deleted[tableName] = count;
+    } else {
+      deleted[tableName] = 0;
+    }
+  });
+
+  clearDataCache();
+
+  // 重新初始化預設倉區
+  const defaultLocations = [
+    { code: 'Y3-3RA', name: '客戶來料暫存區', factory: '柳工再生廠', locationType: 'inbound', sortOrder: 1 },
+    { code: 'Y3-3RB', name: '待再生倉', factory: '柳工再生廠', locationType: 'storage', sortOrder: 2 },
+    { code: 'Y3-3RC', name: '進料前的安裝區', factory: '柳工再生廠', locationType: 'staging', sortOrder: 3 },
+    { code: 'Y3-1RD', name: '成品堆棧區', factory: '柳工再生廠', locationType: 'outbound', sortOrder: 4 },
+    { code: 'Y3-1RE', name: '成品倉', factory: '柳工再生廠', locationType: 'outbound', sortOrder: 5 },
+    { code: 'Y3-3RF', name: '退運區', factory: '柳工再生廠', locationType: 'special', sortOrder: 6 },
+    { code: 'Y3-6RG', name: '待驗區', factory: '柳工再生廠', locationType: 'qc', sortOrder: 7 },
+    { code: 'Y3-2RH', name: '重工區', factory: '柳工再生廠', locationType: 'special', sortOrder: 8 },
+    { code: 'Y3-8RI', name: '待除帳的報廢區', factory: '柳工再生廠', locationType: 'special', sortOrder: 9 }
+  ];
+
+  defaultLocations.forEach(loc => dbCreateWmsLocation(loc));
+
+  // 計算總刪除筆數
+  const totalDeleted = Object.values(deleted).reduce((sum, n) => sum + n, 0);
+
+  return {
+    message: 'MES 系統已重置',
+    totalDeleted: totalDeleted,
+    deleted: deleted,
+    preserved: ['Operators', 'Customers', 'Products', 'NgReasons', options.clearAuditLogs ? null : 'AuditLogs'].filter(Boolean),
+    wmsInitialized: defaultLocations.length
+  };
+}
+
 // 庫存
 function dbGetWmsInventory() { return getTableData('WmsInventory'); }
 

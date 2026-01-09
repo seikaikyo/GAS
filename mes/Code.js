@@ -94,7 +94,7 @@ function api(action, payload) {
     let result;
     switch (action) {
       case 'getVersion':
-        return { success: true, data: '5.36.1' };
+        return { success: true, data: '5.37.0' };
 
       // 效能優化：單次載入所有資料 (含快取)
       case 'getAllData':
@@ -270,6 +270,9 @@ function api(action, payload) {
         break;
       case 'initWmsLocations':
         result = dbInitWmsLocations();
+        break;
+      case 'resetMes':
+        result = dbResetMes(payload || {});
         break;
       case 'getWmsInventory':
         result = dbGetWmsInventory();

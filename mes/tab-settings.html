@@ -260,6 +260,14 @@
           部署: Google Apps Script
         </p>
       </div>
+
+      <div class="admin-card red">
+        <h4>重置 MES 系統</h4>
+        <p>清空所有業務資料（保留人員/客戶/產品設定）</p>
+        <button class="btn btn-error w-full" :disabled="adminLoading" @click="confirmResetMes">
+          {{ adminLoading ? '重置中...' : '重置系統' }}
+        </button>
+      </div>
     </div>
 
     <div v-if="adminMessage" :class="['alert-message', adminMessageType]" style="margin-top: 1rem;">

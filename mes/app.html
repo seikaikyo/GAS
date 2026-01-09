@@ -1315,6 +1315,22 @@
         finally { adminLoading.value = false; }
       };
 
+      const confirmResetMes = async () => {
+        const confirmText = prompt('此操作將清空所有業務資料（工單/派工/報工/WMS 等）\n\n請輸入「RESET」確認重置：');
+        if (confirmText !== 'RESET') {
+          if (confirmText !== null) alert('輸入不正確，取消重置');
+          return;
+        }
+        adminLoading.value = true; adminMessage.value = '';
+        try {
+          const result = await callApi('resetMes', {});
+          adminMessageType.value = 'success';
+          adminMessage.value = `MES 系統已重置！清除 ${result.totalDeleted} 筆資料，WMS 倉區已重新初始化`;
+          await refreshData();
+        } catch (e) { adminMessageType.value = 'error'; adminMessage.value = '重置失敗: ' + e; }
+        finally { adminLoading.value = false; }
+      };
+
       // 全域操作人員選擇 (ISO 27001 Access Control)
       const selectOperator = (op) => {
         currentOperator.value = op;
@@ -3271,7 +3287,7 @@
         handleAoiCsvFile, submitAoiImport, submitSingleAoi,
         showInspectionDetailModal, selectedInspection, inspectionType, viewInspectionDetail,
         adminLoading, adminMessage, adminMessageType, showAllChangelog,
-        adminGenerateTestData, adminSyncDatabase, adminFixColumnOrder, adminFixSignatureData, adminClearCache,
+        adminGenerateTestData, adminSyncDatabase, adminFixColumnOrder, adminFixSignatureData, adminClearCache, confirmResetMes,
         // 操作人員 & Audit Log (ISO 27001)
         currentOperator, showOperatorSelector, selectOperator, clearOperator, requireOperator,
         auditLogs, auditLoading, loadAuditLogs, logAudit,
