@@ -526,14 +526,17 @@
 
       <!-- 外包報價對比 -->
       <div style="border: 1px solid #e2e8f0; border-radius: 0.5rem; overflow: hidden;">
+        <div style="background: #f1f5f9; padding: 0.5rem 0.75rem; font-size: 0.7rem; color: #64748b; border-bottom: 1px solid #e2e8f0;">
+          單位：美金 USD / 時薪參考 Upwork/Toptal 2024 台灣區行情
+        </div>
         <table style="width: 100%; font-size: 0.75rem; border-collapse: collapse;">
           <thead>
             <tr style="background: #f8fafc;">
               <th style="padding: 0.5rem; text-align: left; border-bottom: 1px solid #e2e8f0;">角色</th>
               <th style="padding: 0.5rem; text-align: center; border-bottom: 1px solid #e2e8f0;">人數</th>
-              <th style="padding: 0.5rem; text-align: center; border-bottom: 1px solid #e2e8f0;">時薪 (USD)</th>
+              <th style="padding: 0.5rem; text-align: center; border-bottom: 1px solid #e2e8f0;">時薪</th>
               <th style="padding: 0.5rem; text-align: center; border-bottom: 1px solid #e2e8f0;">工時</th>
-              <th style="padding: 0.5rem; text-align: right; border-bottom: 1px solid #e2e8f0;">小計</th>
+              <th style="padding: 0.5rem; text-align: right; border-bottom: 1px solid #e2e8f0;">小計 (USD)</th>
             </tr>
           </thead>
           <tbody>
@@ -545,37 +548,58 @@
               <td style="padding: 0.5rem; text-align: right;">$6,400</td>
             </tr>
             <tr style="background: #fafafa;">
-              <td style="padding: 0.5rem;">Senior Frontend</td>
+              <td style="padding: 0.5rem;">System Analyst (SA)</td>
               <td style="padding: 0.5rem; text-align: center;">1</td>
-              <td style="padding: 0.5rem; text-align: center;">$60</td>
-              <td style="padding: 0.5rem; text-align: center;">200h</td>
-              <td style="padding: 0.5rem; text-align: right;">$12,000</td>
+              <td style="padding: 0.5rem; text-align: center;">$70</td>
+              <td style="padding: 0.5rem; text-align: center;">60h</td>
+              <td style="padding: 0.5rem; text-align: right;">$4,200</td>
             </tr>
             <tr>
+              <td style="padding: 0.5rem;">Senior Frontend</td>
+              <td style="padding: 0.5rem; text-align: center;">2</td>
+              <td style="padding: 0.5rem; text-align: center;">$60</td>
+              <td style="padding: 0.5rem; text-align: center;">200h</td>
+              <td style="padding: 0.5rem; text-align: right;">$24,000</td>
+            </tr>
+            <tr style="background: #fafafa;">
               <td style="padding: 0.5rem;">Senior Backend</td>
-              <td style="padding: 0.5rem; text-align: center;">1</td>
+              <td style="padding: 0.5rem; text-align: center;">2</td>
               <td style="padding: 0.5rem; text-align: center;">$65</td>
               <td style="padding: 0.5rem; text-align: center;">160h</td>
-              <td style="padding: 0.5rem; text-align: right;">$10,400</td>
+              <td style="padding: 0.5rem; text-align: right;">$20,800</td>
+            </tr>
+            <tr>
+              <td style="padding: 0.5rem;">DBA / Data Engineer</td>
+              <td style="padding: 0.5rem; text-align: center;">1</td>
+              <td style="padding: 0.5rem; text-align: center;">$70</td>
+              <td style="padding: 0.5rem; text-align: center;">40h</td>
+              <td style="padding: 0.5rem; text-align: right;">$2,800</td>
             </tr>
             <tr style="background: #fafafa;">
               <td style="padding: 0.5rem;">UI/UX Designer</td>
               <td style="padding: 0.5rem; text-align: center;">1</td>
               <td style="padding: 0.5rem; text-align: center;">$50</td>
-              <td style="padding: 0.5rem; text-align: center;">60h</td>
-              <td style="padding: 0.5rem; text-align: right;">$3,000</td>
+              <td style="padding: 0.5rem; text-align: center;">80h</td>
+              <td style="padding: 0.5rem; text-align: right;">$4,000</td>
             </tr>
             <tr>
+              <td style="padding: 0.5rem;">DevOps / Infra</td>
+              <td style="padding: 0.5rem; text-align: center;">1</td>
+              <td style="padding: 0.5rem; text-align: center;">$65</td>
+              <td style="padding: 0.5rem; text-align: center;">40h</td>
+              <td style="padding: 0.5rem; text-align: right;">$2,600</td>
+            </tr>
+            <tr style="background: #fafafa;">
               <td style="padding: 0.5rem;">QA Engineer</td>
               <td style="padding: 0.5rem; text-align: center;">1</td>
               <td style="padding: 0.5rem; text-align: center;">$45</td>
-              <td style="padding: 0.5rem; text-align: center;">80h</td>
-              <td style="padding: 0.5rem; text-align: right;">$3,600</td>
+              <td style="padding: 0.5rem; text-align: center;">100h</td>
+              <td style="padding: 0.5rem; text-align: right;">$4,500</td>
             </tr>
             <tr style="background: #fef3c7; font-weight: 600;">
-              <td style="padding: 0.5rem;" colspan="3">外包總計（5 人團隊）</td>
-              <td style="padding: 0.5rem; text-align: center;">580h</td>
-              <td style="padding: 0.5rem; text-align: right; color: #d97706;">$35,400</td>
+              <td style="padding: 0.5rem;" colspan="2">外包總計（10 人團隊）</td>
+              <td style="padding: 0.5rem; text-align: center;" colspan="2">總工時 ~760h</td>
+              <td style="padding: 0.5rem; text-align: right; color: #d97706;">USD $69,300</td>
             </tr>
           </tbody>
         </table>
@@ -586,17 +610,17 @@
         <div style="background: #dcfce7; padding: 0.75rem; border-radius: 0.5rem; text-align: center;">
           <div style="font-size: 0.7rem; color: #16a34a;">實際成本</div>
           <div style="font-size: 1.25rem; font-weight: 700; color: #15803d;">130h + AI</div>
-          <div style="font-size: 0.65rem; color: #64748b;">Claude Code 訂閱 ~$200/月</div>
+          <div style="font-size: 0.65rem; color: #64748b;">Claude Code 訂閱 ~USD $200/月</div>
         </div>
         <div style="background: #fee2e2; padding: 0.75rem; border-radius: 0.5rem; text-align: center;">
           <div style="font-size: 0.7rem; color: #dc2626;">外包報價</div>
-          <div style="font-size: 1.25rem; font-weight: 700; color: #b91c1c;">$35,400</div>
-          <div style="font-size: 0.65rem; color: #64748b;">約 NT$ 1,100,000</div>
+          <div style="font-size: 1.25rem; font-weight: 700; color: #b91c1c;">USD $69,300</div>
+          <div style="font-size: 0.65rem; color: #64748b;">約 NT$ 2,150,000</div>
         </div>
       </div>
 
       <div style="margin-top: 0.75rem; font-size: 0.65rem; color: #94a3b8; text-align: center;">
-        * 外包時薪參考 Upwork/Toptal 2024 年台灣區 Senior 工程師行情
+        * 匯率以 1 USD = 31 TWD 計算 / 不含專案管理費、溝通成本、維護費用
       </div>
     </div>
   </div>
