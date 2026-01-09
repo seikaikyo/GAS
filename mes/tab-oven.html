@@ -48,14 +48,33 @@
         <span class="oven-state-label">
           {{ oven.running ? '運行中' : (oven.doorOpen ? '門開啟' : '待機') }}
         </span>
-        <div class="oven-actions" @click.stop>
-          <button class="btn btn-xs btn-ghost" @click="simulateDoor(oven.id, true)" title="模擬開門">
+        <!-- ECU 連線時顯示小按鈕 -->
+        <div v-if="ecuConnected" class="oven-actions" @click.stop>
+          <button class="btn btn-xs btn-ghost" @click="simulateDoor(oven.id, true)" title="開門">
             <i data-lucide="door-open" class="w-3 h-3"></i>
           </button>
-          <button class="btn btn-xs btn-ghost" @click="simulateDoor(oven.id, false)" title="模擬關門">
+          <button class="btn btn-xs btn-ghost" @click="simulateDoor(oven.id, false)" title="關門">
             <i data-lucide="door-closed" class="w-3 h-3"></i>
           </button>
         </div>
+      </div>
+
+      <!-- ECU 離線時顯示手動操作按鈕 -->
+      <div v-if="!ecuConnected" class="oven-manual-controls" @click.stop>
+        <button class="btn btn-sm"
+                :class="oven.doorOpen ? 'btn-ghost' : 'btn-warning'"
+                @click="simulateDoor(oven.id, true)"
+                :disabled="oven.doorOpen">
+          <i data-lucide="door-open" class="w-4 h-4"></i>
+          開門
+        </button>
+        <button class="btn btn-sm"
+                :class="!oven.doorOpen ? 'btn-ghost' : 'btn-success'"
+                @click="simulateDoor(oven.id, false)"
+                :disabled="!oven.doorOpen">
+          <i data-lucide="door-closed" class="w-4 h-4"></i>
+          關門
+        </button>
       </div>
 
       <!-- Dispatch binding indicator -->
