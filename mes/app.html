@@ -153,6 +153,7 @@
       const ovenAutoReportEnabled = ref(false);
       const ovenEventLogs = ref([]);
       const showOvenSettingsModal = ref(false);
+      const dispatchDoorStates = ref({}); // { dispatchId: { state: 'open'|'closed', time: Date, ovenId: number } }
       let ovenTimer = null;
 
       // Label Editor
@@ -1541,6 +1542,84 @@
         showOvenSettingsModal.value = false;
       };
 
+      // 烘箱狀態判斷函數（連動派工單狀態）
+      const getOvenStateLabel = (oven) => {
+        // 找出綁定此烘箱的派工單
+        const dispatchId = ovenBindings.value[oven.id];
+        if (!dispatchId) return '未綁定';
+        const doorState = dispatchDoorStates.value[dispatchId];
+        if (!doorState) return '待機';
+        return doorState.state === 'closed' ? '運行中' : '門開啟';
+      };
+
+      const getOvenStatusClass = (oven) => {
+        const dispatchId = ovenBindings.value[oven.id];
+        if (!dispatchId) return 'status-offline';
+        const doorState = dispatchDoorStates.value[dispatchId];
+        if (!doorState) return 'status-offline';
+        return doorState.state === 'closed' ? 'status-running' : 'status-open';
+      };
+
+      const getOvenStatusIcon = (oven) => {
+        const dispatchId = ovenBindings.value[oven.id];
+        if (!dispatchId) return 'circle-off';
+        const doorState = dispatchDoorStates.value[dispatchId];
+        if (!doorState) return 'circle-off';
+        return doorState.state === 'closed' ? 'door-closed' : 'door-open';
+      };
+
+      const getOvenStatusText = (oven) => {
+        const dispatchId = ovenBindings.value[oven.id];
+        if (!dispatchId) return '未綁定';
+        const doorState = dispatchDoorStates.value[dispatchId];
+        if (!doorState) return '離線';
+        return doorState.state === 'closed' ? '關門（運行）' : '開門';
+      };
+
+      // 派工單開/關門狀態函數
+      const getDispatchDoorState = (dispatchId) => {
+        const state = dispatchDoorStates.value[dispatchId];
+        return state ? state.state : null;
+      };
+
+      const getDispatchDoorTime = (dispatchId) => {
+        const state = dispatchDoorStates.value[dispatchId];
+        if (!state || !state.time) return '';
+        return new Date(state.time).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      };
+
+      const recordOvenDoor = async (dispatch, doorState) => {
+        const now = new Date().toISOString();
+        // 找出綁定的烘箱
+        const ovenId = Object.keys(ovenBindings.value).find(
+          key => ovenBindings.value[key] === dispatch.id
+        );
+
+        // 更新本地狀態
+        dispatchDoorStates.value[dispatch.id] = {
+          state: doorState,
+          time: now,
+          ovenId: ovenId ? parseInt(ovenId) : null
+        };
+
+        // 記錄到事件日誌
+        const oven = ovenId ? ovens.value.find(o => o.id === parseInt(ovenId)) : null;
+        const ovenName = oven ? oven.name : '未綁定烘箱';
+        const actionText = doorState === 'open' ? '開門' : '關門';
+        addOvenLog(doorState === 'open' ? 'warning' : 'success', ovenName, `${dispatch.dispatchNumber} ${actionText}`);
+
+        // 更新烘箱的 doorOpen 狀態（連動卡片顯示）
+        if (oven) {
+          oven.doorOpen = doorState === 'open';
+          oven.running = doorState === 'closed';
+        }
+
+        // TODO: 未來可以將時間戳存入資料庫
+        // await callApi('recordOvenDoorEvent', { dispatchId: dispatch.id, state: doorState, time: now });
+
+        nextTick(() => { if (window.lucide) lucide.createIcons(); });
+      };
+
       // Oven Barcode Scanning
       const selectOvenForScan = (ovenId) => {
         selectedOvenId.value = ovenId;
@@ -1963,9 +2042,11 @@
         adminGenerateTestData, adminSyncDatabase, adminFixColumnOrder, adminFixSignatureData,
         // Oven Monitoring (10 ovens)
         ovens, ecuConnected, ovenConfig, ovenBindings, ovenBatchQty, ovenAutoReportEnabled,
-        ovenEventLogs, showOvenSettingsModal,
+        ovenEventLogs, showOvenSettingsModal, dispatchDoorStates,
         formatOvenTime, connectAllOvens, clearOvenLogs, getOvenDispatch,
         simulateDoor, saveOvenSettings,
+        getOvenStateLabel, getOvenStatusClass, getOvenStatusIcon, getOvenStatusText,
+        getDispatchDoorState, getDispatchDoorTime, recordOvenDoor,
         selectedOvenId, ovenScanInput, selectOvenForScan, scanOvenBarcode,
         clearOvenScannedCodes, removeOvenScannedCode,
         // R0 Management

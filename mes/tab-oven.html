@@ -46,35 +46,13 @@
 
       <div class="oven-footer">
         <span class="oven-state-label">
-          {{ oven.running ? '運行中' : (oven.doorOpen ? '門開啟' : '待機') }}
+          {{ getOvenStateLabel(oven) }}
         </span>
-        <!-- ECU 連線時顯示小按鈕 -->
-        <div v-if="ecuConnected" class="oven-actions" @click.stop>
-          <button class="btn btn-xs btn-ghost" @click="simulateDoor(oven.id, true)" title="開門">
-            <i data-lucide="door-open" class="w-3 h-3"></i>
-          </button>
-          <button class="btn btn-xs btn-ghost" @click="simulateDoor(oven.id, false)" title="關門">
-            <i data-lucide="door-closed" class="w-3 h-3"></i>
-          </button>
-        </div>
-      </div>
-
-      <!-- ECU 離線時顯示手動操作按鈕 -->
-      <div v-if="!ecuConnected" class="oven-manual-controls" @click.stop>
-        <button class="btn btn-sm"
-                :class="oven.doorOpen ? 'btn-ghost' : 'btn-warning'"
-                @click="simulateDoor(oven.id, true)"
-                :disabled="oven.doorOpen">
-          <i data-lucide="door-open" class="w-4 h-4"></i>
-          開門
-        </button>
-        <button class="btn btn-sm"
-                :class="!oven.doorOpen ? 'btn-ghost' : 'btn-success'"
-                @click="simulateDoor(oven.id, false)"
-                :disabled="!oven.doorOpen">
-          <i data-lucide="door-closed" class="w-4 h-4"></i>
-          關門
-        </button>
+        <!-- 狀態燈（連動派工單或 ECU） -->
+        <span :class="['oven-status-indicator', getOvenStatusClass(oven)]">
+          <i :data-lucide="getOvenStatusIcon(oven)" class="w-3 h-3"></i>
+          {{ getOvenStatusText(oven) }}
+        </span>
       </div>
 
       <!-- Dispatch binding indicator -->
@@ -188,13 +166,18 @@
     <h3 class="font-bold text-lg mb-4">烘箱設定</h3>
 
     <div style="margin-bottom: 1rem;">
-      <label class="input-label">各烘箱設定</label>
+      <label class="input-label">各烘箱狀態與設定</label>
       <div class="oven-settings-grid">
         <div v-for="oven in ovens" :key="'setting-'+oven.id" class="oven-setting-item">
-          <span class="oven-setting-label">{{ oven.name }}</span>
+          <div class="oven-setting-header">
+            <span class="oven-setting-label">{{ oven.name }}</span>
+            <span :class="['oven-status-light', getOvenStatusClass(oven)]" :title="getOvenStatusText(oven)">
+              <i :data-lucide="getOvenStatusIcon(oven)" class="w-3 h-3"></i>
+            </span>
+          </div>
           <div class="oven-setting-inputs">
             <input type="text" class="input input-bordered input-xs"
-                   style="width: 140px;"
+                   style="width: 120px;"
                    v-model="oven.apiEndpoint" :placeholder="'192.168.1.' + (100 + oven.id)">
             <input type="number" class="input input-bordered input-xs"
                    style="width: 50px;"
@@ -203,7 +186,7 @@
         </div>
       </div>
       <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 0.5rem;">
-        左: API 端點 / 右: 每批數量
+        狀態燈: 綠=關門運行 / 黃=開門 / 灰=離線未綁定
       </div>
     </div>
 

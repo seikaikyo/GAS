@@ -984,20 +984,91 @@
     gap: 0.25rem;
   }
 
-  /* 手動模式按鈕（ECU 離線時） */
-  .oven-manual-controls {
+  /* 烘箱狀態燈 */
+  .oven-status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 9999px;
+  }
+
+  .oven-status-indicator.status-running {
+    background: #dcfce7;
+    color: #16a34a;
+  }
+
+  .oven-status-indicator.status-open {
+    background: #fef9c3;
+    color: #ca8a04;
+  }
+
+  .oven-status-indicator.status-offline {
+    background: #f1f5f9;
+    color: #94a3b8;
+  }
+
+  /* 設定區狀態燈 */
+  .oven-setting-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.25rem;
+  }
+
+  .oven-status-light {
+    display: flex;
+    align-items: center;
+    padding: 0.15rem;
+    border-radius: 50%;
+  }
+
+  .oven-status-light.status-running {
+    background: #16a34a;
+    color: white;
+  }
+
+  .oven-status-light.status-open {
+    background: #eab308;
+    color: white;
+  }
+
+  .oven-status-light.status-offline {
+    background: #cbd5e1;
+    color: #64748b;
+  }
+
+  /* 派工單開關門控制 */
+  .oven-door-controls {
     display: flex;
     gap: 0.5rem;
     padding: 0.5rem;
     background: #fefce8;
-    border-top: 1px solid #fef08a;
-    border-radius: 0 0 0.5rem 0.5rem;
-    margin: 0.5rem -0.75rem -0.75rem -0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid #fef08a;
   }
 
-  .oven-manual-controls .btn {
-    flex: 1;
+  .oven-door-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem;
+    background: #f1f5f9;
+    border-radius: 0.375rem;
     font-size: 0.75rem;
+    color: #475569;
+  }
+
+  .oven-door-status span {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .oven-door-status .door-time {
+    font-family: monospace;
+    color: #667eea;
   }
 
   .oven-dispatch-badge {

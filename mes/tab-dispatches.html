@@ -40,6 +40,37 @@
           開始作業
         </button>
 
+        <!-- 烘箱站專用：開/關門按鈕 -->
+        <div v-if="d.status === 'in_progress' && d.stationName === '烘箱站'" class="oven-door-controls">
+          <button class="btn btn-sm flex-1"
+                  :class="getDispatchDoorState(d.id) === 'open' ? 'btn-warning' : 'btn-ghost'"
+                  @click="recordOvenDoor(d, 'open')"
+                  :disabled="getDispatchDoorState(d.id) === 'open'">
+            <i data-lucide="door-open" class="w-4 h-4"></i>
+            開門
+          </button>
+          <button class="btn btn-sm flex-1"
+                  :class="getDispatchDoorState(d.id) === 'closed' ? 'btn-success' : 'btn-ghost'"
+                  @click="recordOvenDoor(d, 'closed')"
+                  :disabled="getDispatchDoorState(d.id) === 'closed' || getDispatchDoorState(d.id) === null">
+            <i data-lucide="door-closed" class="w-4 h-4"></i>
+            關門
+          </button>
+        </div>
+        <!-- 烘箱站：顯示目前狀態與時間 -->
+        <div v-if="d.status === 'in_progress' && d.stationName === '烘箱站' && getDispatchDoorState(d.id)"
+             class="oven-door-status">
+          <span v-if="getDispatchDoorState(d.id) === 'open'">
+            <i data-lucide="door-open" class="w-3 h-3"></i>
+            開門中
+          </span>
+          <span v-else>
+            <i data-lucide="door-closed" class="w-3 h-3"></i>
+            烘烤中
+          </span>
+          <span class="door-time">{{ getDispatchDoorTime(d.id) }}</span>
+        </div>
+
         <button v-if="d.status === 'in_progress'" class="btn btn-success w-full" @click="completeJob(d)">
           <i data-lucide="check" class="w-4 h-4"></i>
           完成並報工

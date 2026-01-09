@@ -94,7 +94,7 @@ function api(action, payload) {
     let result;
     switch (action) {
       case 'getVersion':
-        return { success: true, data: '5.9.8' };
+        return { success: true, data: '5.9.9' };
 
       // 效能優化：單次載入所有資料 (含快取)
       case 'getAllData':
