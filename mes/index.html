@@ -19,10 +19,18 @@
     <header class="header-card">
       <div>
         <h1>SMAI - MES 線外表單</h1>
-        <p class="subtitle">
-          緊急備援作業模式
-          <span v-if="version" class="version-badge">v{{ version }}</span>
-        </p>
+        <div class="system-info-trigger">
+          系統狀態：SMAI-MES v{{ version || '...' }} (備援模式已啟動)
+          <div class="tooltip-content">
+            <strong>(主標) SMAI-Emergency Lite：</strong><br>
+            非正式、臨時性、純手工刻製之「極限生存」自動化線外作業數據矩陣系統
+            <span class="subtitle-tooltip">
+              <strong>(副標) SMAI-Vanguard：</strong><br>
+              前衛者先遣生命維持模組 — <span id="countdown-text">計算中...</span>
+            </span>
+            <div style="font-size: 10px; color: #888; margin-top: 5px;">* 起算日：2025/01/01 | 目標期限：7個月 (2025/08/01)</div>
+          </div>
+        </div>
       </div>
       <div style="display: flex; gap: 0.5rem;">
         <button class="btn btn-ghost" @click="openShareModal">

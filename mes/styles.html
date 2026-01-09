@@ -56,6 +56,64 @@
     margin-left: 0.5rem;
   }
 
+  /* System Info Trigger (緊急狀態提示) */
+  .system-info-trigger {
+    display: inline-block;
+    cursor: help;
+    color: #444;
+    font-size: 13px;
+    padding: 4px 12px;
+    border: 1px dashed #cc0000;
+    border-radius: 4px;
+    background: #fff5f5;
+    position: relative;
+    font-weight: bold;
+    margin-top: 0.5rem;
+  }
+
+  .system-info-trigger .tooltip-content {
+    visibility: hidden;
+    width: 480px;
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+    text-align: left;
+    border-radius: 4px;
+    padding: 15px;
+    position: absolute;
+    z-index: 1000;
+    top: 125%;
+    left: 0;
+    opacity: 0;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0px 8px 20px rgba(0,0,0,0.5);
+    border-left: 5px solid #cc0000;
+    font-weight: normal;
+    line-height: 1.6;
+  }
+
+  .system-info-trigger:hover .tooltip-content {
+    visibility: visible;
+    opacity: 1;
+  }
+
+  .system-info-trigger .subtitle-tooltip {
+    display: block;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #333;
+    color: #00ff41;
+  }
+
+  @media (max-width: 768px) {
+    .system-info-trigger .tooltip-content {
+      display: none !important;
+    }
+    .system-info-trigger {
+      font-size: 11px;
+      padding: 3px 8px;
+    }
+  }
+
   /* Loading Overlay */
   .loading-overlay {
     position: fixed;

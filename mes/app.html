@@ -2384,6 +2384,24 @@
         loadR0LabelsFromStorage();
         // Initialize Lucide icons
         if (window.lucide) lucide.createIcons();
+
+        // 更新倒數計時
+        const updateCountdown = () => {
+          const targetDate = new Date('2025-08-01T00:00:00');
+          const now = new Date();
+          const diffTime = targetDate - now;
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          const el = document.getElementById('countdown-text');
+          if (!el) return;
+          if (diffDays > 0) {
+            el.innerHTML = `針對「七個月技術真空期」之補償方案 (距離廠商承諾交付剩餘 <strong>${diffDays}</strong> 天)`;
+          } else if (diffDays === 0) {
+            el.innerHTML = `今日為廠商承諾之「七個月」交付期限，目前進入最終驗收校對期`;
+          } else {
+            el.innerHTML = `廠商已逾期 <strong>${Math.abs(diffDays)}</strong> 天 — 營運補償方案無限期延長中`;
+          }
+        };
+        updateCountdown();
       });
 
       return {
