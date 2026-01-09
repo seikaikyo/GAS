@@ -1198,7 +1198,8 @@ function dbDeleteWmsLocation(id) {
 
 // 初始化預設倉區 (柳工再生廠)
 function dbInitWmsLocations() {
-  const existing = dbGetWmsLocations();
+  // 檢查「活躍的」倉區，而非所有資料（包含軟刪除的）
+  const existing = dbGetWmsLocations().filter(l => l.isActive !== 'FALSE' && l.isActive !== false);
   if (existing.length > 0) return { message: '倉區已存在', count: existing.length };
 
   const defaultLocations = [
