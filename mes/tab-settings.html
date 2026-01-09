@@ -154,7 +154,59 @@
     </div>
   </div>
 
-  <!-- 4. Admin Tools -->
+  <!-- 4. NG Reasons -->
+  <div class="settings-section">
+    <div class="settings-form" style="background: linear-gradient(135deg, rgba(239,68,68,0.1) 0%, rgba(239,68,68,0.05) 100%);">
+      <h3 style="color: #dc2626;">NG 原因管理</h3>
+      <form @submit.prevent="submitNgReason">
+        <div style="display: grid; grid-template-columns: 1fr 80px; gap: 0.75rem; margin-bottom: 0.75rem;">
+          <div>
+            <label class="input-label">原因名稱</label>
+            <input type="text" class="input input-bordered w-full" v-model="formNgReason.name" required placeholder="例如: 膠殘留">
+          </div>
+          <div>
+            <label class="input-label">代碼</label>
+            <input type="text" class="input input-bordered w-full" v-model="formNgReason.code" placeholder="NG01" maxlength="10">
+          </div>
+        </div>
+        <div style="margin-bottom: 1rem;">
+          <label class="input-label">說明 (選填)</label>
+          <input type="text" class="input input-bordered w-full" v-model="formNgReason.description" placeholder="補充說明此 NG 原因">
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button type="submit" :class="['btn', 'flex-1', editingNgReasonId ? 'btn-warning' : 'btn-error']">
+            {{ editingNgReasonId ? '更新原因' : '新增原因' }}
+          </button>
+          <button v-if="editingNgReasonId" type="button" class="btn btn-ghost btn-outline" @click="cancelEditNgReason">取消</button>
+        </div>
+      </form>
+    </div>
+    <div>
+      <div class="scrollable" style="max-height: 200px; border: 1px solid #e2e8f0; border-radius: 0.5rem;">
+        <table class="data-table">
+          <thead>
+            <tr><th>原因</th><th>代碼</th><th>說明</th><th style="text-align: right;">操作</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="r in ngReasons" :key="r.id">
+              <td style="font-weight: 500; color: #dc2626;">{{ r.name }}</td>
+              <td><code style="background: #fee2e2; padding: 0.15rem 0.4rem; border-radius: 0.25rem; font-size: 0.75rem;">{{ r.code || '-' }}</code></td>
+              <td style="font-size: 0.75rem; color: #64748b; max-width: 150px;">{{ r.description || '-' }}</td>
+              <td style="text-align: right;">
+                <div class="btn-group">
+                  <button class="btn btn-sm btn-ghost" @click="startEditNgReason(r)">編輯</button>
+                  <button class="btn btn-sm btn-error btn-outline" @click="deleteNgReason(r.id)">刪除</button>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="ngReasons.length === 0" class="empty-row"><td colspan="4">尚無 NG 原因，請先新增</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Admin Tools -->
   <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
     <h3 style="margin: 0 0 1rem; color: #1e293b;">系統工具</h3>
     <div class="admin-grid">

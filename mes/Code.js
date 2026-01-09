@@ -94,7 +94,7 @@ function api(action, payload) {
     let result;
     switch (action) {
       case 'getVersion':
-        return { success: true, data: '5.10.0' };
+        return { success: true, data: '5.11.0' };
 
       // 效能優化：單次載入所有資料 (含快取)
       case 'getAllData':
@@ -195,6 +195,28 @@ function api(action, payload) {
         break;
       case 'deleteProduct':
         result = dbDeleteProduct(payload.id);
+        break;
+
+      // NG Reasons (NG 原因管理)
+      case 'getNgReasons':
+        result = dbGetNgReasons().filter(r => r.isActive !== 'FALSE' && r.isActive !== false);
+        break;
+      case 'createNgReason':
+        result = dbCreateNgReason(payload);
+        break;
+      case 'updateNgReason':
+        result = dbUpdateNgReason(payload.id, payload.data);
+        break;
+      case 'deleteNgReason':
+        result = dbDeleteNgReason(payload.id);
+        break;
+
+      // NG Details (NG 明細)
+      case 'createNgDetail':
+        result = dbCreateNgDetail(payload);
+        break;
+      case 'getNgDetailsByReport':
+        result = dbGetNgDetailsByReport(payload.reportId);
         break;
 
       // Outgassing Tests (釋氣檢驗)

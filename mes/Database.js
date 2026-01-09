@@ -73,6 +73,17 @@ const DB_CONFIG = {
         'customerCode', 'productModel', 'productCode', 'regenerationStatus', 'regenerationCount',
         'history', 'createdAt', 'updatedAt'
       ]
+    },
+    ngReasons: {
+      name: 'NgReasons',
+      headers: ['id', 'name', 'code', 'description', 'isActive', 'sortOrder', 'createdAt']
+    },
+    ngDetails: {
+      name: 'NgDetails',
+      headers: [
+        'id', 'reportId', 'dispatchId', 'workOrderId', 'reasonId', 'reasonName',
+        'quantity', 'barcodes', 'notes', 'createdAt'
+      ]
     }
   }
 };
@@ -103,6 +114,7 @@ function getAllDataWithCache() {
     operators: dbGetOperators().filter(o => o.isActive !== 'FALSE' && o.isActive !== false),
     customers: dbGetCustomers().filter(c => c.isActive !== 'FALSE' && c.isActive !== false),
     products: dbGetProducts().filter(p => p.isActive !== 'FALSE' && p.isActive !== false),
+    ngReasons: dbGetNgReasons().filter(r => r.isActive !== 'FALSE' && r.isActive !== false),
     outgassingTests: dbGetOutgassingTests(),
     aoiInspections: dbGetAoiInspections(),
     epcHistory: dbGetEpcHistory(),
@@ -177,6 +189,31 @@ function dbUpdateProduct(id, data) {
   return updateRecord('Products', id, data);
 }
 function dbDeleteProduct(id) { return updateRecord('Products', id, { isActive: false }); }
+
+// NG Reasons CRUD
+function dbGetNgReasons() { return getTableData('NgReasons'); }
+function dbCreateNgReason(data) {
+  data.isActive = true;
+  data.sortOrder = data.sortOrder || 0;
+  return insertRecord('NgReasons', data);
+}
+function dbUpdateNgReason(id, data) {
+  return updateRecord('NgReasons', id, data);
+}
+function dbDeleteNgReason(id) { return updateRecord('NgReasons', id, { isActive: false }); }
+
+// NG Details CRUD
+function dbGetNgDetails() { return getTableData('NgDetails'); }
+function dbCreateNgDetail(data) {
+  // barcodes 以 JSON 字串儲存
+  if (Array.isArray(data.barcodes)) {
+    data.barcodes = JSON.stringify(data.barcodes);
+  }
+  return insertRecord('NgDetails', data);
+}
+function dbGetNgDetailsByReport(reportId) {
+  return dbGetNgDetails().filter(d => d.reportId === reportId);
+}
 
 /**
  * 取得或建立資料庫 Spreadsheet

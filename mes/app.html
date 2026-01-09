@@ -103,11 +103,20 @@
       // Forms
       const formWo = ref({ customerName: '', customerSite: '', productModel: '', quantity: 10, orderType: 'deglue', priority: 'normal', targetRegenerationCount: 1, sourceWorkOrderId: '' });
       const formDispatch = ref({ stationName: '除膠站', operatorName: '', quantity: 0 });
-      const formReport = ref({ goodQty: 0, ngQty: 0, hasAbnormal: false, abnormalType: '' });
+      const formReport = ref({ goodQty: 0, ngQty: 0, hasAbnormal: false, abnormalType: '', ngDetails: [] });
+      // NG 明細輸入
+      const currentNgReason = ref(null);
+      const currentNgQty = ref(1);
+      const currentNgBarcodes = ref([]);
+      const currentNgBarcodeInput = ref('');
       const formEpc = ref({ workOrderId: '', oldEpc: '', newEpc: '', operatorName: '' });
       const formOperator = ref({ name: '', code: '' });
       const formCustomer = ref({ name: '', code: '', sitesInput: '' });
       const formProduct = ref({ name: '', code: '', type: '10cm' });
+
+      // NG Reasons
+      const ngReasons = ref([]);
+      const formNgReason = ref({ name: '', code: '', description: '' });
 
       // Outgassing
       const outgassingTests = ref([]);
@@ -252,6 +261,7 @@
       const editingOperatorId = ref(null);
       const editingCustomerId = ref(null);
       const editingProductId = ref(null);
+      const editingNgReasonId = ref(null);
       const editingWorkOrderId = ref(null);
 
       // EPC Check
@@ -305,6 +315,10 @@
 
       const startEditProduct = (p) => { editingProductId.value = p.id; formProduct.value = { name: p.name, code: p.code, type: p.type }; };
       const cancelEditProduct = () => { editingProductId.value = null; formProduct.value = { name: '', code: '', type: '10cm' }; };
+
+      // NG Reasons CRUD
+      const startEditNgReason = (r) => { editingNgReasonId.value = r.id; formNgReason.value = { name: r.name, code: r.code, description: r.description }; };
+      const cancelEditNgReason = () => { editingNgReasonId.value = null; formNgReason.value = { name: '', code: '', description: '' }; };
 
       const checkOldEpc = async () => {
         const epc = formEpc.value.oldEpc;
@@ -362,6 +376,7 @@
             operators.value = data.operators || [];
             customers.value = data.customers || [];
             products.value = data.products || [];
+            ngReasons.value = data.ngReasons || [];
             outgassingTests.value = data.outgassingTests || [];
             aoiInspections.value = data.aoiInspections || [];
             epcHistory.value = data.epcHistory || [];
@@ -383,6 +398,7 @@
             operators: allData.operators,
             customers: allData.customers,
             products: allData.products,
+            ngReasons: allData.ngReasons,
             outgassingTests: allData.outgassingTests,
             aoiInspections: allData.aoiInspections,
             epcHistory: allData.epcHistory,
@@ -407,6 +423,7 @@
           operators.value = allData.operators || [];
           customers.value = allData.customers || [];
           products.value = allData.products || [];
+          ngReasons.value = allData.ngReasons || [];
           outgassingTests.value = allData.outgassingTests || [];
           aoiInspections.value = allData.aoiInspections || [];
           epcHistory.value = allData.epcHistory || [];
@@ -498,6 +515,21 @@
       const deleteProduct = async (id) => {
         if (!confirm('確定要刪除此產品嗎？')) return;
         try { await callApi('deleteProduct', { id }); await refreshData(); } catch (e) { alert(e); }
+      };
+
+      // NG Reasons Submit/Delete
+      const submitNgReason = async () => {
+        try {
+          if (editingNgReasonId.value) await callApi('updateNgReason', { id: editingNgReasonId.value, data: { ...formNgReason.value } });
+          else await callApi('createNgReason', { ...formNgReason.value });
+          cancelEditNgReason();
+          await refreshData();
+        } catch (e) { alert(e); }
+      };
+
+      const deleteNgReason = async (id) => {
+        if (!confirm('確定要刪除此 NG 原因嗎？')) return;
+        try { await callApi('deleteNgReason', { id }); await refreshData(); } catch (e) { alert(e); }
       };
 
       const submitEpcChange = async () => {
@@ -602,13 +634,82 @@
           endTime: d.actualEndAt || new Date().toISOString()
         };
         showReportModal.value = true;
+        // 重置 NG 明細
+        formReport.value.ngDetails = [];
+        resetNgDetailForm();
+      };
+
+      // NG 明細相關函數
+      const resetNgDetailForm = () => {
+        currentNgReason.value = null;
+        currentNgQty.value = 1;
+        currentNgBarcodes.value = [];
+        currentNgBarcodeInput.value = '';
+      };
+
+      const scanNgBarcode = () => {
+        const code = currentNgBarcodeInput.value.trim();
+        if (!code) return;
+        if (currentNgBarcodes.value.includes(code)) {
+          alert('此條碼已掃描過');
+          return;
+        }
+        currentNgBarcodes.value.push(code);
+        currentNgBarcodeInput.value = '';
+      };
+
+      const removeNgBarcode = (code) => {
+        const idx = currentNgBarcodes.value.indexOf(code);
+        if (idx > -1) currentNgBarcodes.value.splice(idx, 1);
+      };
+
+      const addNgDetail = () => {
+        if (!currentNgReason.value) {
+          alert('請選擇 NG 原因');
+          return;
+        }
+        if (currentNgQty.value < 1) {
+          alert('數量必須大於 0');
+          return;
+        }
+        const reason = ngReasons.value.find(r => r.id === currentNgReason.value);
+        formReport.value.ngDetails.push({
+          reasonId: currentNgReason.value,
+          reasonName: reason?.name || '',
+          reasonCode: reason?.code || '',
+          quantity: currentNgQty.value,
+          barcodes: [...currentNgBarcodes.value]
+        });
+        // 自動更新總 NG 數量
+        formReport.value.ngQty = formReport.value.ngDetails.reduce((sum, d) => sum + d.quantity, 0);
+        resetNgDetailForm();
+      };
+
+      const removeNgDetail = (idx) => {
+        formReport.value.ngDetails.splice(idx, 1);
+        // 自動更新總 NG 數量
+        formReport.value.ngQty = formReport.value.ngDetails.reduce((sum, d) => sum + d.quantity, 0);
       };
 
       const submitReport = async () => {
         try {
           formReport.value.endTime = new Date().toISOString();
           formReport.value.quantity = formReport.value.goodQty + formReport.value.ngQty;
-          await callApi('createReport', { ...formReport.value });
+          const reportResult = await callApi('createReport', { ...formReport.value });
+          // 儲存 NG 明細
+          if (formReport.value.ngDetails.length > 0 && reportResult?.id) {
+            for (const detail of formReport.value.ngDetails) {
+              await callApi('createNgDetail', {
+                reportId: reportResult.id,
+                dispatchId: formReport.value.dispatchId,
+                workOrderId: formReport.value.workOrderId,
+                reasonId: detail.reasonId,
+                reasonName: detail.reasonName,
+                quantity: detail.quantity,
+                barcodes: detail.barcodes
+              });
+            }
+          }
           showReportModal.value = false;
           await refreshData();
         } catch (e) { alert(e); }
@@ -2023,7 +2124,9 @@
         shareLoading, shareData, shareCopied, openShareModal, copyShareUrl,
         selectedWo, selectedDispatch, selectedEpcWo,
         formWo, formDispatch, formReport, formEpc, formOperator, formCustomer, formProduct,
-        editingOperatorId, editingCustomerId, editingProductId, editingWorkOrderId,
+        currentNgReason, currentNgQty, currentNgBarcodes, currentNgBarcodeInput,
+        scanNgBarcode, removeNgBarcode, addNgDetail, removeNgDetail, resetNgDetailForm,
+        editingOperatorId, editingCustomerId, editingProductId, editingNgReasonId, editingWorkOrderId,
         regenerationOrders, completedDeglueOrders, reworkableOrders, aoiPassedOrders, epcHistory, operators, customers, products, customerSites, epcCheckStatus, epcCheckInfo,
         refreshData, submitWorkOrder, openDispatchModal, submitDispatch, openReportModal, submitReport,
         startEditWorkOrder, cancelEditWorkOrder, deleteWorkOrder, deleteDispatch,
@@ -2031,6 +2134,8 @@
         submitOperator, deleteOperator, startEditOperator, cancelEditOperator,
         submitCustomer, deleteCustomer, startEditCustomer, cancelEditCustomer,
         submitProduct, deleteProduct, startEditProduct, cancelEditProduct,
+        ngReasons, formNgReason, editingNgReasonId,
+        submitNgReason, deleteNgReason, startEditNgReason, cancelEditNgReason,
         startJob, completeJob, getStatusClass,
         signaturePadOutgassing, signaturePadAoi, startSign, drawSign, endSign, clearSignature,
         outgassingTests, outgassingSampleInfo, formOutgassing, filteredOutgassingTests,
