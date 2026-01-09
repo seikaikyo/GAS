@@ -1115,6 +1115,7 @@
   .settings-section .textarea,
   .settings-section .select {
     background: #ffffff !important;
+    background-color: #ffffff !important;
     color: #1e293b !important;
     border-color: #d1d5db !important;
   }
@@ -1122,6 +1123,92 @@
   .settings-form .input::placeholder,
   .settings-form .textarea::placeholder {
     color: #9ca3af !important;
+  }
+
+  /* DaisyUI input-bordered 強制覆蓋 */
+  .settings-section input.input,
+  .settings-section textarea.textarea,
+  .settings-section select.select,
+  .settings-form input.input,
+  .settings-form textarea.textarea,
+  .settings-form select.select {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #1e293b !important;
+    border-color: #d1d5db !important;
+    --tw-bg-opacity: 1 !important;
+  }
+
+  /* 全域 content-card 內的輸入欄位（確保所有頁面）*/
+  .content-card input.input,
+  .content-card textarea.textarea,
+  .content-card select.select {
+    background: #ffffff;
+    background-color: #ffffff;
+    color: #1e293b;
+    border-color: #d1d5db;
+  }
+
+  .content-card input.input::placeholder,
+  .content-card textarea.textarea::placeholder {
+    color: #9ca3af;
+  }
+
+  /* 設定頁按鈕樣式修正 */
+  .settings-section .btn,
+  .settings-form .btn {
+    color: inherit;
+  }
+
+  .settings-section .btn-ghost,
+  .settings-form .btn-ghost {
+    color: #475569;
+  }
+
+  .settings-section .btn-primary,
+  .settings-form .btn-primary {
+    color: #ffffff;
+    background: #667eea;
+    border-color: #667eea;
+  }
+
+  .settings-section .btn-error,
+  .settings-form .btn-error {
+    color: #ffffff;
+    background: #dc2626;
+    border-color: #dc2626;
+  }
+
+  .settings-section .btn-warning,
+  .settings-form .btn-warning {
+    color: #ffffff;
+    background: #f59e0b;
+    border-color: #f59e0b;
+  }
+
+  .settings-section .btn-success,
+  .settings-form .btn-success {
+    color: #ffffff;
+    background: #16a34a;
+    border-color: #16a34a;
+  }
+
+  .settings-section .btn-outline,
+  .settings-form .btn-outline {
+    background: transparent;
+  }
+
+  .settings-section .btn-error.btn-outline,
+  .settings-form .btn-error.btn-outline {
+    color: #dc2626;
+    background: transparent;
+  }
+
+  .settings-section .btn-ghost.btn-outline,
+  .settings-form .btn-ghost.btn-outline {
+    color: #475569;
+    background: transparent;
+    border-color: #d1d5db;
   }
 
   /* Split Layout */
@@ -1142,6 +1229,20 @@
     display: flex;
     gap: 0.75rem;
     justify-content: flex-end;
+  }
+
+  /* Form Actions - 按鈕列對齊 */
+  .form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .form-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
   }
 
   /* Alert Message */
