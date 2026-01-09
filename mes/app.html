@@ -9,6 +9,7 @@
       const version = ref('');
       const currentTab = ref('work-orders');
       const workOrders = ref([]);
+      const woStatusFilter = ref('all');
       const dispatches = ref([]);
       const epcHistory = ref([]);
       const reports = ref([]);
@@ -17,6 +18,10 @@
       const products = ref([]);
 
       // Computed
+      const filteredWorkOrders = Vue.computed(() => {
+        if (woStatusFilter.value === 'all') return workOrders.value;
+        return workOrders.value.filter(w => w.status === woStatusFilter.value);
+      });
       const regenerationOrders = Vue.computed(() => workOrders.value.filter(w => w.orderType === 'regeneration'));
       const completedDeglueOrders = Vue.computed(() => workOrders.value.filter(w => w.orderType === 'deglue' && w.status === 'completed'));
       // AOI PASS 的工單（可進行 RFID 更換）
@@ -290,7 +295,15 @@
       const adminLoading = ref(false);
       const adminMessage = ref('');
       const adminMessageType = ref('success');
-      const systemVersion = ref('5.1.0');
+      const showAllChangelog = ref(false);
+
+      // 全域操作人員 (ISO 27001 Access Control)
+      const currentOperator = ref(null);
+      const showOperatorSelector = ref(false);
+
+      // Audit Logs (ISO 27001:2022 A.8.15)
+      const auditLogs = ref([]);
+      const auditLoading = ref(false);
 
       // WMS 倉儲管理
       const wmsLocations = ref([]);
@@ -313,7 +326,9 @@
         fromLocation: '',
         toLocation: '',
         inventoryId: '',
-        reason: ''
+        reason: '',
+        reasonNote: '',
+        selectedInventory: null
       });
 
       // 盤點相關
@@ -1000,6 +1015,8 @@
       const adminFixColumnOrder = async () => {
         adminLoading.value = true; adminMessage.value = '';
         try {
+          // 先清除本地快取
+          localStorage.removeItem('MES_DATA_CACHE');
           const result = await callApi('fixColumnOrder');
           adminMessageType.value = 'success';
           const fixed = result.fixed || [];
@@ -1021,6 +1038,21 @@
         finally { adminLoading.value = false; }
       };
 
+      const adminClearCache = async () => {
+        adminLoading.value = true; adminMessage.value = '';
+        try {
+          // 清除前端快取
+          localStorage.removeItem('MES_DATA_CACHE');
+          // 清除後端快取
+          await callApi('clearCache');
+          adminMessageType.value = 'success';
+          adminMessage.value = '快取已清除，正在重新載入資料...';
+          await refreshData();
+          adminMessage.value = '快取已清除，資料重新載入完成';
+        } catch (e) { adminMessageType.value = 'error'; adminMessage.value = '清除失敗: ' + e; }
+        finally { adminLoading.value = false; }
+      };
+
       const adminGenerateTestData = async () => {
         if (!confirm('確定要產生測試資料嗎？')) return;
         adminLoading.value = true; adminMessage.value = '';
@@ -1031,6 +1063,114 @@
           await refreshData();
         } catch (e) { adminMessageType.value = 'error'; adminMessage.value = '產生失敗: ' + e; }
         finally { adminLoading.value = false; }
+      };
+
+      // 全域操作人員選擇 (ISO 27001 Access Control)
+      const selectOperator = (op) => {
+        currentOperator.value = op;
+        showOperatorSelector.value = false;
+        localStorage.setItem('MES_CURRENT_OPERATOR', JSON.stringify(op));
+      };
+
+      const clearOperator = () => {
+        currentOperator.value = null;
+        localStorage.removeItem('MES_CURRENT_OPERATOR');
+      };
+
+      const requireOperator = () => {
+        if (!currentOperator.value) {
+          showOperatorSelector.value = true;
+          return false;
+        }
+        return true;
+      };
+
+      // Audit Log 記錄 (ISO 27001:2022 A.8.15)
+      const logAudit = async (action, module, targetType, targetId, targetName, details = {}) => {
+        if (!currentOperator.value) return; // 無操作人則不記錄
+        try {
+          await callApi('createAuditLog', {
+            operatorName: currentOperator.value.name,
+            operatorCode: currentOperator.value.code || '',
+            action,
+            module,
+            targetType,
+            targetId: String(targetId),
+            targetName: String(targetName),
+            details
+          });
+        } catch (e) {
+          console.warn('Audit log failed:', e);
+        }
+      };
+
+      // 載入操作紀錄
+      const loadAuditLogs = async () => {
+        auditLoading.value = true;
+        try {
+          auditLogs.value = await callApi('getAuditLogs', { limit: 100 });
+        } catch (e) {
+          console.error('Load audit logs failed:', e);
+        } finally {
+          auditLoading.value = false;
+        }
+      };
+
+      // Audit Log 格式化函數
+      const formatAuditTime = (timestamp) => {
+        if (!timestamp) return '-';
+        try {
+          const d = new Date(timestamp);
+          const pad = n => n.toString().padStart(2, '0');
+          return `${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        } catch { return timestamp; }
+      };
+
+      const formatAuditAction = (action) => {
+        const map = {
+          'create': '新增',
+          'update': '更新',
+          'delete': '刪除',
+          'start': '開始',
+          'complete': '完成',
+          'cancel': '取消',
+          'login': '登入',
+          'logout': '登出'
+        };
+        return map[action] || action;
+      };
+
+      const formatAuditModule = (module) => {
+        const map = {
+          'workOrder': '工單',
+          'dispatch': '派工',
+          'report': '報工',
+          'operator': '人員',
+          'customer': '客戶',
+          'product': '產品',
+          'ngReason': 'NG原因',
+          'wms': '倉儲',
+          'r0': '標籤',
+          'aoi': 'AOI',
+          'outgassing': '釋氣',
+          'system': '系統'
+        };
+        return map[module] || module;
+      };
+
+      const formatAuditDetails = (details) => {
+        if (!details) return '-';
+        if (typeof details === 'string') {
+          try {
+            const obj = JSON.parse(details);
+            return Object.entries(obj)
+              .map(([k, v]) => `${k}: ${v}`)
+              .join(', ');
+          } catch {
+            return details;
+          }
+        }
+        return JSON.stringify(details);
       };
 
       // R0 Management Functions
@@ -2235,6 +2375,68 @@
         showLocationDetailModal.value = true;
       };
 
+      // 從庫存項目開啟調撥 Modal（情境式操作）
+      const openTransferFromInventory = (inv) => {
+        formWms.value = {
+          locationCode: '',
+          workOrderId: '',
+          quantity: 1,
+          barcode: '',
+          barcodes: [],
+          operatorName: '',
+          fromLocation: inv.locationCode,
+          toLocation: '',
+          inventoryId: inv.id,
+          reason: '',
+          reasonNote: '',
+          selectedInventory: inv
+        };
+        showLocationDetailModal.value = false;
+        showWmsTransferModal.value = true;
+      };
+
+      // 從庫存項目開啟出庫 Modal（情境式操作）
+      const openOutboundFromInventory = (inv) => {
+        formWms.value = {
+          locationCode: '',
+          workOrderId: '',
+          quantity: 1,
+          barcode: '',
+          barcodes: [],
+          operatorName: '',
+          fromLocation: inv.locationCode,
+          toLocation: '',
+          inventoryId: inv.id,
+          reason: '',
+          reasonNote: '',
+          selectedInventory: inv
+        };
+        showLocationDetailModal.value = false;
+        showWmsOutboundModal.value = true;
+      };
+
+      // 快速盤點當前儲位
+      const openQuickStockTake = () => {
+        const loc = selectedLocation.value;
+        if (!loc) return;
+        formStockTake.value = {
+          locationCode: loc.code,
+          operatorName: '',
+          notes: ''
+        };
+        // 載入該儲位的盤點項目
+        stockTakeItems.value = wmsInventoryList.value.map(inv => ({
+          id: inv.id,
+          barcode: inv.barcode,
+          orderNumber: inv.orderNumber,
+          productModel: inv.productModel,
+          systemQty: inv.quantity,
+          actualQty: null
+        }));
+        showLocationDetailModal.value = false;
+        showWmsStockTakeModal.value = true;
+      };
+
       const loadLocationInventory = async () => {
         const locCode = formWms.value.fromLocation;
         if (!locCode) { wmsInventoryList.value = []; return; }
@@ -2274,9 +2476,11 @@
             inventoryId: formWms.value.inventoryId,
             toLocation: formWms.value.toLocation,
             operatorName: formWms.value.operatorName,
-            reason: formWms.value.reason
+            reason: formWms.value.reason || '調撥'
           });
           showWmsTransferModal.value = false;
+          // 同時關閉儲位明細 Modal（如果是從那裡開啟的）
+          showLocationDetailModal.value = false;
           await loadWmsData();
           wmsInventory.value = await callApi('getWmsInventory', null, false);
           alert('調撥成功');
@@ -2285,12 +2489,17 @@
 
       const submitWmsOutbound = async () => {
         try {
+          const reason = formWms.value.reason === '其他' && formWms.value.reasonNote
+            ? `其他: ${formWms.value.reasonNote}`
+            : formWms.value.reason;
           await callApi('wmsOutbound', {
             inventoryId: formWms.value.inventoryId,
             operatorName: formWms.value.operatorName,
-            reason: formWms.value.reason
+            reason: reason
           });
           showWmsOutboundModal.value = false;
+          // 同時關閉儲位明細 Modal（如果是從那裡開啟的）
+          showLocationDetailModal.value = false;
           await loadWmsData();
           wmsInventory.value = await callApi('getWmsInventory', null, false);
           alert('出庫成功');
@@ -2370,6 +2579,12 @@
       });
 
       onMounted(() => {
+        // 恢復上次的操作人員 (ISO 27001 Access Control)
+        const savedOperator = localStorage.getItem('MES_CURRENT_OPERATOR');
+        if (savedOperator) {
+          try { currentOperator.value = JSON.parse(savedOperator); } catch {}
+        }
+
         // 效能優化：先載入本地快取（瞬間顯示），再背景更新
         const hasCached = loadCachedData();
         if (hasCached) {
@@ -2387,7 +2602,7 @@
 
         // 賽博龐克倒數計時器 (含毫秒)
         const updateCyberCountdown = () => {
-          const targetDate = new Date('2025-08-01T00:00:00');
+          const targetDate = new Date('2026-08-01T00:00:00');
           const now = new Date();
           const diff = targetDate - now;
 
@@ -2427,7 +2642,7 @@
       });
 
       return {
-        loading, version, currentTab, workOrders, dispatches, reports,
+        loading, version, currentTab, workOrders, woStatusFilter, filteredWorkOrders, dispatches, reports,
         showCreateWoModal, showDispatchModal, showReportModal, showShareModal,
         shareLoading, shareData, shareCopied, openShareModal, copyShareUrl,
         selectedWo, selectedDispatch, selectedEpcWo,
@@ -2451,8 +2666,12 @@
         aoiInspections, aoiCsvPreview, formAoi, formAoiSingle,
         handleAoiCsvFile, submitAoiImport, submitSingleAoi,
         showInspectionDetailModal, selectedInspection, inspectionType, viewInspectionDetail,
-        adminLoading, adminMessage, adminMessageType, systemVersion,
-        adminGenerateTestData, adminSyncDatabase, adminFixColumnOrder, adminFixSignatureData,
+        adminLoading, adminMessage, adminMessageType, showAllChangelog,
+        adminGenerateTestData, adminSyncDatabase, adminFixColumnOrder, adminFixSignatureData, adminClearCache,
+        // 操作人員 & Audit Log (ISO 27001)
+        currentOperator, showOperatorSelector, selectOperator, clearOperator, requireOperator,
+        auditLogs, auditLoading, loadAuditLogs, logAudit,
+        formatAuditTime, formatAuditAction, formatAuditModule, formatAuditDetails,
         // Oven Monitoring (10 ovens)
         ovens, ecuConnected, ovenConfig, ovenBindings, ovenBatchQty, ovenAutoReportEnabled,
         ovenEventLogs, showOvenSettingsModal, dispatchDoorStates,
@@ -2484,7 +2703,8 @@
         showWmsInboundModal, showWmsTransferModal, showWmsOutboundModal, showLocationDetailModal,
         selectedLocation, formWms, formatTime, formatDate,
         loadWmsData, initWmsLocations, wmsLocationTypeLabel, wmsMovementTypeLabel, wmsMovementTypeBadge,
-        openWmsModal, openLocationDetail, loadLocationInventory, wmsAddBarcode,
+        openWmsModal, openLocationDetail, openTransferFromInventory, openOutboundFromInventory, openQuickStockTake,
+        loadLocationInventory, wmsAddBarcode,
         submitWmsInbound, submitWmsTransfer, submitWmsOutbound,
         // 盤點
         showWmsStockTakeModal, stockTakeItems, formStockTake,

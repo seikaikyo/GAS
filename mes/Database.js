@@ -117,6 +117,14 @@ const DB_CONFIG = {
         'id', 'stockTakeId', 'inventoryId', 'barcode', 'orderNumber', 'productModel',
         'systemQty', 'actualQty', 'diffQty', 'notes', 'createdAt'
       ]
+    },
+    // 操作紀錄 (ISO 27001:2022 A.8.15)
+    auditLogs: {
+      name: 'AuditLogs',
+      headers: [
+        'id', 'timestamp', 'operatorName', 'operatorCode', 'action', 'module',
+        'targetType', 'targetId', 'targetName', 'details', 'ipAddress', 'userAgent'
+      ]
     }
   }
 };
@@ -316,6 +324,74 @@ function initDatabase() {
   });
 
   return { success: true, message: '資料庫初始化完成', url: ss.getUrl() };
+}
+
+/**
+ * 清理無效工單資料（orderNumber 為空的資料）
+ */
+function dbCleanInvalidWorkOrders() {
+  const ss = getDbSpreadsheet();
+  const sheet = ss.getSheetByName('WorkOrders');
+  if (!sheet) return { deleted: 0 };
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return { deleted: 0 };
+
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const orderNumberIdx = headers.indexOf('orderNumber');
+
+  if (orderNumberIdx === -1) return { error: 'orderNumber column not found' };
+
+  // 從最後一行往前刪除（避免行號錯亂）
+  let deleted = 0;
+  for (let i = lastRow; i >= 2; i--) {
+    const orderNumber = data[i - 1][orderNumberIdx];
+    if (!orderNumber || orderNumber === '') {
+      sheet.deleteRow(i);
+      deleted++;
+    }
+  }
+
+  if (deleted > 0) clearDataCache();
+  return { deleted: deleted };
+}
+
+/**
+ * 除錯：檢查 Sheet 結構
+ */
+function dbDebugSheet(tableName) {
+  const ss = getDbSpreadsheet();
+  const sheet = ss.getSheetByName(tableName);
+  if (!sheet) return { error: 'Sheet not found: ' + tableName };
+
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  if (lastRow < 1 || lastCol < 1) return { error: 'Empty sheet' };
+
+  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  const config = Object.values(DB_CONFIG.sheets).find(s => s.name === tableName);
+  const expectedHeaders = config ? config.headers : [];
+
+  // 取得第一筆資料（如果有的話）
+  let firstRow = null;
+  let firstRowObj = null;
+  if (lastRow >= 2) {
+    firstRow = sheet.getRange(2, 1, 1, lastCol).getValues()[0];
+    firstRowObj = {};
+    headers.forEach((h, i) => { firstRowObj[h] = firstRow[i]; });
+  }
+
+  return {
+    sheetName: tableName,
+    lastRow: lastRow,
+    lastCol: lastCol,
+    actualHeaders: headers,
+    expectedHeaders: expectedHeaders,
+    headersMatch: JSON.stringify(headers.slice(0, expectedHeaders.length)) === JSON.stringify(expectedHeaders),
+    firstRowRaw: firstRow,
+    firstRowObj: firstRowObj
+  };
 }
 
 /**
@@ -958,6 +1034,11 @@ function dbFixColumnOrder() {
     results.fixed.push(config.name);
   });
 
+  // 清除後端快取，確保下次讀取會拿到新資料
+  if (results.fixed.length > 0) {
+    clearDataCache();
+  }
+
   return results;
 }
 
@@ -1329,3 +1410,64 @@ function dbCreateWmsStockTake(data) {
 function dbGetWmsStockTakeDetails(stockTakeId) {
   return getTableData('WmsStockTakeDetails').filter(d => d.stockTakeId === stockTakeId);
 }
+
+
+// ==================== Audit Logs (ISO 27001:2022 A.8.15) ====================
+
+/**
+ * 建立操作紀錄
+ * @param {Object} data - 操作資料
+ * @param {string} data.operatorName - 操作人姓名
+ * @param {string} data.operatorCode - 操作人代號
+ * @param {string} data.action - 動作 (create/update/delete/dispatch/complete/cancel)
+ * @param {string} data.module - 模組 (workOrder/dispatch/report/wms)
+ * @param {string} data.targetType - 目標類型 (WorkOrder/Dispatch/Report/WmsInventory)
+ * @param {string} data.targetId - 目標 ID
+ * @param {string} data.targetName - 目標名稱（如工單號）
+ * @param {Object} data.details - 變更詳情
+ */
+function dbCreateAuditLog(data) {
+  return insertRecord('AuditLogs', {
+    timestamp: new Date().toISOString(),
+    operatorName: data.operatorName || '系統',
+    operatorCode: data.operatorCode || '',
+    action: data.action || 'unknown',
+    module: data.module || 'unknown',
+    targetType: data.targetType || '',
+    targetId: data.targetId || '',
+    targetName: data.targetName || '',
+    details: typeof data.details === 'object' ? JSON.stringify(data.details) : (data.details || ''),
+    ipAddress: data.ipAddress || '',
+    userAgent: data.userAgent || 'GAS Web App'
+  });
+}
+
+/**
+ * 取得操作紀錄（最近 100 筆）
+ */
+function dbGetAuditLogs(limit = 100) {
+  const logs = getTableData('AuditLogs');
+  // 依時間倒序排列
+  logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  return logs.slice(0, limit);
+}
+
+/**
+ * 查詢特定目標的操作紀錄
+ */
+function dbGetAuditLogsByTarget(targetType, targetId) {
+  return getTableData('AuditLogs')
+    .filter(log => log.targetType === targetType && log.targetId === targetId)
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+}
+
+/**
+ * 查詢特定操作人的操作紀錄
+ */
+function dbGetAuditLogsByOperator(operatorName, limit = 50) {
+  return getTableData('AuditLogs')
+    .filter(log => log.operatorName === operatorName)
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    .slice(0, limit);
+}
+

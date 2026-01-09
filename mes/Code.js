@@ -94,7 +94,7 @@ function api(action, payload) {
     let result;
     switch (action) {
       case 'getVersion':
-        return { success: true, data: '5.19.0' };
+        return { success: true, data: '5.26.0' };
 
       // 效能優化：單次載入所有資料 (含快取)
       case 'getAllData':
@@ -311,6 +311,24 @@ function api(action, payload) {
         break;
       case 'fixSignatureData':
         result = dbFixSignatureData();
+        break;
+      case 'clearCache':
+        clearDataCache();
+        result = { cleared: true };
+        break;
+      case 'debugSheet':
+        result = dbDebugSheet(payload.tableName || 'WorkOrders');
+        break;
+      case 'cleanInvalidWorkOrders':
+        result = dbCleanInvalidWorkOrders();
+        break;
+
+      // Audit Logs (ISO 27001:2022)
+      case 'getAuditLogs':
+        result = dbGetAuditLogs(payload.limit || 100);
+        break;
+      case 'createAuditLog':
+        result = dbCreateAuditLog(payload);
         break;
 
       case 'getShortUrl':

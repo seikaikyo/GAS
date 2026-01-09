@@ -18,6 +18,24 @@
     </div>
   </div>
 
+  <!-- 狀態篩選 -->
+  <div class="wo-filter-bar">
+    <div class="wo-filter-chips">
+      <button :class="['wo-filter-chip', woStatusFilter === 'all' ? 'active' : '']" @click="woStatusFilter = 'all'">
+        全部 <span class="chip-count">{{ workOrders.length }}</span>
+      </button>
+      <button :class="['wo-filter-chip', woStatusFilter === 'in_progress' ? 'active in-progress' : '']" @click="woStatusFilter = 'in_progress'">
+        進行中 <span class="chip-count">{{ workOrders.filter(w => w.status === 'in_progress').length }}</span>
+      </button>
+      <button :class="['wo-filter-chip', woStatusFilter === 'draft' ? 'active draft' : '']" @click="woStatusFilter = 'draft'">
+        草稿 <span class="chip-count">{{ workOrders.filter(w => w.status === 'draft').length }}</span>
+      </button>
+      <button :class="['wo-filter-chip', woStatusFilter === 'completed' ? 'active completed' : '']" @click="woStatusFilter = 'completed'">
+        已完成 <span class="chip-count">{{ workOrders.filter(w => w.status === 'completed').length }}</span>
+      </button>
+    </div>
+  </div>
+
   <div class="scrollable">
     <table class="data-table">
       <thead>
@@ -31,7 +49,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="wo in workOrders" :key="wo.id">
+        <tr v-for="wo in filteredWorkOrders" :key="wo.id">
           <td>
             <span style="font-family: monospace; font-weight: 600;">{{ wo.orderNumber }}</span>
           </td>
@@ -71,11 +89,11 @@
             </div>
           </td>
         </tr>
-        <tr v-if="workOrders.length === 0" class="empty-row">
+        <tr v-if="filteredWorkOrders.length === 0" class="empty-row">
           <td colspan="6">
             <div class="empty-state">
               <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-4 opacity-50"></i>
-              <div>暫無工單資料</div>
+              <div>{{ woStatusFilter === 'all' ? '暫無工單資料' : '無符合條件的工單' }}</div>
             </div>
           </td>
         </tr>
