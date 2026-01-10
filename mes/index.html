@@ -12,7 +12,7 @@
     <!-- Loading Overlay -->
     <div v-if="loading" class="loading-overlay">
       <span class="loading loading-spinner loading-lg text-primary"></span>
-      <div style="font-weight: 600; color: #667eea;">載入中...</div>
+      <div style="font-weight: 600; color: #667eea;">{{ loadingMessage || '載入中...' }}</div>
     </div>
 
     <!-- Header -->

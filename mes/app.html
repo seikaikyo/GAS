@@ -6,6 +6,7 @@
     setup() {
       const loading = ref(false);
       const loadingCount = ref(0);
+      const loadingMessage = ref('');
       const version = ref('');
       const currentTab = ref('schedule');
       const workOrders = ref([]);
@@ -752,14 +753,24 @@
 
       // 強制重新整理（清除快取 + 重載）
       const forceRefresh = async () => {
+        loading.value = true;
+        loadingMessage.value = '清除快取中...';
         try {
           // 清除前端快取
           localStorage.removeItem('MES_DATA_CACHE');
           // 清除後端快取
-          await callApi('clearCache', null, true);
+          loadingMessage.value = '清除伺服器快取...';
+          await callApi('clearCache', null, false);
           // 重新載入資料
-          await refreshData(true);
-        } catch (e) { alert('重新整理失敗: ' + e); }
+          loadingMessage.value = '重新載入資料...';
+          await refreshData(false);
+          loadingMessage.value = '';
+        } catch (e) {
+          loadingMessage.value = '';
+          alert('重新整理失敗: ' + e);
+        } finally {
+          loading.value = false;
+        }
       };
 
       // Share Functions
@@ -3277,7 +3288,7 @@
       });
 
       return {
-        loading, version, currentTab, workOrders, woStatusFilter, filteredWorkOrders, dispatches, reports,
+        loading, loadingMessage, version, currentTab, workOrders, woStatusFilter, filteredWorkOrders, dispatches, reports,
         showCreateWoModal, showDispatchModal, showReportModal, showShareModal,
         shareLoading, shareData, shareCopied, openShareModal, copyShareUrl,
         selectedWo, selectedDispatch, selectedEpcWo,
