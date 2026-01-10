@@ -163,6 +163,72 @@ if (isAoiFormat) {
 }
 ```
 
+### 8. 手機版頁籤無法滾動/溢出
+
+**問題**：手機版頁籤太多時看不到、無法點擊
+
+**原因**：`.tabs-nav` 或 `.schedule-tabs` 缺少 `overflow-x: auto`
+
+**解決**：確保所有橫向導航元件都有以下樣式：
+
+```css
+@media (max-width: 640px) {
+  .tabs-nav,
+  .schedule-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .nav-tab,
+  .schedule-tab {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+}
+```
+
+### 9. 手機版內容溢出（出框）
+
+**問題**：手機瀏覽時內容超出螢幕邊界，出現水平滾動條
+
+**解決**：在 styles.html 全域樣式添加：
+
+```css
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+#app {
+  width: 100%;
+}
+```
+
+**檢查方式**：使用 Puppeteer 手機版截圖測試
+```bash
+cd /Users/dash/Documents/github/MES && node -e "
+const puppeteer = require('puppeteer');
+(async () => {
+  const browser = await puppeteer.launch({ headless: 'new' });
+  const page = await browser.newPage();
+  await page.setViewport({ width: 375, height: 812, isMobile: true });
+  await page.goto('https://script.google.com/macros/s/<DEPLOYMENT_ID>/exec', { waitUntil: 'networkidle0', timeout: 60000 });
+  await new Promise(r => setTimeout(r, 8000));
+
+  // 檢查是否有水平滾動
+  const hasHorizontalScroll = await page.evaluate(() => {
+    return document.documentElement.scrollWidth > document.documentElement.clientWidth;
+  });
+  console.log('Has horizontal scroll:', hasHorizontalScroll);
+
+  await page.screenshot({ path: '/tmp/mes-mobile.png', fullPage: true });
+  await browser.close();
+})();
+"
+```
+
 ## 版本更新 SOP
 
 1. 修改程式碼
