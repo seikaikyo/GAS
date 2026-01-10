@@ -750,6 +750,18 @@
         } catch (e) { if (showLoading) alert('載入失敗: ' + e); }
       };
 
+      // 強制重新整理（清除快取 + 重載）
+      const forceRefresh = async () => {
+        try {
+          // 清除前端快取
+          localStorage.removeItem('MES_DATA_CACHE');
+          // 清除後端快取
+          await callApi('clearCache', null, true);
+          // 重新載入資料
+          await refreshData(true);
+        } catch (e) { alert('重新整理失敗: ' + e); }
+      };
+
       // Share Functions
       const openShareModal = async () => {
         showShareModal.value = true;
@@ -3274,7 +3286,7 @@
         scanNgBarcode, removeNgBarcode, addNgDetail, removeNgDetail, resetNgDetailForm,
         editingOperatorId, editingCustomerId, editingProductId, editingNgReasonId, editingWorkOrderId,
         regenerationOrders, completedDeglueOrders, reworkableOrders, aoiPassedOrders, epcHistory, operators, customers, products, customerSites, availableStations, epcCheckStatus, epcCheckInfo,
-        refreshData, openCreateWoModal, submitWorkOrder, openDispatchModal, submitDispatch, openReportModal, submitReport,
+        refreshData, forceRefresh, openCreateWoModal, submitWorkOrder, openDispatchModal, submitDispatch, openReportModal, submitReport,
         startEditWorkOrder, cancelEditWorkOrder, deleteWorkOrder, deleteDispatch,
         submitEpcChange, onWoSelect, onCustomerSelect, onSourceWorkOrderSelect, checkOldEpc,
         submitOperator, deleteOperator, startEditOperator, cancelEditOperator,
