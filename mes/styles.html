@@ -1272,6 +1272,8 @@
   .scrollable {
     max-height: 400px;
     overflow-y: auto;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Input Label */
@@ -1504,13 +1506,21 @@
     }
 
     /* Mobile Table Improvements */
+    .scrollable {
+      max-height: none;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
     .data-table {
       font-size: 0.8rem;
+      min-width: 500px;
     }
 
     .data-table th,
     .data-table td {
       padding: 0.5rem;
+      white-space: nowrap;
     }
 
     .data-table th {
@@ -1520,6 +1530,18 @@
     /* Mobile Form Improvements */
     .form-section {
       padding: 1rem;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
+    /* 防止表單元素溢出 */
+    input, select, textarea {
+      max-width: 100%;
+    }
+
+    /* 簽名區域縮小 */
+    .signature-pad-container canvas {
+      height: 100px;
     }
 
     .operator-grid {
