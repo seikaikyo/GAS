@@ -1224,6 +1224,11 @@
     gap: 1.5rem;
   }
 
+  .split-layout > div {
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
   @media (max-width: 1024px) {
     .split-layout {
       grid-template-columns: 1fr;
@@ -1537,6 +1542,28 @@
     /* 防止表單元素溢出 */
     input, select, textarea {
       max-width: 100%;
+    }
+
+    /* 防止所有區塊溢出 */
+    .split-layout > div,
+    .form-section,
+    .alert,
+    .csv-preview,
+    .info-grid {
+      max-width: 100%;
+      overflow-x: hidden;
+      word-wrap: break-word;
+    }
+
+    /* CSV 預覽行溢出處理 */
+    .csv-preview-row {
+      flex-wrap: wrap;
+    }
+
+    .csv-preview-row .barcode {
+      max-width: 150px;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     /* 簽名區域縮小 */
