@@ -2132,21 +2132,29 @@
     }
 
     .wo-create-buttons {
-      flex-direction: column;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
     .wo-create-buttons .btn {
-      width: 100%;
-      justify-content: center;
+      flex-shrink: 0;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
     }
 
     .wms-actions {
-      flex-direction: column;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
     .wms-actions .btn {
-      width: 100%;
-      justify-content: center;
+      flex-shrink: 0;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
     }
 
     .wms-location-grid {
