@@ -193,40 +193,120 @@ if (isAoiFormat) {
 
 **問題**：手機瀏覽時內容超出螢幕邊界，出現水平滾動條
 
-**解決**：在 styles.html 全域樣式添加：
+**常見溢出元素**：
+- `.split-layout` 子元素（釋氣檢驗、AOI 檢驗等頁面）
+- `.data-table` 表格
+- `.alert`, `.csv-preview`, `.info-grid` 區塊
+- 表單元素 input/select/textarea
+
+**解決方案**：
 
 ```css
+/* 全域防止溢出 */
 html, body {
   overflow-x: hidden;
   width: 100%;
 }
 
-#app {
-  width: 100%;
+/* Grid 子元素必須設定 min-width: 0 */
+.split-layout > div {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+/* 手機版 media query 內添加 */
+@media (max-width: 640px) {
+  .split-layout > div,
+  .form-section,
+  .alert,
+  .csv-preview,
+  .info-grid {
+    max-width: 100%;
+    overflow-x: hidden;
+    word-wrap: break-word;
+  }
+
+  input, select, textarea {
+    max-width: 100%;
+  }
+
+  .data-table {
+    min-width: 500px; /* 讓表格可橫向滾動 */
+  }
+
+  .scrollable {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 ```
 
-**檢查方式**：使用 Puppeteer 手機版截圖測試
+### 10. 手機版 UI 測試必須檢查所有頁籤（重要）
+
+**問題**：只測試首頁會遺漏其他頁籤的溢出問題
+
+**必須測試的頁籤**：
+1. 排程看板（含子頁籤：排程總覽、生產排程、人員排班、設備排程）
+2. 工單管理
+3. 現場派工
+4. 報工紀錄
+5. 釋氣檢驗 ← 常見溢出
+6. AOI 檢驗 ← 常見溢出
+7. 標籤管理
+8. 樣式設計
+9. 烘箱監控
+10. 倉儲管理
+11. 設定
+
+**完整測試腳本**：
 ```bash
 cd /Users/dash/Documents/github/MES && node -e "
 const puppeteer = require('puppeteer');
+const TABS = ['schedule', 'workorders', 'dispatches', 'reports', 'outgassing', 'aoi', 'rfid', 'label', 'oven', 'wms', 'settings'];
+
 (async () => {
   const browser = await puppeteer.launch({ headless: 'new' });
   const page = await browser.newPage();
   await page.setViewport({ width: 375, height: 812, isMobile: true });
-  await page.goto('https://script.google.com/macros/s/<DEPLOYMENT_ID>/exec', { waitUntil: 'networkidle0', timeout: 60000 });
-  await new Promise(r => setTimeout(r, 8000));
 
-  // 檢查是否有水平滾動
-  const hasHorizontalScroll = await page.evaluate(() => {
-    return document.documentElement.scrollWidth > document.documentElement.clientWidth;
-  });
-  console.log('Has horizontal scroll:', hasHorizontalScroll);
+  await page.goto('https://script.google.com/macros/s/AKfycbwbX1uACKWhzRhe8JxlXwKEWbZ7ysduAQtf2R2drxIZm5X6acMX7WFUMEpCGouPELoKYw/exec', { waitUntil: 'networkidle0', timeout: 60000 });
+  await new Promise(r => setTimeout(r, 10000));
 
-  await page.screenshot({ path: '/tmp/mes-mobile.png', fullPage: true });
+  const results = [];
+  for (const tab of TABS) {
+    await page.evaluate(t => { if (window.app) window.app.currentTab = t; }, tab);
+    await new Promise(r => setTimeout(r, 1500));
+
+    const overflow = await page.evaluate(() =>
+      document.documentElement.scrollWidth > document.documentElement.clientWidth
+    );
+    results.push({ tab, overflow });
+
+    if (overflow) {
+      await page.screenshot({ path: '/tmp/mes-overflow-' + tab + '.png', fullPage: true });
+    }
+  }
+
+  console.log('測試結果:');
+  results.forEach(r => console.log(r.tab + ': ' + (r.overflow ? 'X 溢出' : 'O 正常')));
+
+  const failed = results.filter(r => r.overflow);
+  if (failed.length > 0) {
+    console.log('\\n溢出頁籤截圖已儲存至 /tmp/mes-overflow-*.png');
+    process.exit(1);
+  }
+
   await browser.close();
 })();
 "
+```
+
+**使用 DashAI DevTools**：
+```bash
+# 手機版 E2E 測試（僅檢查首頁）
+dash e2e <URL> --mobile
+
+# 完整測試需使用上方腳本
 ```
 
 ## 版本更新 SOP
