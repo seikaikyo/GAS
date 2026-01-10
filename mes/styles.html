@@ -368,6 +368,12 @@
     display: block !important;
   }
 
+  /* 讓深色 dashboard 填滿整個 tab-content 區域 */
+  .tab-content > .schedule-dashboard {
+    margin: -1.5rem;
+    border-radius: 0;
+  }
+
   /* Table Styling */
   .data-table {
     width: 100%;
@@ -1718,6 +1724,45 @@
   @media (max-width: 768px) {
     .settings-section {
       grid-template-columns: 1fr;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
+    .settings-section > div {
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
+    .settings-form {
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
+    .settings-form input,
+    .settings-form textarea,
+    .settings-form select {
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    /* 設定頁表格手機版 */
+    .settings-section .scrollable {
+      max-width: 100%;
+      overflow-x: auto;
+    }
+
+    .settings-section .data-table {
+      min-width: 400px;
+    }
+
+    .settings-section .btn-group {
+      flex-wrap: nowrap;
+      gap: 0.25rem;
+    }
+
+    .settings-section .btn-group .btn {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.75rem;
     }
   }
 
@@ -3429,6 +3474,10 @@
     grid-column: 1 / -1;
   }
 
+  .schedule-widget.span-2 {
+    grid-column: span 2;
+  }
+
   .schedule-widget.has-warning {
     border-color: rgba(255, 152, 0, 0.5);
   }
@@ -3520,6 +3569,247 @@
     margin-bottom: 1rem;
   }
 
+  .schedule-dashboard .kpi-grid.kpi-grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .schedule-dashboard .kpi-item.kpi-large {
+    grid-column: span 2;
+    text-align: center;
+  }
+
+  .schedule-dashboard .kpi-item.kpi-large .schedule-metric-value {
+    font-size: 2.5rem;
+  }
+
+  /* Status Bars (生產監控用) */
+  .schedule-dashboard .status-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .schedule-dashboard .status-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .schedule-dashboard .status-bar-label {
+    width: 4rem;
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .schedule-dashboard .status-bar-track {
+    flex: 1;
+    height: 1.25rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 0.375rem;
+    overflow: hidden;
+  }
+
+  .schedule-dashboard .status-bar-fill {
+    height: 100%;
+    border-radius: 0.375rem;
+    transition: width 0.3s ease;
+  }
+
+  .schedule-dashboard .status-bar-fill.status-pending {
+    background: linear-gradient(90deg, #FF9800, #f57c00);
+  }
+
+  .schedule-dashboard .status-bar-fill.status-active {
+    background: linear-gradient(90deg, #2196F3, #1976d2);
+  }
+
+  .schedule-dashboard .status-bar-fill.status-completed {
+    background: linear-gradient(90deg, #4CAF50, #388e3c);
+  }
+
+  .schedule-dashboard .status-bar-count {
+    width: 2rem;
+    text-align: right;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  /* Station/Type Stats List */
+  .schedule-dashboard .station-stats-list,
+  .schedule-dashboard .type-stats-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .schedule-dashboard .station-stat-row,
+  .schedule-dashboard .type-stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 0.375rem;
+  }
+
+  .schedule-dashboard .station-name,
+  .schedule-dashboard .type-name {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.875rem;
+  }
+
+  .schedule-dashboard .station-count,
+  .schedule-dashboard .type-count {
+    color: #00d4ff;
+    font-weight: 700;
+    font-size: 1.25rem;
+    min-width: 2rem;
+    text-align: right;
+  }
+
+  .schedule-dashboard .empty-hint {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.4);
+    padding: 1rem;
+    font-size: 0.875rem;
+  }
+
+  /* Quality Overview (品質分析用) */
+  .schedule-dashboard .quality-overview {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+  }
+
+  .schedule-dashboard .quality-main-stat {
+    text-align: center;
+  }
+
+  .schedule-dashboard .quality-big-value {
+    display: block;
+    font-size: 3rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+  }
+
+  .schedule-dashboard .quality-big-label {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .schedule-dashboard .quality-breakdown {
+    display: flex;
+    gap: 1rem;
+    flex: 1;
+  }
+
+  .schedule-dashboard .breakdown-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 0.5rem;
+    flex: 1;
+    text-align: center;
+  }
+
+  .schedule-dashboard .breakdown-label {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 0.375rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+  }
+
+  .schedule-dashboard .breakdown-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+
+  /* Inspection Rows (檢驗統計用) */
+  .schedule-dashboard .inspection-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .schedule-dashboard .inspection-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.625rem 0.75rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+  }
+
+  .schedule-dashboard .inspection-row span:first-child {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .schedule-dashboard .inspection-row span:last-child {
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  .schedule-dashboard .inspection-row.highlight {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 0.75rem;
+    margin-top: 0.5rem;
+    border-bottom: none;
+  }
+
+  /* Alert Styles (倉儲預警用) */
+  .schedule-dashboard .alert-ok {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    gap: 0.5rem;
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .schedule-dashboard .alert-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .schedule-dashboard .alert-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: rgba(255, 152, 0, 0.1);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  /* Progress Section */
+  .schedule-dashboard .progress-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .schedule-dashboard .progress-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .schedule-dashboard .progress-value {
+    font-weight: 600;
+    color: #fff;
+  }
+
   .schedule-dashboard .kpi-item {
     text-align: center;
     padding: 0.75rem;
@@ -3539,9 +3829,11 @@
   }
 
   .schedule-metric-label {
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     color: rgba(255, 255, 255, 0.6);
     display: block;
+    margin-top: 0.25rem;
+    font-weight: 500;
   }
 
   /* 進度區塊 */
@@ -3581,26 +3873,69 @@
   .schedule-progress-fill.medium { background: linear-gradient(90deg, #FF9800, #f57c00); }
   .schedule-progress-fill.low { background: linear-gradient(90deg, #f44336, #d32f2f); }
 
-  /* Mini Stats */
+  /* Mini Stats - 小型統計卡片 */
   .schedule-dashboard .mini-stats {
     display: flex;
-    gap: 1rem;
+    gap: 0.75rem;
     margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   .schedule-dashboard .mini-stat {
     display: flex;
     flex-direction: column;
-    font-size: 0.75rem;
+    align-items: center;
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 0.375rem;
+    text-align: center;
   }
 
   .schedule-dashboard .mini-label {
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.7rem;
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
   }
 
   .schedule-dashboard .mini-value {
     color: #fff;
+    font-size: 1.125rem;
+    font-weight: 700;
+  }
+
+  /* 烘箱迷你顯示 */
+  .schedule-dashboard .oven-mini-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.5rem;
+  }
+
+  .schedule-dashboard .oven-mini-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
     font-weight: 600;
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .schedule-dashboard .oven-mini-cell.oven-running {
+    background: rgba(76, 175, 80, 0.3);
+    color: #4CAF50;
+    border: 1px solid rgba(76, 175, 80, 0.5);
+  }
+
+  .schedule-dashboard .oven-mini-cell.oven-idle {
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.4);
   }
 
   /* 班次摘要 */
@@ -4695,15 +5030,89 @@
     .week-calendar {
       grid-template-columns: repeat(4, 1fr);
     }
+
+    /* 戰情中心子頁籤 - 手機版橫向滾動 */
     .schedule-tabs {
+      display: flex;
       overflow-x: auto;
       flex-wrap: nowrap;
       padding-bottom: 0.5rem;
       -webkit-overflow-scrolling: touch;
+      max-width: 100%;
+      gap: 0.5rem;
     }
     .schedule-tab {
       white-space: nowrap;
       flex-shrink: 0;
+      padding: 0.4rem 0.75rem;
+      font-size: 0.8rem;
+    }
+
+    /* 排程管理表格 */
+    .schedule-table-container {
+      max-width: 100%;
+      overflow-x: auto;
+    }
+    .schedule-table {
+      min-width: 500px;
+    }
+
+    /* 班次週曆 - 需要外層滾動容器 */
+    .schedule-widget .widget-content:has(.week-calendar),
+    .schedule-widget .widget-content:has(.equipment-timeline) {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .week-calendar {
+      min-width: 600px;
+    }
+    .week-header,
+    .week-row {
+      grid-template-columns: 80px repeat(7, 1fr);
+    }
+    .week-cell {
+      min-height: 40px;
+      padding: 0.35rem;
+    }
+    .week-cell.header {
+      font-size: 0.65rem;
+    }
+    .skill-matrix-container {
+      max-width: 100%;
+      overflow-x: auto;
+    }
+
+    /* 烘箱排程時間軸 */
+    .equipment-timeline {
+      min-width: 700px;
+    }
+
+    /* 品質分析 手機版響應式 */
+    .schedule-dashboard .quality-overview {
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .schedule-dashboard .quality-main-stat {
+      width: 100%;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .schedule-dashboard .quality-breakdown {
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.75rem;
+    }
+    .schedule-dashboard .breakdown-item {
+      min-width: 80px;
+      flex: 1;
+    }
+
+    /* KPI Grid 手機版 */
+    .schedule-dashboard .kpi-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .schedule-dashboard .kpi-grid-4 {
+      grid-template-columns: repeat(2, 1fr);
     }
   }
 </style>

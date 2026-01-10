@@ -8,7 +8,7 @@
       const loadingCount = ref(0);
       const loadingMessage = ref('');
       const version = ref('');
-      const currentTab = ref('schedule');
+      const currentTab = ref('dashboard');
       const workOrders = ref([]);
       const woStatusFilter = ref('all');
       const dispatches = ref([]);
@@ -1093,7 +1093,7 @@
         let defaultStation = '除膠站';
         if (wo.orderType === 'regeneration') defaultStation = '烘箱站';
         else if (wo.orderType === 'rework') defaultStation = '烘箱站';
-        formDispatch.value = { workOrderId: wo.id, stationName: defaultStation, operatorName: '', quantity: wo.quantity - wo.completedQty };
+        formDispatch.value = { workOrderId: wo.id, stationName: defaultStation, operatorName: currentOperator.value?.name || '', quantity: wo.quantity - wo.completedQty };
         showDispatchModal.value = true;
       };
 
@@ -2064,7 +2064,7 @@
           oldBarcode: '',
           oldLabelInfo: null,
           reason: '',
-          operatorName: '',
+          operatorName: currentOperator.value?.name || '',
           pendingNewLabel: false,
           newEpc: ''
         };
@@ -2118,7 +2118,7 @@
         formR0Upgrade.value = {
           barcode: '',
           labelInfo: null,
-          operatorName: '',
+          operatorName: currentOperator.value?.name || '',
           notes: ''
         };
       };
@@ -2790,13 +2790,13 @@
       };
 
       const openWmsModal = (type) => {
-        formWms.value = { locationCode: '', workOrderId: '', quantity: 1, barcode: '', barcodes: [], operatorName: '', fromLocation: '', toLocation: '', inventoryId: '', reason: '' };
+        formWms.value = { locationCode: '', workOrderId: '', quantity: 1, barcode: '', barcodes: [], operatorName: currentOperator.value?.name || '', fromLocation: '', toLocation: '', inventoryId: '', reason: '' };
         wmsInventoryList.value = [];
         if (type === 'inbound') showWmsInboundModal.value = true;
         else if (type === 'transfer') showWmsTransferModal.value = true;
         else if (type === 'outbound') showWmsOutboundModal.value = true;
         else if (type === 'stocktake') {
-          formStockTake.value = { locationCode: '', operatorName: '', notes: '' };
+          formStockTake.value = { locationCode: '', operatorName: currentOperator.value?.name || '', notes: '' };
           stockTakeItems.value = [];
           showWmsStockTakeModal.value = true;
         }
@@ -2823,7 +2823,7 @@
           quantity: 1,
           barcode: '',
           barcodes: [],
-          operatorName: '',
+          operatorName: currentOperator.value?.name || '',
           fromLocation: inv.locationCode,
           toLocation: '',
           inventoryId: inv.id,
@@ -2843,7 +2843,7 @@
           quantity: 1,
           barcode: '',
           barcodes: [],
-          operatorName: '',
+          operatorName: currentOperator.value?.name || '',
           fromLocation: inv.locationCode,
           toLocation: '',
           inventoryId: inv.id,
@@ -2861,7 +2861,7 @@
         if (!loc) return;
         formStockTake.value = {
           locationCode: loc.code,
-          operatorName: '',
+          operatorName: currentOperator.value?.name || '',
           notes: ''
         };
         // 載入該儲位的盤點項目
@@ -3357,7 +3357,7 @@
         return { draft: '草稿', pending: '待生產', in_progress: '生產中', completed: '已完成', paused: '暫停' }[status] || status;
       };
 
-      // Watch for tab change to refresh icons
+      // Watch for tab change to refresh icons and pre-fill operator
       watch(currentTab, (newTab) => {
         if (newTab === 'oven') {
           nextTick(() => { if (window.lucide) lucide.createIcons(); });
@@ -3370,6 +3370,23 @@
           loadScheduleData();
           nextTick(() => { if (window.lucide) lucide.createIcons(); });
         }
+        // 自動填入操作人員（如尚未選擇）
+        if (newTab === 'outgassing' && !formOutgassing.value.operatorName && currentOperator.value) {
+          formOutgassing.value.operatorName = currentOperator.value.name;
+        }
+        if (newTab === 'aoi' && !formAoi.value.operatorName && currentOperator.value) {
+          formAoi.value.operatorName = currentOperator.value.name;
+        }
+      });
+
+      // Watch for operator change to update forms (ISO 27001 - 操作人員資料聯動)
+      watch(currentOperator, (newOp) => {
+        const name = newOp?.name || '';
+        // 更新當前頁面的表單（如果該表單已顯示）
+        if (currentTab.value === 'outgassing') formOutgassing.value.operatorName = name;
+        if (currentTab.value === 'aoi') formAoi.value.operatorName = name;
+        // 如果 Modal 已開啟，也更新其中的操作人員
+        if (showDispatchModal.value) formDispatch.value.operatorName = name;
       });
 
       onMounted(() => {

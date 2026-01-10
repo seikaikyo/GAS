@@ -42,8 +42,9 @@ project/
 
 ### 前端框架
 
-- **Vue 3 CDN** + **Shoelace Web Components**
+- **Vue 3 CDN** + **DaisyUI** (Tailwind CSS)
 - 不使用建置工具，直接部署
+- **注意**：MES 專案使用 DaisyUI，不是 Shoelace
 
 ### API 格式
 
@@ -309,6 +310,61 @@ dash e2e <URL> --mobile
 # 完整測試需使用上方腳本
 ```
 
+## CSS 修改防治措施（重要）
+
+### 禁止的 CSS 修改
+
+1. **不要隨意修改 border 屬性**
+   - 只用 `border-color`，不要改 `border` 本身
+   - DaisyUI 的 `input-bordered` 已設定好 border-width，覆蓋會導致溢出
+
+2. **不要增加元素尺寸**
+   - 不要把 `border: 1px` 改成 `border: 2px`
+   - 不要增加 `padding` 或 `margin`
+   - 改動會破壞 box-sizing 計算
+
+3. **修改 styles.html 前必須**
+   - 先用 `git show HEAD:mes/styles.html | grep -A 10 "要修改的選擇器"` 查看原始狀態
+   - 部署後用 Puppeteer 截圖驗證手機版
+   - 發現問題立即用 git 還原
+
+### 安全的 CSS 修改
+
+```css
+/* 安全：只改顏色 */
+border-color: #xxx !important;
+background-color: #xxx !important;
+color: #xxx !important;
+
+/* 危險：會影響尺寸 */
+border: 2px solid #xxx;  /* 禁止 */
+padding: 1rem;           /* 謹慎 */
+margin: 1rem;            /* 謹慎 */
+```
+
+### 修改後驗證
+
+```bash
+# 部署後必須跑手機版截圖測試
+cd /Users/dash/Documents/github/MES && node -e "
+const puppeteer = require('puppeteer');
+(async () => {
+  const browser = await puppeteer.launch({ headless: 'new' });
+  const page = await browser.newPage();
+  await page.setViewport({ width: 390, height: 844 });
+  await page.goto('https://script.google.com/macros/s/AKfycbwbX1uACKWhzRhe8JxlXwKEWbZ7ysduAQtf2R2drxIZm5X6acMX7WFUMEpCGouPELoKYw/exec', { waitUntil: 'networkidle0', timeout: 60000 });
+  await new Promise(r => setTimeout(r, 5000));
+  const frames = page.frames();
+  const frame = frames[2];
+  // 測試設定頁
+  await frame.evaluate(() => { document.querySelectorAll('.nav-tab').forEach(t => { if(t.textContent.includes('設定')) t.click(); }); });
+  await new Promise(r => setTimeout(r, 2000));
+  await page.screenshot({ path: '/tmp/verify-settings.png', fullPage: true });
+  await browser.close();
+})();
+"
+```
+
 ## 版本更新 SOP
 
 1. 修改程式碼
@@ -316,7 +372,8 @@ dash e2e <URL> --mobile
 3. `clasp push`
 4. `clasp deploy -i <DEPLOYMENT_ID> -d "版本說明"`
 5. 重新整理網頁確認版本號
-6. 測試功能
+6. **手機版截圖驗證**（修改 CSS 時必須）
+7. 測試功能
 
 ## 測試方式
 
