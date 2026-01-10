@@ -365,15 +365,38 @@ const puppeteer = require('puppeteer');
 "
 ```
 
-## 版本更新 SOP
+## 版本更新 SOP（重要）
+
+**核心原則**：版本號更新必須與部署同步完成，禁止先改版本號但不部署。
+
+### 正確流程
+
+```bash
+# 1. 修改程式碼（含 Code.js 版本號 + tab-settings.html 更新日誌）
+# 2. 推送 + 部署（必須一起執行）
+clasp push && clasp deploy -i <DEPLOYMENT_ID> -d "版本說明"
+
+# 3. 確認部署成功後，才 commit
+git add -A && git commit -m "類型: 描述 (vX.X.X)"
+```
+
+### 完整步驟
 
 1. 修改程式碼
-2. 更新 Code.js 版本號
-3. `clasp push`
-4. `clasp deploy -i <DEPLOYMENT_ID> -d "版本說明"`
-5. 重新整理網頁確認版本號
-6. **手機版截圖驗證**（修改 CSS 時必須）
-7. 測試功能
+2. 更新 Code.js 的 `getVersion` 版本號
+3. 更新 tab-settings.html 的更新日誌
+4. **執行 `clasp push && clasp deploy -i <ID> -d "vX.X.X 說明"`**
+5. 確認 deploy 輸出成功（顯示 @版本號）
+6. 重新整理網頁確認版本號正確
+7. **手機版截圖驗證**（修改 CSS 時必須）
+8. 測試功能
+9. 全部通過後才 `git commit`
+
+### 禁止事項
+
+- 禁止先 commit 版本號變更但不部署
+- 禁止 `clasp push` 後忘記 `clasp deploy`
+- 禁止部署失敗後仍然 commit
 
 ## 測試方式
 
