@@ -809,6 +809,625 @@
     padding-top: 1rem;
   }
 
+  /* WMS Dashboard */
+  .wms-dashboard {
+    margin-bottom: 1.5rem;
+  }
+
+  .wms-dashboard-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .wms-widget {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    overflow: hidden;
+  }
+
+  .wms-widget-wide {
+    grid-column: span 2;
+  }
+
+  .wms-widget-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+  }
+
+  .wms-widget-title {
+    font-weight: 600;
+    font-size: 0.875rem;
+  }
+
+  .wms-widget-badge {
+    font-size: 0.7rem;
+    padding: 0.125rem 0.5rem;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 9999px;
+  }
+
+  .wms-badge-warning {
+    background: #f59e0b;
+  }
+
+  .wms-badge-success {
+    background: #22c55e;
+  }
+
+  .wms-widget-body {
+    padding: 1rem;
+  }
+
+  /* W1: 庫存概況 Stats Grid */
+  .wms-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+  }
+
+  .wms-stat-card {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    background: #f8fafc;
+  }
+
+  .wms-stat-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    color: white;
+  }
+
+  .wms-stat-primary .wms-stat-icon { background: #667eea; }
+  .wms-stat-success .wms-stat-icon { background: #22c55e; }
+  .wms-stat-warning .wms-stat-icon { background: #f59e0b; }
+  .wms-stat-info .wms-stat-icon { background: #06b6d4; }
+
+  .wms-stat-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .wms-stat-card .wms-stat-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.2;
+  }
+
+  .wms-stat-card .wms-stat-label {
+    font-size: 0.7rem;
+    color: #64748b;
+  }
+
+  /* W2: 今日動態 */
+  .wms-today-stats {
+    display: flex;
+    justify-content: space-around;
+    gap: 1rem;
+  }
+
+  .wms-today-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    flex: 1;
+  }
+
+  .wms-today-inbound {
+    background: rgba(34, 197, 94, 0.1);
+    color: #16a34a;
+  }
+
+  .wms-today-outbound {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+  }
+
+  .wms-today-transfer {
+    background: rgba(59, 130, 246, 0.1);
+    color: #2563eb;
+  }
+
+  .wms-today-info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .wms-today-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+
+  .wms-today-label {
+    font-size: 0.7rem;
+    opacity: 0.8;
+  }
+
+  /* W3: 庫存預警 */
+  .wms-alert-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    color: #22c55e;
+    gap: 0.5rem;
+  }
+
+  .wms-alert-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .wms-alert-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.8rem;
+  }
+
+  .wms-alert-warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: #b45309;
+  }
+
+  .wms-alert-error {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+  }
+
+  .wms-alert-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .wms-alert-title {
+    font-weight: 600;
+  }
+
+  .wms-alert-desc {
+    font-size: 0.7rem;
+    opacity: 0.8;
+    margin-top: 0.125rem;
+  }
+
+  /* W4: 周轉分析 */
+  .wms-turnover-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .wms-turnover-main {
+    text-align: center;
+    padding: 0.5rem;
+  }
+
+  .wms-turnover-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #667eea;
+  }
+
+  .wms-turnover-label {
+    font-size: 0.75rem;
+    color: #64748b;
+  }
+
+  .wms-turnover-details {
+    border-top: 1px solid #e2e8f0;
+    padding-top: 0.5rem;
+  }
+
+  .wms-turnover-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.25rem 0;
+    font-size: 0.8rem;
+  }
+
+  .wms-turnover-item-label {
+    color: #64748b;
+  }
+
+  .wms-turnover-item-value {
+    font-weight: 600;
+  }
+
+  /* W5: 入出庫進度 */
+  .wms-progress-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .wms-progress-bar-container {
+    height: 24px;
+    background: #f1f5f9;
+    border-radius: 0.25rem;
+    overflow: hidden;
+  }
+
+  .wms-progress-bar {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 600;
+    transition: width 0.3s ease;
+  }
+
+  .wms-progress-inbound {
+    background: linear-gradient(90deg, #22c55e, #4ade80);
+  }
+
+  .wms-progress-outbound {
+    background: linear-gradient(90deg, #ef4444, #f87171);
+  }
+
+  .wms-progress-summary {
+    text-align: center;
+    font-size: 0.85rem;
+    padding: 0.5rem;
+    background: #f8fafc;
+    border-radius: 0.25rem;
+  }
+
+  .text-success { color: #16a34a; font-weight: 600; }
+  .text-error { color: #dc2626; font-weight: 600; }
+  .text-warning { color: #d97706; font-weight: 600; }
+
+  /* ==================== Dashboard 戰情中心 ==================== */
+  .dashboard-sub-tabs {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: #f8fafc;
+    border-radius: 0.75rem;
+    margin-bottom: 1rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .dashboard-sub-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    border: none;
+    background: white;
+    border-radius: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .dashboard-sub-tab:hover {
+    background: #e2e8f0;
+    color: #1e293b;
+  }
+
+  .dashboard-sub-tab.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+  }
+
+  .dashboard-panel {
+    min-height: 400px;
+  }
+
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+
+  .dash-widget {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    overflow: hidden;
+  }
+
+  .dash-widget-wide {
+    grid-column: span 2;
+  }
+
+  .dash-widget-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.625rem 1rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+  }
+
+  .dash-header-green { background: linear-gradient(135deg, #22c55e, #16a34a); }
+  .dash-header-blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+  .dash-header-gold { background: linear-gradient(135deg, #f59e0b, #d97706); }
+  .dash-header-cyan { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+  .dash-header-red { background: linear-gradient(135deg, #ef4444, #dc2626); }
+  .dash-header-orange { background: linear-gradient(135deg, #f97316, #ea580c); }
+  .dash-header-teal { background: linear-gradient(135deg, #14b8a6, #0d9488); }
+  .dash-header-purple { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+  .dash-header-yellow { background: linear-gradient(135deg, #eab308, #ca8a04); }
+
+  .dash-widget-title {
+    font-weight: 600;
+    font-size: 0.8rem;
+  }
+
+  .dash-widget-badge {
+    font-size: 0.65rem;
+    padding: 0.125rem 0.5rem;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 9999px;
+  }
+
+  .dash-widget-body {
+    padding: 1rem;
+  }
+
+  /* D1: 環保影響力 */
+  .eco-impact-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .eco-impact-card {
+    text-align: center;
+    padding: 0.75rem;
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05));
+    border-radius: 0.5rem;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+  }
+
+  .eco-icon { font-size: 1.5rem; margin-bottom: 0.25rem; }
+  .eco-value { font-size: 1.25rem; font-weight: 700; color: #16a34a; }
+  .eco-label { font-size: 0.65rem; color: #64748b; }
+
+  .eco-summary {
+    background: #f8fafc;
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  .eco-summary-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.375rem 0;
+    font-size: 0.8rem;
+    border-bottom: 1px dashed #e2e8f0;
+  }
+
+  .eco-summary-item:last-child { border-bottom: none; }
+  .eco-summary-value { font-weight: 600; }
+
+  /* D2-D4: 水資源/碳權/綠電 */
+  .water-main, .carbon-main, .green-main {
+    text-align: center;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .water-icon, .carbon-icon, .green-icon { font-size: 2rem; margin-bottom: 0.25rem; }
+  .water-value, .carbon-value, .green-value { font-size: 1.5rem; font-weight: 700; }
+  .water-label, .carbon-label, .green-label { font-size: 0.7rem; color: #64748b; }
+
+  .water-value { color: #2563eb; }
+  .carbon-value { color: #d97706; }
+  .green-value { color: #0891b2; }
+
+  .water-details, .carbon-details, .green-details {
+    background: #f8fafc;
+    border-radius: 0.375rem;
+    padding: 0.5rem;
+  }
+
+  .water-item, .carbon-item, .green-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.25rem 0;
+    font-size: 0.75rem;
+  }
+
+  /* D5: OEE */
+  .oee-grid { display: flex; flex-direction: column; gap: 0.5rem; }
+  .oee-item { margin-bottom: 0.5rem; }
+  .oee-label { font-size: 0.7rem; color: #64748b; }
+  .oee-value { font-size: 1.25rem; font-weight: 700; color: #667eea; }
+  .oee-bar { height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; margin-top: 0.25rem; }
+  .oee-bar-fill { height: 100%; background: #22c55e; transition: width 0.3s; }
+  .oee-bar-blue { background: #3b82f6; }
+  .oee-main { display: flex; justify-content: space-between; padding: 0.5rem; background: #f8fafc; border-radius: 0.375rem; font-size: 0.85rem; }
+  .oee-main-value { font-weight: 700; color: #667eea; }
+
+  /* D6: 產出 vs 計畫 */
+  .production-compare { display: flex; justify-content: space-around; margin-bottom: 0.75rem; }
+  .production-item { text-align: center; }
+  .production-label { font-size: 0.7rem; color: #64748b; display: block; }
+  .production-value { font-size: 1.5rem; font-weight: 700; }
+  .production-rate, .production-wip { display: flex; justify-content: space-between; padding: 0.375rem 0.5rem; background: #f8fafc; border-radius: 0.25rem; font-size: 0.8rem; margin-top: 0.375rem; }
+
+  /* D7: 瓶頸 */
+  .bottleneck-list { display: flex; flex-direction: column; gap: 0.375rem; }
+  .bottleneck-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: #f8fafc; border-radius: 0.375rem; font-size: 0.8rem; }
+  .bottleneck-rank { width: 20px; height: 20px; background: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 600; }
+  .bottleneck-name { flex: 1; }
+  .bottleneck-util { font-weight: 600; }
+
+  /* D8: Pareto */
+  .pareto-list { display: flex; flex-direction: column; gap: 0.375rem; margin-bottom: 0.5rem; }
+  .pareto-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; }
+  .pareto-name { width: 60px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pareto-bar-container { flex: 1; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+  .pareto-bar { height: 100%; background: linear-gradient(90deg, #f97316, #ea580c); }
+  .pareto-value { width: 30px; text-align: right; font-weight: 600; }
+  .pareto-rework { display: flex; justify-content: space-between; padding: 0.5rem; background: #f8fafc; border-radius: 0.375rem; font-size: 0.8rem; }
+
+  /* D9: 環境 */
+  .env-grid { display: flex; justify-content: space-around; margin-bottom: 0.75rem; }
+  .env-item { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; }
+  .env-value { font-size: 1.25rem; font-weight: 700; color: #0d9488; }
+  .env-label { font-size: 0.65rem; color: #64748b; }
+  .env-tvoc { display: flex; justify-content: space-between; padding: 0.5rem; background: #f8fafc; border-radius: 0.375rem; font-size: 0.8rem; }
+
+  /* D10: SPC */
+  .spc-main { display: flex; justify-content: space-between; padding: 0.5rem; background: #f8fafc; border-radius: 0.375rem; margin-bottom: 0.75rem; }
+  .spc-value { font-size: 1.5rem; font-weight: 700; }
+  .spc-pressure { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+  .spc-pressure-item { text-align: center; padding: 0.5rem; background: #f8fafc; border-radius: 0.375rem; font-size: 0.75rem; }
+
+  /* D11: OQC */
+  .oqc-stats { display: flex; justify-content: space-around; margin-bottom: 0.75rem; }
+  .oqc-item { text-align: center; }
+  .oqc-label { font-size: 0.65rem; color: #64748b; display: block; }
+  .oqc-value { font-size: 1.25rem; font-weight: 700; }
+  .oqc-details { background: #f8fafc; border-radius: 0.375rem; padding: 0.5rem; }
+  .oqc-detail-item { display: flex; justify-content: space-between; padding: 0.25rem 0; font-size: 0.75rem; }
+
+  /* D12: 能源 */
+  .energy-main { text-align: center; margin-bottom: 0.75rem; }
+  .energy-value { font-size: 2rem; font-weight: 700; color: #ca8a04; }
+  .energy-unit { font-size: 0.75rem; color: #64748b; }
+  .energy-peak { display: flex; flex-direction: column; gap: 0.375rem; }
+  .energy-peak-item { display: flex; justify-content: space-between; padding: 0.375rem 0.5rem; background: #f8fafc; border-radius: 0.25rem; font-size: 0.8rem; }
+
+  /* D13: 告警 */
+  .alert-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1rem; color: #22c55e; gap: 0.5rem; }
+  .alert-list { display: flex; flex-direction: column; gap: 0.375rem; margin-bottom: 0.5rem; }
+  .alert-item { display: flex; gap: 0.5rem; padding: 0.375rem; border-radius: 0.25rem; font-size: 0.7rem; background: rgba(239, 68, 68, 0.1); }
+  .alert-warning { background: rgba(245, 158, 11, 0.1); }
+  .alert-error { background: rgba(239, 68, 68, 0.1); }
+  .alert-time { color: #64748b; white-space: nowrap; }
+  .alert-msg { flex: 1; }
+  .alert-metrics { display: flex; justify-content: space-around; padding: 0.5rem; background: #f8fafc; border-radius: 0.375rem; }
+  .alert-metric { text-align: center; font-size: 0.75rem; }
+
+  /* D14: 烘箱 */
+  .oven-list { display: flex; flex-direction: column; gap: 0.375rem; }
+  .oven-item { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: #f8fafc; border-radius: 0.375rem; font-size: 0.8rem; }
+  .oven-name { font-weight: 500; }
+  .oven-temp { font-weight: 600; }
+  .oven-status { font-size: 0.65rem; padding: 0.125rem 0.375rem; border-radius: 9999px; }
+  .status-running { background: rgba(34, 197, 94, 0.2); color: #16a34a; }
+  .status-idle { background: rgba(100, 116, 139, 0.2); color: #64748b; }
+
+  /* 生產製程 */
+  .capacity-chart { display: flex; justify-content: space-around; align-items: flex-end; height: 120px; padding: 0.5rem; }
+  .capacity-bar-group { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; }
+  .capacity-bar { width: 24px; background: linear-gradient(180deg, #667eea, #764ba2); border-radius: 4px 4px 0 0; display: flex; align-items: flex-end; justify-content: center; min-height: 20px; }
+  .capacity-bar-value { font-size: 0.6rem; color: white; padding-bottom: 0.25rem; }
+  .capacity-bar-label { font-size: 0.6rem; color: #64748b; }
+
+  .wo-progress-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  .wo-progress-item { background: #f8fafc; padding: 0.5rem; border-radius: 0.375rem; }
+  .wo-progress-header { display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 0.25rem; }
+  .wo-number { font-weight: 600; }
+  .wo-percent { color: #667eea; }
+  .wo-progress-bar { height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; }
+  .wo-progress-fill { height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); }
+
+  .ai-suggestions { display: flex; flex-direction: column; gap: 0.5rem; }
+  .ai-suggestion-item { display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.5rem; background: rgba(139, 92, 246, 0.1); border-radius: 0.375rem; font-size: 0.75rem; color: #7c3aed; }
+
+  /* 品質分析 */
+  .yield-chart { display: flex; justify-content: space-around; align-items: flex-end; height: 80px; margin-bottom: 0.5rem; }
+  .yield-point { display: flex; flex-direction: column; align-items: center; }
+  .yield-bar { width: 12px; background: linear-gradient(180deg, #22c55e, #16a34a); border-radius: 2px 2px 0 0; }
+  .yield-label { font-size: 0.5rem; color: #64748b; margin-top: 0.25rem; }
+  .yield-summary { display: flex; justify-content: space-between; padding: 0.5rem; background: #f8fafc; border-radius: 0.375rem; font-size: 0.85rem; }
+
+  .ng-reasons { display: flex; flex-direction: column; gap: 0.375rem; }
+  .ng-reason-item { display: flex; justify-content: space-between; padding: 0.375rem 0.5rem; background: rgba(239, 68, 68, 0.05); border-radius: 0.25rem; font-size: 0.75rem; border-left: 3px solid #ef4444; }
+  .ng-reason-count { font-weight: 600; color: #dc2626; }
+
+  .spc-monitors { display: flex; flex-direction: column; gap: 0.375rem; }
+  .spc-monitor-item { display: flex; justify-content: space-between; padding: 0.375rem 0.5rem; background: #f8fafc; border-radius: 0.25rem; font-size: 0.8rem; }
+  .spc-monitor-status { font-size: 0.65rem; padding: 0.125rem 0.375rem; border-radius: 9999px; }
+  .spc-monitor-status.normal { background: rgba(34, 197, 94, 0.2); color: #16a34a; }
+  .spc-monitor-status.warning { background: rgba(245, 158, 11, 0.2); color: #d97706; }
+  .spc-monitor-status.error { background: rgba(239, 68, 68, 0.2); color: #dc2626; }
+
+  /* 能源管理 */
+  .energy-overview { display: flex; justify-content: space-around; }
+  .energy-stat { text-align: center; }
+  .energy-stat-value { font-size: 1.25rem; font-weight: 700; display: block; }
+  .energy-stat-label { font-size: 0.65rem; color: #64748b; }
+
+  .peak-distribution { display: flex; flex-direction: column; gap: 0.5rem; }
+  .peak-item { display: flex; justify-content: space-between; padding: 0.5rem; border-radius: 0.375rem; font-size: 0.8rem; }
+  .peak-on { background: rgba(239, 68, 68, 0.1); }
+  .peak-off { background: rgba(34, 197, 94, 0.1); }
+  .peak-value { font-weight: 600; }
+
+  .energy-tips { display: flex; flex-direction: column; gap: 0.5rem; }
+  .energy-tip-item { display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.5rem; background: rgba(34, 197, 94, 0.1); border-radius: 0.375rem; font-size: 0.75rem; color: #16a34a; }
+
+  /* 倉儲調度 Dashboard */
+  .wms-overview-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
+  .wms-overview-card { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; padding: 0.75rem; background: #f8fafc; border-radius: 0.5rem; }
+  .wms-overview-value { font-size: 1.25rem; font-weight: 700; color: #667eea; }
+  .wms-overview-label { font-size: 0.65rem; color: #64748b; }
+
+  .wms-today-grid { display: flex; justify-content: space-around; }
+  .wms-today-card { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; padding: 0.75rem 1rem; border-radius: 0.5rem; }
+  .wms-inbound { background: rgba(34, 197, 94, 0.1); color: #16a34a; }
+  .wms-outbound { background: rgba(239, 68, 68, 0.1); color: #dc2626; }
+  .wms-transfer { background: rgba(59, 130, 246, 0.1); color: #2563eb; }
+  .wms-today-value { font-size: 1.25rem; font-weight: 700; }
+  .wms-today-label { font-size: 0.65rem; }
+
+  .wms-alert-ok { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1rem; color: #22c55e; gap: 0.5rem; }
+  .wms-alert-list-compact { display: flex; flex-direction: column; gap: 0.375rem; }
+  .wms-alert-compact { display: flex; align-items: center; gap: 0.5rem; padding: 0.375rem 0.5rem; background: #f8fafc; border-radius: 0.25rem; font-size: 0.75rem; }
+
+  /* 人力排程 */
+  .workforce-overview { display: flex; justify-content: space-around; }
+  .workforce-stat { text-align: center; }
+  .workforce-value { font-size: 1.5rem; font-weight: 700; display: block; }
+  .workforce-label { font-size: 0.65rem; color: #64748b; }
+
+  .shift-distribution { display: flex; flex-direction: column; gap: 0.375rem; }
+  .shift-item { display: flex; justify-content: space-between; padding: 0.5rem; background: #f8fafc; border-radius: 0.375rem; font-size: 0.8rem; }
+  .shift-count { font-weight: 600; }
+
+  .skill-coverage { display: flex; flex-direction: column; gap: 0.5rem; }
+  .skill-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; }
+  .skill-name { width: 50px; }
+  .skill-bar { flex: 1; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+  .skill-fill { height: 100%; background: linear-gradient(90deg, #8b5cf6, #7c3aed); }
+  .skill-percent { width: 35px; text-align: right; }
+
   /* Form Sections */
   .form-section {
     background: #f8fafc;

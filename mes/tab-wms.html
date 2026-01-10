@@ -14,6 +14,178 @@
     </div>
   </div>
 
+  <!-- WMS 戰情總覽 Dashboard -->
+  <div class="wms-dashboard" v-if="!wmsLoading && wmsLocationSummary.length > 0">
+    <!-- 第一行: W1 庫存概況 + W2 今日動態 -->
+    <div class="wms-dashboard-row">
+      <!-- W1: 庫存概況 -->
+      <div class="wms-widget wms-widget-wide">
+        <div class="wms-widget-header">
+          <span class="wms-widget-title">W1 庫存概況</span>
+          <span class="wms-widget-badge">即時</span>
+        </div>
+        <div class="wms-widget-body">
+          <div class="wms-stats-grid">
+            <div class="wms-stat-card wms-stat-primary">
+              <div class="wms-stat-icon">
+                <i data-lucide="layers" class="w-6 h-6"></i>
+              </div>
+              <div class="wms-stat-info">
+                <div class="wms-stat-value">{{ wmsStats.totalItems }}</div>
+                <div class="wms-stat-label">總筆數</div>
+              </div>
+            </div>
+            <div class="wms-stat-card wms-stat-success">
+              <div class="wms-stat-icon">
+                <i data-lucide="package" class="w-6 h-6"></i>
+              </div>
+              <div class="wms-stat-info">
+                <div class="wms-stat-value">{{ wmsStats.totalQty }}</div>
+                <div class="wms-stat-label">總件數</div>
+              </div>
+            </div>
+            <div class="wms-stat-card wms-stat-warning">
+              <div class="wms-stat-icon">
+                <i data-lucide="warehouse" class="w-6 h-6"></i>
+              </div>
+              <div class="wms-stat-info">
+                <div class="wms-stat-value">{{ wmsStats.usedLocations }}/{{ wmsStats.totalLocations }}</div>
+                <div class="wms-stat-label">使用倉區</div>
+              </div>
+            </div>
+            <div class="wms-stat-card wms-stat-info">
+              <div class="wms-stat-icon">
+                <i data-lucide="percent" class="w-6 h-6"></i>
+              </div>
+              <div class="wms-stat-info">
+                <div class="wms-stat-value">{{ wmsStats.utilization }}%</div>
+                <div class="wms-stat-label">使用率</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- W2: 今日動態 -->
+      <div class="wms-widget">
+        <div class="wms-widget-header">
+          <span class="wms-widget-title">W2 今日動態</span>
+          <span class="wms-widget-badge">{{ formatDate(new Date()) }}</span>
+        </div>
+        <div class="wms-widget-body">
+          <div class="wms-today-stats">
+            <div class="wms-today-item wms-today-inbound">
+              <i data-lucide="arrow-down-circle" class="w-5 h-5"></i>
+              <div class="wms-today-info">
+                <span class="wms-today-value">{{ wmsStats.todayInbound }}</span>
+                <span class="wms-today-label">入庫</span>
+              </div>
+            </div>
+            <div class="wms-today-item wms-today-outbound">
+              <i data-lucide="arrow-up-circle" class="w-5 h-5"></i>
+              <div class="wms-today-info">
+                <span class="wms-today-value">{{ wmsStats.todayOutbound }}</span>
+                <span class="wms-today-label">出庫</span>
+              </div>
+            </div>
+            <div class="wms-today-item wms-today-transfer">
+              <i data-lucide="arrow-left-right" class="w-5 h-5"></i>
+              <div class="wms-today-info">
+                <span class="wms-today-value">{{ wmsStats.todayTransfer }}</span>
+                <span class="wms-today-label">調撥</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 第二行: W3 庫存預警 + W4 周轉分析 + W5 入出庫進度 -->
+    <div class="wms-dashboard-row">
+      <!-- W3: 庫存預警 -->
+      <div class="wms-widget">
+        <div class="wms-widget-header">
+          <span class="wms-widget-title">W3 庫存預警</span>
+          <span class="wms-widget-badge" :class="wmsStats.alertCount > 0 ? 'wms-badge-warning' : 'wms-badge-success'">
+            {{ wmsStats.alertCount > 0 ? wmsStats.alertCount + ' 項' : '正常' }}
+          </span>
+        </div>
+        <div class="wms-widget-body">
+          <div v-if="wmsAlerts.length === 0" class="wms-alert-empty">
+            <i data-lucide="check-circle" class="w-8 h-8"></i>
+            <span>庫存狀態正常</span>
+          </div>
+          <div v-else class="wms-alert-list">
+            <div v-for="alert in wmsAlerts.slice(0, 3)" :key="alert.id"
+                 class="wms-alert-item" :class="'wms-alert-' + alert.type">
+              <i :data-lucide="alert.icon" class="w-4 h-4"></i>
+              <div class="wms-alert-content">
+                <div class="wms-alert-title">{{ alert.title }}</div>
+                <div class="wms-alert-desc">{{ alert.description }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- W4: 周轉分析 -->
+      <div class="wms-widget">
+        <div class="wms-widget-header">
+          <span class="wms-widget-title">W4 周轉分析</span>
+          <span class="wms-widget-badge">本月</span>
+        </div>
+        <div class="wms-widget-body">
+          <div class="wms-turnover-stats">
+            <div class="wms-turnover-main">
+              <div class="wms-turnover-value">{{ wmsStats.turnoverRate }}</div>
+              <div class="wms-turnover-label">周轉率 (次/月)</div>
+            </div>
+            <div class="wms-turnover-details">
+              <div class="wms-turnover-item">
+                <span class="wms-turnover-item-label">平均庫存天數</span>
+                <span class="wms-turnover-item-value">{{ wmsStats.avgStockDays }} 天</span>
+              </div>
+              <div class="wms-turnover-item">
+                <span class="wms-turnover-item-label">滯留品項</span>
+                <span class="wms-turnover-item-value" :class="wmsStats.slowMoving > 0 ? 'text-warning' : ''">
+                  {{ wmsStats.slowMoving }} 項
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- W5: 入出庫進度 -->
+      <div class="wms-widget">
+        <div class="wms-widget-header">
+          <span class="wms-widget-title">W5 本週進度</span>
+          <span class="wms-widget-badge">7 天</span>
+        </div>
+        <div class="wms-widget-body">
+          <div class="wms-progress-chart">
+            <div class="wms-progress-bar-container">
+              <div class="wms-progress-bar wms-progress-inbound" :style="{ width: wmsStats.weekInboundPercent + '%' }">
+                <span>入 {{ wmsStats.weekInbound }}</span>
+              </div>
+            </div>
+            <div class="wms-progress-bar-container">
+              <div class="wms-progress-bar wms-progress-outbound" :style="{ width: wmsStats.weekOutboundPercent + '%' }">
+                <span>出 {{ wmsStats.weekOutbound }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="wms-progress-summary">
+            <span>淨增減: </span>
+            <span :class="wmsStats.weekNet >= 0 ? 'text-success' : 'text-error'">
+              {{ wmsStats.weekNet >= 0 ? '+' : '' }}{{ wmsStats.weekNet }} 件
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- 倉區總覽 -->
   <div class="wms-location-grid">
     <div v-for="loc in wmsLocationSummary" :key="loc.id"

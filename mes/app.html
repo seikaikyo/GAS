@@ -342,6 +342,9 @@
         notes: ''
       });
 
+      // ===== 戰情中心 (Factory Dashboard) =====
+      const dashboardSubTab = ref('overview');
+
       // ===== 排程管理 (Scheduling Dashboard) =====
       const scheduleSubTab = ref('overview');
       const scheduleDate = ref(new Date().toISOString().split('T')[0]);
@@ -471,6 +474,151 @@
           resourceConflict: 0,
           capacityConflict: 0
         };
+      });
+
+      // ===== 戰情中心統計 (Factory Dashboard Stats) - 只用真實數據 =====
+      const dashStats = Vue.computed(() => {
+        const today = new Date().toISOString().split('T')[0];
+        const todayFormatted = today.replace(/-/g, '/').slice(5); // MM/DD
+
+        // 今日派工統計
+        const todayDisp = dispatches.value.filter(d => d.createdAt && d.createdAt.startsWith(today));
+        const completedDisp = todayDisp.filter(d => d.status === 'completed');
+        const inProgressDisp = todayDisp.filter(d => d.status === 'in_progress');
+        const todayTargetQty = todayDisp.reduce((sum, d) => sum + (parseInt(d.targetQty) || 0), 0);
+        const todayCompletedQty = completedDisp.reduce((sum, d) => sum + (parseInt(d.completedQty) || 0), 0);
+
+        // 工單統計
+        const activeOrders = workOrders.value.filter(w => w.status === 'in_progress');
+        const pendingOrders = workOrders.value.filter(w => w.status === 'pending');
+        const completedOrdersList = workOrders.value.filter(w => w.status === 'completed');
+        const totalOrders = workOrders.value.length;
+
+        // 工單類型統計
+        const deglueOrders = workOrders.value.filter(w => w.orderType === 'deglue').length;
+        const regenerationOrders = workOrders.value.filter(w => w.orderType === 'regeneration').length;
+        const reworkOrders = workOrders.value.filter(w => w.orderType === 'rework').length;
+
+        // 報工品質統計 (累計)
+        const totalGood = reports.value.reduce((sum, r) => sum + (parseInt(r.goodQty) || 0), 0);
+        const totalNg = reports.value.reduce((sum, r) => sum + (parseInt(r.ngQty) || 0), 0);
+        const totalReports = reports.value.length;
+        const yieldRate = (totalGood + totalNg) > 0 ? ((totalGood / (totalGood + totalNg)) * 100).toFixed(1) : '100.0';
+
+        // AOI 檢驗統計 (累計)
+        const aoiPass = aoiInspections.value.filter(a => a.result === 'PASS').length;
+        const aoiFail = aoiInspections.value.filter(a => a.result === 'FAIL').length;
+        const aoiTotal = aoiPass + aoiFail;
+        const aoiPassRate = aoiTotal > 0 ? Math.round(aoiPass / aoiTotal * 100) : 0;
+
+        // 釋氣檢驗統計 (累計)
+        const outgassingPass = outgassingTests.value.filter(t => t.result === 'PASS').length;
+        const outgassingFail = outgassingTests.value.filter(t => t.result === 'FAIL').length;
+        const outgassingTotal = outgassingPass + outgassingFail;
+        const outgassingPassRate = outgassingTotal > 0 ? Math.round(outgassingPass / outgassingTotal * 100) : 0;
+
+        // 烘箱狀態
+        const activeOvens = ovens.value.filter(o => o.running).length;
+
+        // 站點派工統計
+        const stationCounts = {};
+        dispatches.value.forEach(d => {
+          const station = d.stationName || '未指定';
+          stationCounts[station] = (stationCounts[station] || 0) + 1;
+        });
+        const stationStats = Object.entries(stationCounts)
+          .map(([name, count]) => ({ name, count }))
+          .sort((a, b) => b.count - a.count);
+
+        return {
+          // 日期
+          todayDate: todayFormatted,
+
+          // 工單總覽
+          pendingOrders: pendingOrders.length,
+          activeOrders: activeOrders.length,
+          completedOrders: completedOrdersList.length,
+          totalOrders,
+
+          // 工單類型
+          deglueOrders,
+          regenerationOrders,
+          reworkOrders,
+
+          // 今日派工
+          todayDispatchCount: todayDisp.length,
+          inProgressCount: inProgressDisp.length,
+          completedCount: completedDisp.length,
+          todayTargetQty,
+          todayCompletedQty,
+          achievementRate: todayTargetQty > 0 ? Math.round(todayCompletedQty / todayTargetQty * 100) : 0,
+
+          // 品質統計
+          totalGood,
+          totalNg,
+          totalReports,
+          yieldRate,
+
+          // AOI 檢驗
+          aoiPass,
+          aoiFail,
+          aoiTotal,
+          aoiPassRate,
+
+          // 釋氣檢驗
+          outgassingPass,
+          outgassingFail,
+          outgassingTotal,
+          outgassingPassRate,
+
+          // 烘箱
+          activeOvens,
+          totalOvens: ovens.value.length,
+
+          // 人員
+          totalOperators: operators.value.length,
+          todayShifts: shifts.value.filter(s => s.shiftDate === today).length,
+
+          // 站點統計
+          stationStats
+        };
+      });
+
+      // WMS 統計 (for Dashboard warehouse tab)
+      const wmsStats = Vue.computed(() => {
+        const inv = wmsInventory.value || [];
+        const locs = wmsLocations.value || [];
+        const movs = wmsMovements.value || [];
+        const today = new Date().toISOString().split('T')[0];
+        const todayMovs = movs.filter(m => m.createdAt && m.createdAt.startsWith(today));
+
+        return {
+          totalItems: inv.length,
+          totalQty: inv.reduce((sum, i) => sum + (parseInt(i.quantity) || 0), 0),
+          usedLocations: new Set(inv.map(i => i.locationCode)).size,
+          totalLocations: locs.length,
+          utilization: locs.length > 0 ? Math.round(new Set(inv.map(i => i.locationCode)).size / locs.length * 100) : 0,
+          todayInbound: todayMovs.filter(m => m.type === 'inbound').length,
+          todayOutbound: todayMovs.filter(m => m.type === 'outbound').length,
+          todayTransfer: todayMovs.filter(m => m.type === 'transfer').length
+        };
+      });
+
+      // WMS 警示 (for Dashboard warehouse tab)
+      const wmsAlerts = Vue.computed(() => {
+        const alerts = [];
+        const inv = wmsInventory.value || [];
+        // 低庫存警告
+        inv.forEach(item => {
+          if ((parseInt(item.quantity) || 0) < 5) {
+            alerts.push({
+              id: 'low-' + item.id,
+              type: 'warning',
+              title: `${item.productModel || '品項'} 庫存不足 (${item.quantity})`
+            });
+          }
+        });
+        return alerts.slice(0, 5);
       });
 
       const todayDispatches = Vue.computed(() => {
@@ -3355,6 +3503,8 @@
         // 盤點
         showWmsStockTakeModal, stockTakeItems, formStockTake,
         loadStockTakeInventory, submitWmsStockTake,
+        // 戰情中心 (Factory Dashboard)
+        dashboardSubTab, dashStats, wmsStats, wmsAlerts,
         // 排程管理 (Scheduling Dashboard)
         scheduleSubTab, scheduleDate, shifts, equipmentSchedules, schedulePlans, ganttView,
         showShiftModal, showEquipmentScheduleModal, savingShift, savingEquipmentSchedule,

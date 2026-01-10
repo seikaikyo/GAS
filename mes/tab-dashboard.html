@@ -1,0 +1,506 @@
+<!-- Tab: 戰情中心 Dashboard -->
+<div v-show="currentTab === 'dashboard'">
+  <!-- 子頁籤導航 -->
+  <div class="dashboard-sub-tabs">
+    <button :class="['dashboard-sub-tab', dashboardSubTab === 'overview' ? 'active' : '']"
+            @click="dashboardSubTab = 'overview'">
+      <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+      戰情總覽
+    </button>
+    <button :class="['dashboard-sub-tab', dashboardSubTab === 'production' ? 'active' : '']"
+            @click="dashboardSubTab = 'production'">
+      <i data-lucide="factory" class="w-4 h-4"></i>
+      生產監控
+    </button>
+    <button :class="['dashboard-sub-tab', dashboardSubTab === 'quality' ? 'active' : '']"
+            @click="dashboardSubTab = 'quality'">
+      <i data-lucide="check-circle" class="w-4 h-4"></i>
+      品質分析
+    </button>
+    <button :class="['dashboard-sub-tab', dashboardSubTab === 'warehouse' ? 'active' : '']"
+            @click="dashboardSubTab = 'warehouse'">
+      <i data-lucide="warehouse" class="w-4 h-4"></i>
+      倉儲狀態
+    </button>
+  </div>
+
+  <!-- ==================== 戰情總覽 ==================== -->
+  <div v-show="dashboardSubTab === 'overview'" class="dashboard-panel">
+    <div class="dashboard-grid">
+      <!-- 工單總覽 -->
+      <div class="dash-widget">
+        <div class="dash-widget-header">
+          <span class="dash-widget-title">工單總覽</span>
+          <span class="dash-widget-badge">即時</span>
+        </div>
+        <div class="dash-widget-body">
+          <div class="stat-grid">
+            <div class="stat-item">
+              <div class="stat-value text-warning">{{ dashStats.pendingOrders }}</div>
+              <div class="stat-label">待處理</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value text-info">{{ dashStats.activeOrders }}</div>
+              <div class="stat-label">進行中</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value text-success">{{ dashStats.completedOrders }}</div>
+              <div class="stat-label">已完成</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value">{{ dashStats.totalOrders }}</div>
+              <div class="stat-label">總工單</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 今日派工 -->
+      <div class="dash-widget">
+        <div class="dash-widget-header dash-header-blue">
+          <span class="dash-widget-title">今日派工</span>
+          <span class="dash-widget-badge">{{ dashStats.todayDate }}</span>
+        </div>
+        <div class="dash-widget-body">
+          <div class="stat-grid">
+            <div class="stat-item">
+              <div class="stat-value">{{ dashStats.todayDispatchCount }}</div>
+              <div class="stat-label">派工數</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value text-info">{{ dashStats.inProgressCount }}</div>
+              <div class="stat-label">進行中</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value text-success">{{ dashStats.completedCount }}</div>
+              <div class="stat-label">已完成</div>
+            </div>
+          </div>
+          <div class="progress-section" v-if="dashStats.todayTargetQty > 0">
+            <div class="progress-header">
+              <span>目標達成率</span>
+              <span :class="dashStats.achievementRate >= 100 ? 'text-success' : 'text-warning'">
+                {{ dashStats.achievementRate }}%
+              </span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" :style="{ width: Math.min(dashStats.achievementRate, 100) + '%' }"></div>
+            </div>
+            <div class="progress-detail">
+              {{ dashStats.todayCompletedQty }} / {{ dashStats.todayTargetQty }} 件
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 品質統計 -->
+      <div class="dash-widget">
+        <div class="dash-widget-header dash-header-green">
+          <span class="dash-widget-title">品質統計</span>
+          <span class="dash-widget-badge">累計</span>
+        </div>
+        <div class="dash-widget-body">
+          <div class="quality-main">
+            <div class="quality-rate">
+              <span class="quality-value" :class="dashStats.yieldRate >= 95 ? 'text-success' : 'text-warning'">
+                {{ dashStats.yieldRate }}%
+              </span>
+              <span class="quality-label">良品率</span>
+            </div>
+          </div>
+          <div class="quality-detail">
+            <div class="quality-item">
+              <span>良品數</span>
+              <span class="text-success">{{ dashStats.totalGood }}</span>
+            </div>
+            <div class="quality-item">
+              <span>不良數</span>
+              <span class="text-error">{{ dashStats.totalNg }}</span>
+            </div>
+            <div class="quality-item">
+              <span>總報工</span>
+              <span>{{ dashStats.totalReports }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AOI 檢驗 -->
+      <div class="dash-widget">
+        <div class="dash-widget-header dash-header-purple">
+          <span class="dash-widget-title">AOI 檢驗</span>
+          <span class="dash-widget-badge">累計</span>
+        </div>
+        <div class="dash-widget-body">
+          <div class="inspection-stats">
+            <div class="inspection-item">
+              <i data-lucide="check-circle" class="w-5 h-5 text-success"></i>
+              <span class="inspection-value">{{ dashStats.aoiPass }}</span>
+              <span class="inspection-label">PASS</span>
+            </div>
+            <div class="inspection-item">
+              <i data-lucide="x-circle" class="w-5 h-5 text-error"></i>
+              <span class="inspection-value">{{ dashStats.aoiFail }}</span>
+              <span class="inspection-label">FAIL</span>
+            </div>
+          </div>
+          <div class="inspection-rate" v-if="dashStats.aoiTotal > 0">
+            <span>通過率</span>
+            <span :class="dashStats.aoiPassRate >= 95 ? 'text-success' : 'text-warning'">
+              {{ dashStats.aoiPassRate }}%
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- OQC 釋氣檢驗 -->
+      <div class="dash-widget">
+        <div class="dash-widget-header dash-header-teal">
+          <span class="dash-widget-title">OQC 釋氣檢驗</span>
+          <span class="dash-widget-badge">累計</span>
+        </div>
+        <div class="dash-widget-body">
+          <div class="inspection-stats">
+            <div class="inspection-item">
+              <i data-lucide="check-circle" class="w-5 h-5 text-success"></i>
+              <span class="inspection-value">{{ dashStats.outgassingPass }}</span>
+              <span class="inspection-label">PASS</span>
+            </div>
+            <div class="inspection-item">
+              <i data-lucide="x-circle" class="w-5 h-5 text-error"></i>
+              <span class="inspection-value">{{ dashStats.outgassingFail }}</span>
+              <span class="inspection-label">FAIL</span>
+            </div>
+          </div>
+          <div class="inspection-rate" v-if="dashStats.outgassingTotal > 0">
+            <span>通過率</span>
+            <span :class="dashStats.outgassingPassRate >= 95 ? 'text-success' : 'text-warning'">
+              {{ dashStats.outgassingPassRate }}%
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 烘箱狀態 -->
+      <div class="dash-widget">
+        <div class="dash-widget-header dash-header-orange">
+          <span class="dash-widget-title">烘箱狀態</span>
+          <span class="dash-widget-badge">{{ dashStats.activeOvens }}/{{ dashStats.totalOvens }}</span>
+        </div>
+        <div class="dash-widget-body">
+          <div class="oven-grid">
+            <div v-for="oven in ovens" :key="oven.id"
+                 :class="['oven-cell', oven.running ? 'oven-running' : 'oven-idle']">
+              <span class="oven-id">{{ oven.id }}</span>
+              <span class="oven-status-dot"></span>
+            </div>
+          </div>
+          <div class="oven-summary">
+            <span>運轉中</span>
+            <span class="text-success">{{ dashStats.activeOvens }} 台</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 人員配置 -->
+      <div class="dash-widget">
+        <div class="dash-widget-header">
+          <span class="dash-widget-title">人員配置</span>
+          <span class="dash-widget-badge">系統</span>
+        </div>
+        <div class="dash-widget-body">
+          <div class="workforce-stats">
+            <div class="workforce-item">
+              <i data-lucide="users" class="w-5 h-5"></i>
+              <span class="workforce-value">{{ dashStats.totalOperators }}</span>
+              <span class="workforce-label">總人員</span>
+            </div>
+            <div class="workforce-item">
+              <i data-lucide="calendar" class="w-5 h-5"></i>
+              <span class="workforce-value">{{ dashStats.todayShifts }}</span>
+              <span class="workforce-label">今日排班</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 倉儲概況 -->
+      <div class="dash-widget">
+        <div class="dash-widget-header dash-header-cyan">
+          <span class="dash-widget-title">倉儲概況</span>
+          <span class="dash-widget-badge">WMS</span>
+        </div>
+        <div class="dash-widget-body">
+          <div class="wms-mini-stats">
+            <div class="wms-mini-item">
+              <span class="wms-mini-value">{{ wmsStats.totalItems }}</span>
+              <span class="wms-mini-label">庫存筆數</span>
+            </div>
+            <div class="wms-mini-item">
+              <span class="wms-mini-value">{{ wmsStats.totalQty }}</span>
+              <span class="wms-mini-label">總數量</span>
+            </div>
+            <div class="wms-mini-item">
+              <span class="wms-mini-value">{{ wmsStats.usedLocations }}/{{ wmsStats.totalLocations }}</span>
+              <span class="wms-mini-label">使用儲位</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 生產監控 ==================== -->
+  <div v-show="dashboardSubTab === 'production'" class="dashboard-panel">
+    <div class="dashboard-grid">
+      <!-- 工單狀態分布 -->
+      <div class="dash-widget dash-widget-wide">
+        <div class="dash-widget-header">
+          <span class="dash-widget-title">工單狀態分布</span>
+          <span class="dash-widget-badge">全部</span>
+        </div>
+        <div class="dash-widget-body">
+          <div class="status-bars">
+            <div class="status-bar-item">
+              <span class="status-bar-label">待處理</span>
+              <div class="status-bar-bg">
+                <div class="status-bar-fill status-pending"
+                     :style="{ width: (dashStats.pendingOrders / Math.max(dashStats.totalOrders, 1) * 100) + '%' }"></div>
+              </div>
+              <span class="status-bar-count">{{ dashStats.pendingOrders }}</span>
+            </div>
+            <div class="status-bar-item">
+              <span class="status-bar-label">進行中</span>
+              <div class="status-bar-bg">
+                <div class="status-bar-fill status-active"
+                     :style="{ width: (dashStats.activeOrders / Math.max(dashStats.totalOrders, 1) * 100) + '%' }"></div>
+              </div>
+              <span class="status-bar-count">{{ dashStats.activeOrders }}</span>
+            </div>
+            <div class="status-bar-item">
+              <span class="status-bar-label">已完成</span>
+              <div class="status-bar-bg">
+                <div class="status-bar-fill status-completed"
+                     :style="{ width: (dashStats.completedOrders / Math.max(dashStats.totalOrders, 1) * 100) + '%' }"></div>
+              </div>
+              <span class="status-bar-count">{{ dashStats.completedOrders }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 各站點派工數 -->
+      <div class="dash-widget">
+        <div class="dash-widget-header dash-header-blue">
+          <span class="dash-widget-title">站點派工統計</span>
+          <span class="dash-widget-badge">累計</span>
+        </div>
+        <div class="dash-widget-body">
+          <div class="station-list">
+            <div v-for="station in dashStats.stationStats" :key="station.name" class="station-item">
+              <span class="station-name">{{ station.name }}</span>
+              <span class="station-count">{{ station.count }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 工單類型分布 -->
+      <div class="dash-widget">
+        <div class="dash-widget-header">
+          <span class="dash-widget-title">工單類型</span>
+          <span class="dash-widget-badge">分布</span>
+        </div>
+        <div class="dash-widget-body">
+          <div class="type-list">
+            <div class="type-item">
+              <span class="type-name">除膠工單</span>
+              <span class="type-count">{{ dashStats.deglueOrders }}</span>
+            </div>
+            <div class="type-item">
+              <span class="type-name">再生工單</span>
+              <span class="type-count">{{ dashStats.regenerationOrders }}</span>
+            </div>
+            <div class="type-item">
+              <span class="type-name">重工工單</span>
+              <span class="type-count">{{ dashStats.reworkOrders }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 品質分析 ==================== -->
+  <div v-show="dashboardSubTab === 'quality'" class="dashboard-panel">
+    <div class="dashboard-grid">
+      <!-- 整體品質 -->
+      <div class="dash-widget dash-widget-wide">
+        <div class="dash-widget-header dash-header-green">
+          <span class="dash-widget-title">整體品質指標</span>
+          <span class="dash-widget-badge">累計</span>
+        </div>
+        <div class="dash-widget-body">
+          <div class="quality-overview">
+            <div class="quality-big-stat">
+              <div class="quality-big-value" :class="dashStats.yieldRate >= 95 ? 'text-success' : 'text-warning'">
+                {{ dashStats.yieldRate }}%
+              </div>
+              <div class="quality-big-label">良品率</div>
+            </div>
+            <div class="quality-breakdown">
+              <div class="breakdown-item">
+                <span class="breakdown-label">良品</span>
+                <span class="breakdown-value text-success">{{ dashStats.totalGood }}</span>
+              </div>
+              <div class="breakdown-item">
+                <span class="breakdown-label">不良</span>
+                <span class="breakdown-value text-error">{{ dashStats.totalNg }}</span>
+              </div>
+              <div class="breakdown-item">
+                <span class="breakdown-label">總報工</span>
+                <span class="breakdown-value">{{ dashStats.totalReports }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AOI 檢驗詳情 -->
+      <div class="dash-widget">
+        <div class="dash-widget-header dash-header-purple">
+          <span class="dash-widget-title">AOI 檢驗統計</span>
+          <span class="dash-widget-badge">{{ dashStats.aoiTotal }} 筆</span>
+        </div>
+        <div class="dash-widget-body">
+          <div class="inspection-detail">
+            <div class="inspection-row">
+              <span>通過 (PASS)</span>
+              <span class="text-success">{{ dashStats.aoiPass }}</span>
+            </div>
+            <div class="inspection-row">
+              <span>未通過 (FAIL)</span>
+              <span class="text-error">{{ dashStats.aoiFail }}</span>
+            </div>
+            <div class="inspection-row inspection-highlight">
+              <span>通過率</span>
+              <span :class="dashStats.aoiPassRate >= 95 ? 'text-success' : 'text-warning'">
+                {{ dashStats.aoiPassRate }}%
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 釋氣檢驗詳情 -->
+      <div class="dash-widget">
+        <div class="dash-widget-header dash-header-teal">
+          <span class="dash-widget-title">釋氣檢驗統計</span>
+          <span class="dash-widget-badge">{{ dashStats.outgassingTotal }} 筆</span>
+        </div>
+        <div class="dash-widget-body">
+          <div class="inspection-detail">
+            <div class="inspection-row">
+              <span>通過 (PASS)</span>
+              <span class="text-success">{{ dashStats.outgassingPass }}</span>
+            </div>
+            <div class="inspection-row">
+              <span>未通過 (FAIL)</span>
+              <span class="text-error">{{ dashStats.outgassingFail }}</span>
+            </div>
+            <div class="inspection-row inspection-highlight">
+              <span>通過率</span>
+              <span :class="dashStats.outgassingPassRate >= 95 ? 'text-success' : 'text-warning'">
+                {{ dashStats.outgassingPassRate }}%
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 倉儲狀態 ==================== -->
+  <div v-show="dashboardSubTab === 'warehouse'" class="dashboard-panel">
+    <div class="dashboard-grid">
+      <!-- 庫存總覽 -->
+      <div class="dash-widget dash-widget-wide">
+        <div class="dash-widget-header">
+          <span class="dash-widget-title">庫存總覽</span>
+          <span class="dash-widget-badge">即時</span>
+        </div>
+        <div class="dash-widget-body">
+          <div class="wms-overview-grid">
+            <div class="wms-overview-card">
+              <i data-lucide="layers" class="w-6 h-6"></i>
+              <div class="wms-overview-value">{{ wmsStats.totalItems }}</div>
+              <div class="wms-overview-label">庫存筆數</div>
+            </div>
+            <div class="wms-overview-card">
+              <i data-lucide="package" class="w-6 h-6"></i>
+              <div class="wms-overview-value">{{ wmsStats.totalQty }}</div>
+              <div class="wms-overview-label">總數量</div>
+            </div>
+            <div class="wms-overview-card">
+              <i data-lucide="warehouse" class="w-6 h-6"></i>
+              <div class="wms-overview-value">{{ wmsStats.usedLocations }}/{{ wmsStats.totalLocations }}</div>
+              <div class="wms-overview-label">使用儲位</div>
+            </div>
+            <div class="wms-overview-card">
+              <i data-lucide="percent" class="w-6 h-6"></i>
+              <div class="wms-overview-value">{{ wmsStats.utilization }}%</div>
+              <div class="wms-overview-label">使用率</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 今日異動 -->
+      <div class="dash-widget">
+        <div class="dash-widget-header dash-header-blue">
+          <span class="dash-widget-title">今日異動</span>
+          <span class="dash-widget-badge">{{ dashStats.todayDate }}</span>
+        </div>
+        <div class="dash-widget-body">
+          <div class="wms-today-grid">
+            <div class="wms-today-card wms-inbound">
+              <i data-lucide="arrow-down-circle" class="w-5 h-5"></i>
+              <span class="wms-today-value">{{ wmsStats.todayInbound }}</span>
+              <span class="wms-today-label">入庫</span>
+            </div>
+            <div class="wms-today-card wms-outbound">
+              <i data-lucide="arrow-up-circle" class="w-5 h-5"></i>
+              <span class="wms-today-value">{{ wmsStats.todayOutbound }}</span>
+              <span class="wms-today-label">出庫</span>
+            </div>
+            <div class="wms-today-card wms-transfer">
+              <i data-lucide="arrow-left-right" class="w-5 h-5"></i>
+              <span class="wms-today-value">{{ wmsStats.todayTransfer }}</span>
+              <span class="wms-today-label">調撥</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 庫存預警 -->
+      <div class="dash-widget">
+        <div class="dash-widget-header" :class="wmsAlerts.length > 0 ? 'dash-header-orange' : 'dash-header-green'">
+          <span class="dash-widget-title">庫存預警</span>
+          <span class="dash-widget-badge">{{ wmsAlerts.length }} 項</span>
+        </div>
+        <div class="dash-widget-body">
+          <div v-if="wmsAlerts.length === 0" class="alert-empty">
+            <i data-lucide="check-circle" class="w-8 h-8 text-success"></i>
+            <span>庫存狀態正常</span>
+          </div>
+          <div v-else class="alert-list-compact">
+            <div v-for="alert in wmsAlerts.slice(0, 5)" :key="alert.id" class="alert-item-compact">
+              <span class="alert-icon">{{ alert.type === 'warning' ? '!' : '!' }}</span>
+              <span class="alert-text">{{ alert.title }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
