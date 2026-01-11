@@ -289,12 +289,34 @@
         <label class="input-label">關聯工單</label>
         <div class="chip-group">
           <div :class="['chip', !formWms.workOrderId ? 'selected' : '']"
-               @click="formWms.workOrderId = ''">散料</div>
+               @click="formWms.workOrderId = ''; formWms.partId = ''">散料</div>
           <div v-for="wo in workOrders.slice(0, 8)" :key="wo.id"
                :class="['chip', formWms.workOrderId === wo.id ? 'selected' : '']"
-               @click="formWms.workOrderId = wo.id">
+               @click="formWms.workOrderId = wo.id; formWms.partId = ''">
             {{ wo.orderNumber }}
           </div>
+        </div>
+      </div>
+
+      <!-- 步驟 2.5: 散料選擇物料 -->
+      <div v-if="formWms.locationCode && !formWms.workOrderId" style="margin-bottom: 1rem;">
+        <label class="input-label">選擇物料 *</label>
+        <div v-if="parts.length === 0" class="alert alert-warning" style="padding: 0.75rem;">
+          <span>尚無物料資料，請先至「物料主檔」新增</span>
+        </div>
+        <div v-else class="chip-group" style="max-height: 120px; overflow-y: auto;">
+          <div v-for="part in parts" :key="part.id"
+               :class="['chip', formWms.partId === part.id ? 'selected' : '']"
+               @click="formWms.partId = part.id">
+            <span style="font-weight: 600;">{{ part.partNumber }}</span>
+            <span style="font-size: 0.75rem; color: #64748b; margin-left: 0.25rem;">{{ part.name }}</span>
+          </div>
+        </div>
+        <div v-if="formWms.partId" style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem;">
+          {{ parts.find(p => p.id === formWms.partId)?.spec || '' }}
+          <span v-if="parts.find(p => p.id === formWms.partId)?.unit">
+            ({{ parts.find(p => p.id === formWms.partId)?.unit }})
+          </span>
         </div>
       </div>
 
@@ -329,7 +351,8 @@
     </form>
     <div class="modal-action">
       <button class="btn btn-ghost" @click="showWmsInboundModal = false">取消</button>
-      <button class="btn btn-primary" @click="submitWmsInbound" :disabled="!formWms.locationCode || !formWms.operatorName">
+      <button class="btn btn-primary" @click="submitWmsInbound"
+              :disabled="!formWms.locationCode || !formWms.operatorName || (!formWms.workOrderId && !formWms.partId)">
         確認入庫
       </button>
     </div>

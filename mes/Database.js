@@ -118,6 +118,14 @@ const DB_CONFIG = {
         'systemQty', 'actualQty', 'diffQty', 'notes', 'createdAt'
       ]
     },
+    // 物料主檔
+    parts: {
+      name: 'Parts',
+      headers: [
+        'id', 'partNumber', 'name', 'spec', 'unit', 'category',
+        'safetyStock', 'notes', 'isActive', 'createdAt', 'updatedAt'
+      ]
+    },
     // 操作紀錄 (ISO 27001:2022 A.8.15)
     auditLogs: {
       name: 'AuditLogs',
@@ -177,6 +185,7 @@ function getAllDataWithCache() {
     operators: dbGetOperators().filter(o => o.isActive !== 'FALSE' && o.isActive !== false),
     customers: dbGetCustomers().filter(c => c.isActive !== 'FALSE' && c.isActive !== false),
     products: dbGetProducts().filter(p => p.isActive !== 'FALSE' && p.isActive !== false),
+    parts: dbGetParts().filter(p => p.isActive !== 'FALSE' && p.isActive !== false),
     ngReasons: dbGetNgReasons().filter(r => r.isActive !== 'FALSE' && r.isActive !== false),
     outgassingTests: dbGetOutgassingTests(),
     aoiInspections: dbGetAoiInspections(),
@@ -252,6 +261,19 @@ function dbUpdateProduct(id, data) {
   return updateRecord('Products', id, data);
 }
 function dbDeleteProduct(id) { return updateRecord('Products', id, { isActive: false }); }
+
+// Parts (物料主檔) CRUD
+function dbGetParts() { return getTableData('Parts'); }
+function dbCreatePart(data) {
+  data.isActive = true;
+  data.createdAt = new Date().toISOString();
+  return insertRecord('Parts', data);
+}
+function dbUpdatePart(id, data) {
+  data.updatedAt = new Date().toISOString();
+  return updateRecord('Parts', id, data);
+}
+function dbDeletePart(id) { return updateRecord('Parts', id, { isActive: false }); }
 
 // NG Reasons CRUD
 function dbGetNgReasons() { return getTableData('NgReasons'); }
@@ -1348,12 +1370,22 @@ function dbCreateWmsMovement(data) {
 
 // 入庫作業
 function dbWmsInbound(data) {
-  // data: { locationCode, workOrderId, quantity, barcode, operatorName }
+  // data: { locationCode, workOrderId, partId, quantity, barcode, operatorName }
+
+  // 取得物料資訊（如果有 partId）
+  let productModel = '';
+  if (data.partId) {
+    const part = dbGetParts().find(p => p.id === data.partId);
+    if (part) {
+      productModel = `[${part.partNumber}] ${part.name}`;
+    }
+  }
 
   // 建立庫存紀錄
   const inventory = dbCreateWmsInventory({
     locationCode: data.locationCode,
     workOrderId: data.workOrderId,
+    productModel: productModel,
     quantity: data.quantity || 1,
     barcode: data.barcode
   });
@@ -1363,6 +1395,7 @@ function dbWmsInbound(data) {
     fromLocation: 'EXTERNAL',
     toLocation: data.locationCode,
     workOrderId: data.workOrderId,
+    productModel: productModel,
     quantity: data.quantity || 1,
     barcode: data.barcode,
     movementType: 'inbound',

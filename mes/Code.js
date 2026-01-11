@@ -94,7 +94,7 @@ function api(action, payload) {
     let result;
     switch (action) {
       case 'getVersion':
-        return { success: true, data: '5.45.6' };
+        return { success: true, data: '5.46.0' };
 
       // 效能優化：單次載入所有資料 (含快取)
       case 'getAllData':
@@ -195,6 +195,20 @@ function api(action, payload) {
         break;
       case 'deleteProduct':
         result = dbDeleteProduct(payload.id);
+        break;
+
+      // Parts (物料主檔)
+      case 'getParts':
+        result = dbGetParts().filter(p => p.isActive !== 'FALSE' && p.isActive !== false);
+        break;
+      case 'createPart':
+        result = dbCreatePart(payload);
+        break;
+      case 'updatePart':
+        result = dbUpdatePart(payload.id, payload.data);
+        break;
+      case 'deletePart':
+        result = dbDeletePart(payload.id);
         break;
 
       // NG Reasons (NG 原因管理)

@@ -1,0 +1,163 @@
+<!-- Tab: 物料主檔 -->
+<div v-show="currentTab === 'parts'">
+  <div class="section-header">
+    <h2>物料主檔</h2>
+    <button class="btn btn-primary" @click="openPartModal()">
+      <i data-lucide="plus" class="w-4 h-4"></i>
+      新增物料
+    </button>
+  </div>
+
+  <!-- 搜尋與篩選 -->
+  <div class="filter-bar" style="margin-bottom: 1rem;">
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+      <input type="text" class="input input-bordered input-sm"
+             v-model="partSearch" placeholder="搜尋料號或品名..."
+             style="width: 200px;">
+      <div class="chip-group">
+        <div :class="['chip', partCategoryFilter === '' ? 'selected' : '']"
+             @click="partCategoryFilter = ''">全部</div>
+        <div v-for="cat in partCategories" :key="cat"
+             :class="['chip', partCategoryFilter === cat ? 'selected' : '']"
+             @click="partCategoryFilter = cat">{{ cat }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 物料清單表格 -->
+  <div class="scrollable" style="max-height: calc(100vh - 280px);">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width: 120px;">料號</th>
+          <th>品名</th>
+          <th style="width: 150px;">規格</th>
+          <th style="width: 80px;">單位</th>
+          <th style="width: 100px;">類別</th>
+          <th style="width: 80px; text-align: center;">安全庫存</th>
+          <th style="width: 120px; text-align: right;">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="part in filteredParts" :key="part.id">
+          <td>
+            <code style="background: #f1f5f9; padding: 0.15rem 0.4rem; border-radius: 0.25rem; font-weight: 600;">
+              {{ part.partNumber }}
+            </code>
+          </td>
+          <td style="font-weight: 500;">{{ part.name }}</td>
+          <td style="font-size: 0.875rem; color: #64748b;">{{ part.spec || '-' }}</td>
+          <td>
+            <span class="badge badge-ghost">{{ part.unit || '件' }}</span>
+          </td>
+          <td>
+            <span :class="'badge badge-' + partCategoryBadge(part.category)">
+              {{ part.category || '未分類' }}
+            </span>
+          </td>
+          <td style="text-align: center;">
+            <span v-if="part.safetyStock" style="font-weight: 600;">{{ part.safetyStock }}</span>
+            <span v-else style="color: #94a3b8;">-</span>
+          </td>
+          <td style="text-align: right;">
+            <div class="btn-group">
+              <button class="btn btn-sm btn-ghost" @click="openPartModal(part)">編輯</button>
+              <button class="btn btn-sm btn-error btn-outline" @click="deletePart(part.id)">刪除</button>
+            </div>
+          </td>
+        </tr>
+        <tr v-if="filteredParts.length === 0" class="empty-row">
+          <td colspan="7" style="text-align: center; padding: 2rem; color: #64748b;">
+            <i data-lucide="package-search" style="width: 48px; height: 48px; margin: 0 auto 0.5rem; opacity: 0.5;"></i>
+            <div v-if="partSearch || partCategoryFilter">沒有符合條件的物料</div>
+            <div v-else>尚無物料資料，請點擊「新增物料」建立</div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 統計資訊 -->
+  <div style="margin-top: 1rem; padding: 0.75rem; background: #f8fafc; border-radius: 0.5rem; display: flex; gap: 1.5rem; font-size: 0.875rem;">
+    <div><span style="color: #64748b;">總物料數：</span><strong>{{ parts.length }}</strong></div>
+    <div v-for="cat in partCategories" :key="cat">
+      <span style="color: #64748b;">{{ cat }}：</span>
+      <strong>{{ parts.filter(p => p.category === cat).length }}</strong>
+    </div>
+  </div>
+</div>
+
+<!-- 物料編輯 Modal -->
+<dialog class="modal" :class="{ 'modal-open': showPartModal }">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-4">
+      {{ editingPartId ? '編輯物料' : '新增物料' }}
+    </h3>
+    <form @submit.prevent="submitPart">
+      <!-- 料號 + 品名 -->
+      <div style="display: grid; grid-template-columns: 120px 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+        <div>
+          <label class="input-label">料號 *</label>
+          <input type="text" class="input input-bordered w-full"
+                 v-model="formPart.partNumber" required
+                 placeholder="P001" style="text-transform: uppercase;">
+        </div>
+        <div>
+          <label class="input-label">品名 *</label>
+          <input type="text" class="input input-bordered w-full"
+                 v-model="formPart.name" required placeholder="物料名稱">
+        </div>
+      </div>
+
+      <!-- 規格 -->
+      <div style="margin-bottom: 0.75rem;">
+        <label class="input-label">規格/型號</label>
+        <input type="text" class="input input-bordered w-full"
+               v-model="formPart.spec" placeholder="例如: 10cm x 10cm">
+      </div>
+
+      <!-- 單位 + 安全庫存 -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+        <div>
+          <label class="input-label">單位</label>
+          <div class="chip-group">
+            <div v-for="u in ['件', '片', '箱', 'kg', '公升', '組']" :key="u"
+                 :class="['chip', formPart.unit === u ? 'selected' : '']"
+                 @click="formPart.unit = u">{{ u }}</div>
+          </div>
+        </div>
+        <div>
+          <label class="input-label">安全庫存</label>
+          <input type="number" class="input input-bordered w-full"
+                 v-model.number="formPart.safetyStock" min="0" placeholder="0">
+        </div>
+      </div>
+
+      <!-- 類別 -->
+      <div style="margin-bottom: 0.75rem;">
+        <label class="input-label">類別 *</label>
+        <div class="chip-group">
+          <div v-for="cat in partCategories" :key="cat"
+               :class="['chip', formPart.category === cat ? 'selected' : '']"
+               @click="formPart.category = cat">{{ cat }}</div>
+        </div>
+      </div>
+
+      <!-- 備註 -->
+      <div style="margin-bottom: 1rem;">
+        <label class="input-label">備註</label>
+        <textarea class="textarea textarea-bordered w-full"
+                  v-model="formPart.notes" rows="2" placeholder="選填"></textarea>
+      </div>
+    </form>
+    <div class="modal-action">
+      <button class="btn btn-ghost" @click="showPartModal = false">取消</button>
+      <button :class="['btn', editingPartId ? 'btn-warning' : 'btn-primary']"
+              @click="submitPart"
+              :disabled="!formPart.partNumber || !formPart.name || !formPart.category">
+        {{ editingPartId ? '更新物料' : '新增物料' }}
+      </button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop" @click="showPartModal = false"><button>close</button></form>
+</dialog>

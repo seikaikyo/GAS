@@ -17,6 +17,15 @@
       const operators = ref([]);
       const customers = ref([]);
       const products = ref([]);
+      const parts = ref([]);
+
+      // Parts (物料主檔)
+      const showPartModal = ref(false);
+      const editingPartId = ref(null);
+      const formPart = ref({ partNumber: '', name: '', spec: '', unit: '件', category: '', safetyStock: null, notes: '' });
+      const partSearch = ref('');
+      const partCategoryFilter = ref('');
+      const partCategories = ref(['原料', '半成品', '成品', '耗材', '包材']);
 
       // Computed
       const filteredWorkOrders = Vue.computed(() => {
@@ -81,6 +90,22 @@
           (l.orderNumber && l.orderNumber.toLowerCase().includes(filter)) ||
           (l.customerName && l.customerName.toLowerCase().includes(filter))
         );
+      });
+
+      // Parts filtered
+      const filteredParts = Vue.computed(() => {
+        let result = parts.value;
+        if (partCategoryFilter.value) {
+          result = result.filter(p => p.category === partCategoryFilter.value);
+        }
+        if (partSearch.value) {
+          const search = partSearch.value.toLowerCase();
+          result = result.filter(p =>
+            (p.partNumber && p.partNumber.toLowerCase().includes(search)) ||
+            (p.name && p.name.toLowerCase().includes(search))
+          );
+        }
+        return result;
       });
 
       const r0CodePreview = Vue.computed(() => {
@@ -321,6 +346,7 @@
       const formWms = ref({
         locationCode: '',
         workOrderId: '',
+        partId: '',
         quantity: 1,
         barcode: '',
         barcodes: [],
@@ -842,6 +868,7 @@
             operators.value = data.operators || [];
             customers.value = data.customers || [];
             products.value = data.products || [];
+            parts.value = data.parts || [];
             ngReasons.value = data.ngReasons || [];
             outgassingTests.value = data.outgassingTests || [];
             aoiInspections.value = data.aoiInspections || [];
@@ -864,6 +891,7 @@
             operators: allData.operators,
             customers: allData.customers,
             products: allData.products,
+            parts: allData.parts || [],
             ngReasons: allData.ngReasons,
             outgassingTests: allData.outgassingTests,
             aoiInspections: allData.aoiInspections,
@@ -1003,6 +1031,37 @@
       const deleteProduct = async (id) => {
         if (!confirm('確定要刪除此產品嗎？')) return;
         try { await callApi('deleteProduct', { id }); await refreshData(); } catch (e) { alert(e); }
+      };
+
+      // Parts (物料主檔) Methods
+      const openPartModal = (part = null) => {
+        if (part) {
+          editingPartId.value = part.id;
+          formPart.value = { ...part };
+        } else {
+          editingPartId.value = null;
+          formPart.value = { partNumber: '', name: '', spec: '', unit: '件', category: '', safetyStock: null, notes: '' };
+        }
+        showPartModal.value = true;
+      };
+      const submitPart = async () => {
+        try {
+          if (editingPartId.value) {
+            await callApi('updatePart', { id: editingPartId.value, data: { ...formPart.value } });
+          } else {
+            await callApi('createPart', { ...formPart.value });
+          }
+          showPartModal.value = false;
+          await refreshData();
+        } catch (e) { alert(e); }
+      };
+      const deletePart = async (id) => {
+        if (!confirm('確定要刪除此物料嗎？')) return;
+        try { await callApi('deletePart', { id }); await refreshData(); } catch (e) { alert(e); }
+      };
+      const partCategoryBadge = (category) => {
+        const map = { '原料': 'info', '半成品': 'warning', '成品': 'success', '耗材': 'ghost', '包材': 'ghost' };
+        return map[category] || 'ghost';
       };
 
       // NG Reasons Submit/Delete
@@ -2790,7 +2849,7 @@
       };
 
       const openWmsModal = (type) => {
-        formWms.value = { locationCode: '', workOrderId: '', quantity: 1, barcode: '', barcodes: [], operatorName: currentOperator.value?.name || '', fromLocation: '', toLocation: '', inventoryId: '', reason: '' };
+        formWms.value = { locationCode: '', workOrderId: '', partId: '', quantity: 1, barcode: '', barcodes: [], operatorName: currentOperator.value?.name || '', fromLocation: '', toLocation: '', inventoryId: '', reason: '' };
         wmsInventoryList.value = [];
         if (type === 'inbound') showWmsInboundModal.value = true;
         else if (type === 'transfer') showWmsTransferModal.value = true;
@@ -2900,6 +2959,7 @@
           await callApi('wmsInbound', {
             locationCode: formWms.value.locationCode,
             workOrderId: formWms.value.workOrderId || null,
+            partId: formWms.value.partId || null,
             quantity: formWms.value.quantity,
             barcode: formWms.value.barcodes.length > 0 ? formWms.value.barcodes.join(',') : formWms.value.barcode,
             operatorName: formWms.value.operatorName
@@ -3468,6 +3528,8 @@
         submitOperator, deleteOperator, startEditOperator, cancelEditOperator,
         submitCustomer, deleteCustomer, startEditCustomer, cancelEditCustomer,
         submitProduct, deleteProduct, startEditProduct, cancelEditProduct,
+        parts, filteredParts, showPartModal, editingPartId, formPart, partSearch, partCategoryFilter, partCategories,
+        openPartModal, submitPart, deletePart, partCategoryBadge,
         ngReasons, formNgReason, editingNgReasonId,
         submitNgReason, deleteNgReason, startEditNgReason, cancelEditNgReason,
         startJob, completeJob, getStatusClass,
