@@ -1023,8 +1023,13 @@
       // CRUD Operations
       const submitOperator = async () => {
         try {
-          if (editingOperatorId.value) await callApi('updateOperator', { id: editingOperatorId.value, data: { ...formOperator.value } });
-          else await callApi('createOperator', { ...formOperator.value });
+          if (editingOperatorId.value) {
+            await callApi('updateOperator', { id: editingOperatorId.value, data: { ...formOperator.value } });
+            await logAudit('update', 'operator', 'Operator', editingOperatorId.value, formOperator.value.name, { code: formOperator.value.code });
+          } else {
+            const result = await callApi('createOperator', { ...formOperator.value });
+            await logAudit('create', 'operator', 'Operator', result?.id || '', formOperator.value.name, { code: formOperator.value.code });
+          }
           cancelEditOperator();
           await refreshData();
         } catch (e) { alert(e); }
@@ -1032,14 +1037,24 @@
 
       const deleteOperator = async (id) => {
         if (!confirm('確定要刪除此人員嗎？')) return;
-        try { await callApi('deleteOperator', { id }); await refreshData(); } catch (e) { alert(e); }
+        const op = operators.value.find(o => o.id === id);
+        try {
+          await callApi('deleteOperator', { id });
+          await logAudit('delete', 'operator', 'Operator', id, op?.name || '', {});
+          await refreshData();
+        } catch (e) { alert(e); }
       };
 
       const submitCustomer = async () => {
         try {
           const sites = formCustomer.value.sitesInput.split(/[,，\n]+/).map(s => s.trim()).filter(s => s);
-          if (editingCustomerId.value) await callApi('updateCustomer', { id: editingCustomerId.value, data: { name: formCustomer.value.name, code: formCustomer.value.code, sites } });
-          else await callApi('createCustomer', { ...formCustomer.value, sites });
+          if (editingCustomerId.value) {
+            await callApi('updateCustomer', { id: editingCustomerId.value, data: { name: formCustomer.value.name, code: formCustomer.value.code, sites } });
+            await logAudit('update', 'customer', 'Customer', editingCustomerId.value, formCustomer.value.name, { code: formCustomer.value.code });
+          } else {
+            const result = await callApi('createCustomer', { ...formCustomer.value, sites });
+            await logAudit('create', 'customer', 'Customer', result?.id || '', formCustomer.value.name, { code: formCustomer.value.code });
+          }
           cancelEditCustomer();
           await refreshData();
         } catch (e) { alert(e); }
@@ -1047,13 +1062,23 @@
 
       const deleteCustomer = async (id) => {
         if (!confirm('確定要刪除此客戶嗎？')) return;
-        try { await callApi('deleteCustomer', { id }); await refreshData(); } catch (e) { alert(e); }
+        const c = customers.value.find(x => x.id === id);
+        try {
+          await callApi('deleteCustomer', { id });
+          await logAudit('delete', 'customer', 'Customer', id, c?.name || '', {});
+          await refreshData();
+        } catch (e) { alert(e); }
       };
 
       const submitProduct = async () => {
         try {
-          if (editingProductId.value) await callApi('updateProduct', { id: editingProductId.value, data: { ...formProduct.value } });
-          else await callApi('createProduct', { ...formProduct.value });
+          if (editingProductId.value) {
+            await callApi('updateProduct', { id: editingProductId.value, data: { ...formProduct.value } });
+            await logAudit('update', 'product', 'Product', editingProductId.value, formProduct.value.name, { code: formProduct.value.code, type: formProduct.value.type });
+          } else {
+            const result = await callApi('createProduct', { ...formProduct.value });
+            await logAudit('create', 'product', 'Product', result?.id || '', formProduct.value.name, { code: formProduct.value.code, type: formProduct.value.type });
+          }
           cancelEditProduct();
           await refreshData();
         } catch (e) { alert(e); }
@@ -1061,7 +1086,12 @@
 
       const deleteProduct = async (id) => {
         if (!confirm('確定要刪除此產品嗎？')) return;
-        try { await callApi('deleteProduct', { id }); await refreshData(); } catch (e) { alert(e); }
+        const p = products.value.find(x => x.id === id);
+        try {
+          await callApi('deleteProduct', { id });
+          await logAudit('delete', 'product', 'Product', id, p?.name || '', {});
+          await refreshData();
+        } catch (e) { alert(e); }
       };
 
       // Parts (物料主檔) Methods
@@ -1106,8 +1136,13 @@
       // NG Reasons Submit/Delete
       const submitNgReason = async () => {
         try {
-          if (editingNgReasonId.value) await callApi('updateNgReason', { id: editingNgReasonId.value, data: { ...formNgReason.value } });
-          else await callApi('createNgReason', { ...formNgReason.value });
+          if (editingNgReasonId.value) {
+            await callApi('updateNgReason', { id: editingNgReasonId.value, data: { ...formNgReason.value } });
+            await logAudit('update', 'ngReason', 'NgReason', editingNgReasonId.value, formNgReason.value.name, { code: formNgReason.value.code });
+          } else {
+            const result = await callApi('createNgReason', { ...formNgReason.value });
+            await logAudit('create', 'ngReason', 'NgReason', result?.id || '', formNgReason.value.name, { code: formNgReason.value.code });
+          }
           cancelEditNgReason();
           await refreshData();
         } catch (e) { alert(e); }
@@ -1115,7 +1150,12 @@
 
       const deleteNgReason = async (id) => {
         if (!confirm('確定要刪除此 NG 原因嗎？')) return;
-        try { await callApi('deleteNgReason', { id }); await refreshData(); } catch (e) { alert(e); }
+        const r = ngReasons.value.find(x => x.id === id);
+        try {
+          await callApi('deleteNgReason', { id });
+          await logAudit('delete', 'ngReason', 'NgReason', id, r?.name || '', {});
+          await refreshData();
+        } catch (e) { alert(e); }
       };
 
       const submitEpcChange = async () => {
@@ -1144,8 +1184,13 @@
         }
 
         try {
-          if (editingWorkOrderId.value) await callApi('updateWorkOrder', { id: editingWorkOrderId.value, data: payload });
-          else await callApi('createWorkOrder', payload);
+          if (editingWorkOrderId.value) {
+            await callApi('updateWorkOrder', { id: editingWorkOrderId.value, data: payload });
+            await logAudit('update', 'workOrder', 'WorkOrder', editingWorkOrderId.value, payload.orderNumber || '', { customer: payload.customerName, product: payload.productModel, qty: payload.quantity });
+          } else {
+            const result = await callApi('createWorkOrder', payload);
+            await logAudit('create', 'workOrder', 'WorkOrder', result?.id || '', result?.orderNumber || '', { customer: payload.customerName, product: payload.productModel, qty: payload.quantity, type: payload.orderType });
+          }
           showCreateWoModal.value = false;
           formWo.value = { customerName: '', customerSite: '', productModel: '', quantity: 10, orderType: 'deglue', priority: 'normal', targetRegenerationCount: 1, sourceWorkOrderId: '' };
           editingWorkOrderId.value = null;
@@ -1182,7 +1227,12 @@
 
       const deleteWorkOrder = async (id) => {
         if (!confirm('確定要取消此工單嗎？')) return;
-        try { await callApi('deleteWorkOrder', { id }); await refreshData(); } catch (e) { alert(e); }
+        const wo = workOrders.value.find(w => w.id === id);
+        try {
+          await callApi('deleteWorkOrder', { id });
+          await logAudit('cancel', 'workOrder', 'WorkOrder', id, wo?.orderNumber || '', { customer: wo?.customerName });
+          await refreshData();
+        } catch (e) { alert(e); }
       };
 
       const openDispatchModal = (wo) => {
@@ -1198,8 +1248,10 @@
       const submitDispatch = async () => {
         if (!formDispatch.value.operatorName) { alert('請選擇作業員'); return; }
         if (!formDispatch.value.quantity || formDispatch.value.quantity <= 0) { alert('請輸入有效數量'); return; }
+        const wo = workOrders.value.find(w => w.id === formDispatch.value.workOrderId);
         try {
-          await callApi('createDispatch', { ...formDispatch.value });
+          const result = await callApi('createDispatch', { ...formDispatch.value });
+          await logAudit('create', 'dispatch', 'Dispatch', result?.id || '', wo?.orderNumber || '', { station: formDispatch.value.stationName, operator: formDispatch.value.operatorName, qty: formDispatch.value.quantity });
           showDispatchModal.value = false;
           await refreshData();
           currentTab.value = 'dispatches';
@@ -1208,16 +1260,26 @@
 
       const deleteDispatch = async (id) => {
         if (!confirm('確定要取消此派工嗎？')) return;
-        try { await callApi('deleteDispatch', { id }); await refreshData(); } catch (e) { alert(e); }
+        const d = dispatches.value.find(x => x.id === id);
+        try {
+          await callApi('deleteDispatch', { id });
+          await logAudit('cancel', 'dispatch', 'Dispatch', id, d?.orderNumber || '', { station: d?.stationName });
+          await refreshData();
+        } catch (e) { alert(e); }
       };
 
       const startJob = async (d) => {
-        try { await callApi('startDispatch', { id: d.id }); await refreshData(); } catch (e) { alert(e); }
+        try {
+          await callApi('startDispatch', { id: d.id });
+          await logAudit('start', 'dispatch', 'Dispatch', d.id, d.orderNumber || '', { station: d.stationName, operator: d.operatorName });
+          await refreshData();
+        } catch (e) { alert(e); }
       };
 
       const completeJob = async (d) => {
         try {
           await callApi('completeDispatch', { id: d.id });
+          await logAudit('complete', 'dispatch', 'Dispatch', d.id, d.orderNumber || '', { station: d.stationName, operator: d.operatorName });
           await refreshData();
           const updatedD = dispatches.value.find(x => x.id === d.id);
           openReportModal(updatedD);
@@ -1295,6 +1357,7 @@
           formReport.value.endTime = new Date().toISOString();
           formReport.value.quantity = formReport.value.goodQty + formReport.value.ngQty;
           const reportResult = await callApi('createReport', { ...formReport.value });
+          await logAudit('create', 'report', 'Report', reportResult?.id || '', selectedDispatch.value?.orderNumber || '', { station: formReport.value.stationName, good: formReport.value.goodQty, ng: formReport.value.ngQty, operator: formReport.value.operatorName });
           // 儲存 NG 明細
           if (formReport.value.ngDetails.length > 0 && reportResult?.id) {
             for (const detail of formReport.value.ngDetails) {
@@ -1373,8 +1436,10 @@
         if (!formOutgassing.value.workOrderId) { alert('請選擇工單'); return; }
         if (!formOutgassing.value.result) { alert('請選擇檢驗結果'); return; }
         if (!formOutgassing.value.operatorName) { alert('請選擇檢驗員'); return; }
+        const wo = workOrders.value.find(w => w.id === formOutgassing.value.workOrderId);
         try {
-          await callApi('createOutgassingTest', { ...formOutgassing.value });
+          const result = await callApi('createOutgassingTest', { ...formOutgassing.value });
+          await logAudit('create', 'outgassing', 'OutgassingTest', result?.id || '', wo?.orderNumber || '', { result: formOutgassing.value.result, rfid: formOutgassing.value.rfidCode, operator: formOutgassing.value.operatorName });
           if (formOutgassing.value.result === 'NG') alert('檢驗結果: NG\n\n依規定需加抽 2 片再測，若仍超標則回爐重烤。');
           formOutgassing.value.rfidCode = ''; formOutgassing.value.result = ''; formOutgassing.value.notes = ''; formOutgassing.value.signature = '';
           clearSignature('outgassing');
@@ -1495,8 +1560,10 @@
         if (!formAoi.value.workOrderId) { alert('請選擇工單'); return; }
         if (!formAoi.value.operatorName) { alert('請選擇匯入人員'); return; }
         if (aoiCsvPreview.value.length === 0) { alert('請先選擇 CSV 檔案'); return; }
+        const wo = workOrders.value.find(w => w.id === formAoi.value.workOrderId);
         try {
           const result = await callApi('importAoiCsv', { workOrderId: formAoi.value.workOrderId, csvRows: aoiCsvPreview.value, operatorName: formAoi.value.operatorName });
+          await logAudit('create', 'aoi', 'AOI Import', '', wo?.orderNumber || '', { count: result.success, failed: result.failed, operator: formAoi.value.operatorName });
           alert(`匯入完成！\n成功: ${result.success} 筆\n失敗: ${result.failed} 筆`);
           aoiCsvPreview.value = [];
           await refreshData();
@@ -1507,8 +1574,10 @@
         if (!formAoi.value.workOrderId) { alert('請先在上方選擇工單'); return; }
         if (!formAoiSingle.value.rfidCode) { alert('請輸入條碼編號'); return; }
         if (!formAoiSingle.value.result) { alert('請選擇檢驗結果'); return; }
+        const wo = workOrders.value.find(w => w.id === formAoi.value.workOrderId);
         try {
-          await callApi('createAoiInspection', { workOrderId: formAoi.value.workOrderId, operatorName: formAoi.value.operatorName || '系統', ...formAoiSingle.value });
+          const result = await callApi('createAoiInspection', { workOrderId: formAoi.value.workOrderId, operatorName: formAoi.value.operatorName || '系統', ...formAoiSingle.value });
+          await logAudit('create', 'aoi', 'AOI', result?.id || '', wo?.orderNumber || '', { result: formAoiSingle.value.result, rfid: formAoiSingle.value.rfidCode, defect: formAoiSingle.value.defectType });
           if (formAoiSingle.value.result === 'NG' && (formAoiSingle.value.defectType || '').includes('破洞')) alert('嚴重瑕疵: 破洞\n此件須直接報廢處理。');
           formAoiSingle.value = { rfidCode: '', result: '', defectType: '' };
           await refreshData();
@@ -2999,7 +3068,7 @@
 
       const submitWmsInbound = async () => {
         try {
-          await callApi('wmsInbound', {
+          const result = await callApi('wmsInbound', {
             locationCode: formWms.value.locationCode,
             workOrderId: formWms.value.workOrderId || null,
             partId: formWms.value.partId || null,
@@ -3007,6 +3076,8 @@
             barcode: formWms.value.barcodes.length > 0 ? formWms.value.barcodes.join(',') : formWms.value.barcode,
             operatorName: formWms.value.operatorName
           });
+          const wo = workOrders.value.find(w => w.id === formWms.value.workOrderId);
+          await logAudit('create', 'wms', 'Inbound', result?.id || '', formWms.value.locationCode, { qty: formWms.value.quantity, workOrder: wo?.orderNumber || '散料', operator: formWms.value.operatorName });
           showWmsInboundModal.value = false;
           await loadWmsData();
           alert('入庫成功');
@@ -3015,14 +3086,15 @@
 
       const submitWmsTransfer = async () => {
         try {
+          const inv = wmsInventory.value.find(i => i.id === formWms.value.inventoryId);
           await callApi('wmsTransfer', {
             inventoryId: formWms.value.inventoryId,
             toLocation: formWms.value.toLocation,
             operatorName: formWms.value.operatorName,
             reason: formWms.value.reason || '調撥'
           });
+          await logAudit('update', 'wms', 'Transfer', formWms.value.inventoryId, inv?.barcode || '', { from: inv?.locationCode, to: formWms.value.toLocation, operator: formWms.value.operatorName });
           showWmsTransferModal.value = false;
-          // 同時關閉儲位明細 Modal（如果是從那裡開啟的）
           showLocationDetailModal.value = false;
           await loadWmsData();
           wmsInventory.value = await callApi('getWmsInventory', null, false);
@@ -3035,13 +3107,14 @@
           const reason = formWms.value.reason === '其他' && formWms.value.reasonNote
             ? `其他: ${formWms.value.reasonNote}`
             : formWms.value.reason;
+          const inv = wmsInventory.value.find(i => i.id === formWms.value.inventoryId);
           await callApi('wmsOutbound', {
             inventoryId: formWms.value.inventoryId,
             operatorName: formWms.value.operatorName,
             reason: reason
           });
+          await logAudit('delete', 'wms', 'Outbound', formWms.value.inventoryId, inv?.barcode || '', { location: inv?.locationCode, reason: reason, operator: formWms.value.operatorName });
           showWmsOutboundModal.value = false;
-          // 同時關閉儲位明細 Modal（如果是從那裡開啟的）
           showLocationDetailModal.value = false;
           await loadWmsData();
           wmsInventory.value = await callApi('getWmsInventory', null, false);
@@ -3097,6 +3170,7 @@
               actualQty: item.actualQty
             }))
           });
+          await logAudit('create', 'wms', 'StockTake', result?.id || '', formStockTake.value.locationCode, { items: filledItems.length, adjusted: result.adjustedItems || 0, operator: formStockTake.value.operatorName });
           showWmsStockTakeModal.value = false;
           await loadWmsData();
           const adjustedCount = result.adjustedItems || 0;
@@ -3157,13 +3231,13 @@
         savingShift.value = true;
         try {
           const operator = operators.value.find(o => o.id === shiftForm.value.operatorId);
-          await callApi('createShift', {
+          const result = await callApi('createShift', {
             ...shiftForm.value,
             operatorName: operator?.name || ''
           });
+          await logAudit('create', 'schedule', 'Shift', result?.id || '', operator?.name || '', { date: shiftForm.value.shiftDate, type: shiftForm.value.shiftType, station: shiftForm.value.stationName });
           await loadScheduleData();
           showShiftModal.value = false;
-          logAudit('create', 'schedule', '新增班次', { shift: shiftForm.value });
         } catch (e) {
           alert('儲存失敗: ' + e);
         } finally {
@@ -3338,10 +3412,10 @@
         importingShifts.value = true;
         try {
           const result = await callApi('importShifts', { shifts: validShifts });
+          await logAudit('create', 'schedule', 'Shift Import', '', '', { count: result.imported || validShifts.length });
           alert(`成功匯入 ${result.imported || validShifts.length} 筆班次`);
           await loadScheduleData();
           closeShiftImportModal();
-          logAudit('import', 'schedule', '批次匯入班次', { count: validShifts.length });
         } catch (e) {
           alert('匯入失敗: ' + e);
         } finally {
@@ -3376,13 +3450,13 @@
           } else {
             equipmentName = equipmentScheduleForm.value.equipmentId;
           }
-          await callApi('createEquipmentSchedule', {
+          const result = await callApi('createEquipmentSchedule', {
             ...equipmentScheduleForm.value,
             equipmentName
           });
+          await logAudit('create', 'schedule', 'EquipmentSchedule', result?.id || '', equipmentName, { type: equipmentScheduleForm.value.equipmentType, date: equipmentScheduleForm.value.scheduleDate });
           await loadScheduleData();
           showEquipmentScheduleModal.value = false;
-          logAudit('create', 'schedule', '新增設備排程', { schedule: equipmentScheduleForm.value });
         } catch (e) {
           alert('儲存失敗: ' + e);
         } finally {
