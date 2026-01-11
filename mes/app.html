@@ -4,9 +4,9 @@
 
   // 角色權限映射
   const ROLE_PERMISSIONS = {
-    operator: ['work-orders-view', 'dispatches', 'reports'],
-    warehouse: ['work-orders-view', 'wms', 'parts'],
-    qc: ['work-orders-view', 'outgassing', 'aoi', 'r0'],
+    operator: ['work-orders-view', 'dispatches', 'reports', 'schedule'],
+    warehouse: ['work-orders-view', 'wms', 'parts', 'schedule'],
+    qc: ['work-orders-view', 'outgassing', 'aoi', 'r0', 'schedule'],
     clerk: ['work-orders-view', 'wms', 'parts', 'audit', 'settings'],
     supervisor: ['dashboard', 'work-orders-view', 'dispatches', 'reports', 'outgassing', 'aoi', 'r0', 'schedule', 'oven', 'wms', 'parts', 'audit'],
     admin: ['dashboard', 'work-orders', 'dispatches', 'reports', 'outgassing', 'aoi', 'r0', 'label-editor', 'schedule', 'oven', 'wms', 'parts', 'audit', 'settings']

@@ -282,7 +282,7 @@
           <i data-lucide="table" class="w-4 h-4"></i>
           工單排程表
         </h3>
-        <div class="widget-actions">
+        <div v-if="canSupervise" class="widget-actions">
           <button class="btn btn-primary btn-sm" @click="openSchedulePlanModal">
             <i data-lucide="plus" class="w-4 h-4"></i>
             新增排程
@@ -301,7 +301,7 @@
                 <th>預計開始</th>
                 <th>預計完成</th>
                 <th>狀態</th>
-                <th>操作</th>
+                <th v-if="canSupervise">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -317,7 +317,7 @@
                 <td>
                   <span class="status-tag" :class="wo.status">{{ formatWoStatus(wo.status) }}</span>
                 </td>
-                <td class="action-cell">
+                <td v-if="canSupervise" class="action-cell">
                   <button class="btn btn-ghost btn-xs" @click="editWorkOrderSchedule(wo)">
                     <i data-lucide="edit" class="w-3 h-3"></i>
                   </button>
@@ -385,7 +385,7 @@
           <i data-lucide="calendar" class="w-4 h-4"></i>
           班次週曆
         </h3>
-        <div class="widget-actions">
+        <div v-if="canSupervise" class="widget-actions">
           <button class="btn btn-outline btn-sm" @click="downloadShiftTemplate">
             <i data-lucide="download" class="w-4 h-4"></i>
             下載範本
@@ -417,9 +417,10 @@
                      class="shift-badge" :class="getShiftForOperatorDay(operator.id, day.date).shiftType">
                   {{ formatShiftType(getShiftForOperatorDay(operator.id, day.date).shiftType) }}
                 </div>
-                <div v-else class="shift-empty" @click="quickAddShift(operator.id, day.date)">
+                <div v-else-if="canSupervise" class="shift-empty" @click="quickAddShift(operator.id, day.date)">
                   <i data-lucide="plus" class="w-3 h-3"></i>
                 </div>
+                <div v-else class="shift-empty-readonly">-</div>
               </div>
             </div>
             <div v-if="scheduleOperators.length === 0" class="week-empty">
@@ -475,7 +476,7 @@
           <i data-lucide="flame" class="w-4 h-4"></i>
           烘箱排程
         </h3>
-        <div class="widget-actions">
+        <div v-if="canSupervise" class="widget-actions">
           <button class="btn btn-primary btn-sm" @click="openEquipmentScheduleModal('oven')">
             <i data-lucide="plus" class="w-4 h-4"></i>
             新增排程
