@@ -1716,15 +1716,17 @@
       const pinError = ref('');
 
       const selectOperator = (op) => {
-        // 如果有設定 PIN，彈出 PIN 輸入框
-        if (op.pin) {
+        // admin 可以自由切換身份（方便除錯）
+        const isAdmin = currentOperator.value?.role === 'admin';
+        // 如果有設定 PIN 且非 admin，彈出 PIN 輸入框
+        if (op.pin && !isAdmin) {
           pendingOperator.value = op;
           pinInput.value = '';
           pinError.value = '';
           showPinModal.value = true;
           return;
         }
-        // 沒有 PIN，直接選擇
+        // 沒有 PIN 或是 admin，直接選擇
         confirmOperatorSelection(op);
       };
 
