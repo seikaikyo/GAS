@@ -1622,8 +1622,17 @@
       const adminSyncDatabase = async () => {
         adminLoading.value = true; adminMessage.value = '';
         try {
-          const result = await callApi('syncDatabase');
-          adminMessageType.value = 'success'; adminMessage.value = `資料庫同步完成！${result.message || ''}`;
+          // 1. 同步資料庫結構
+          await callApi('syncDatabase');
+          // 2. 修復欄位順序
+          localStorage.removeItem('MES_DATA_CACHE');
+          const fixResult = await callApi('fixColumnOrder');
+          // 3. 修復簽名資料
+          await callApi('fixSignatureData');
+
+          const fixed = fixResult.fixed || [];
+          adminMessageType.value = 'success';
+          adminMessage.value = `資料庫同步完成！${fixed.length > 0 ? '已修復欄位: ' + fixed.join(', ') : '欄位順序正確'}`;
         } catch (e) { adminMessageType.value = 'error'; adminMessage.value = '同步失敗: ' + e; }
         finally { adminLoading.value = false; }
       };

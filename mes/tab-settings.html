@@ -240,25 +240,9 @@
     <div class="admin-grid">
       <div class="admin-card blue">
         <h4>同步資料庫</h4>
-        <p>新增缺少的欄位（如簽名欄）</p>
+        <p>同步結構 + 修復欄位順序 + 修復簽名</p>
         <button class="btn btn-primary w-full" :disabled="adminLoading" @click="adminSyncDatabase">
           {{ adminLoading ? '同步中...' : '同步資料庫' }}
-        </button>
-      </div>
-
-      <div class="admin-card orange">
-        <h4>修復欄位順序</h4>
-        <p>修正欄位順序錯亂導致的資料問題</p>
-        <button class="btn btn-warning w-full" :disabled="adminLoading" @click="adminFixColumnOrder">
-          {{ adminLoading ? '修復中...' : '修復欄位順序' }}
-        </button>
-      </div>
-
-      <div class="admin-card pink">
-        <h4>修復簽名資料</h4>
-        <p>修復簽名資料儲存位置錯誤問題</p>
-        <button class="btn btn-error btn-outline w-full" :disabled="adminLoading" @click="adminFixSignatureData">
-          {{ adminLoading ? '修復中...' : '修復簽名資料' }}
         </button>
       </div>
 
@@ -378,7 +362,16 @@
     <div class="changelog-container">
       <!-- 最近 3 個版本永遠顯示 -->
       <div class="changelog-item" style="border-left: 3px solid #22c55e;">
-        <div class="changelog-version" style="color: #16a34a;">v5.48.1</div>
+        <div class="changelog-version" style="color: #16a34a;">v5.48.2</div>
+        <div class="changelog-date">2026-01-11</div>
+        <div class="changelog-effort">0.2h / 1人</div>
+        <ul class="changelog-list">
+          <li><span class="changelog-tag refactor">UX</span>同步資料庫按鈕整合：結構同步 + 欄位順序 + 簽名修復</li>
+          <li><span class="changelog-tag fix">FIX</span>移除冗餘的修復按鈕，簡化管理介面</li>
+        </ul>
+      </div>
+      <div class="changelog-item">
+        <div class="changelog-version">v5.48.1</div>
         <div class="changelog-date">2026-01-11</div>
         <div class="changelog-effort">0.5h / 1人</div>
         <ul class="changelog-list">
