@@ -7,7 +7,7 @@
     operator: ['work-orders-view', 'dispatches', 'reports'],
     warehouse: ['work-orders-view', 'wms', 'parts'],
     qc: ['work-orders-view', 'outgassing', 'aoi', 'r0'],
-    clerk: ['work-orders-view', 'wms', 'parts', 'settings'],
+    clerk: ['work-orders-view', 'wms', 'parts', 'audit', 'settings'],
     supervisor: ['dashboard', 'work-orders-view', 'dispatches', 'reports', 'outgassing', 'aoi', 'r0', 'schedule', 'oven', 'wms', 'parts', 'audit'],
     admin: ['dashboard', 'work-orders', 'dispatches', 'reports', 'outgassing', 'aoi', 'r0', 'label-editor', 'schedule', 'oven', 'wms', 'parts', 'audit', 'settings']
   };
@@ -1731,6 +1731,7 @@
       };
 
       const confirmOperatorSelection = (op) => {
+        const prevOperator = currentOperator.value;
         currentOperator.value = op;
         showOperatorSelector.value = false;
         showPinModal.value = false;
@@ -1739,6 +1740,12 @@
         localStorage.setItem('MES_CURRENT_OPERATOR', JSON.stringify(op));
         // 切換到該角色的預設頁籤
         currentTab.value = DEFAULT_TABS[op.role] || 'dispatches';
+        // 記錄切換操作
+        logAudit('login', 'settings', op.name, {
+          from: prevOperator?.name || '未登入',
+          to: op.name,
+          role: op.role
+        });
       };
 
       const verifyPin = () => {
@@ -1860,7 +1867,8 @@
           locationCode: '儲位', partNumber: '料號', partName: '品名',
           movementType: '異動類型', reason: '原因', notes: '備註',
           sites: '站點', sitesInput: '站點',
-          startTime: '開始時間', endTime: '結束時間'
+          startTime: '開始時間', endTime: '結束時間',
+          from: '從', to: '切換至'
         };
         // 值的中文對照
         const valueMap = {
