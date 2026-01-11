@@ -234,10 +234,36 @@
   white-space: nowrap;
 }
 
-/* 狀態標籤 */
+/* 狀態標籤 (通用) */
+.status-tag {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
 .status-tag.pending { background: #fef3c7; color: #d97706; }
 .status-tag.approved { background: #d1fae5; color: #059669; }
 .status-tag.rejected { background: #fee2e2; color: #dc2626; }
+
+/* 表單群組 (審核 Modal 用) */
+.form-group {
+  margin-bottom: 1rem;
+}
+.form-group .input-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+/* Modal 按鈕列 */
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
 
 /* 按鈕群組 */
 .btn-group-horizontal { display: flex; gap: 0.25rem; }
