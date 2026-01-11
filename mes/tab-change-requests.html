@@ -17,8 +17,8 @@
   </div>
 
   <!-- 篩選器 -->
-  <div class="filter-bar" style="margin-bottom: 1rem;">
-    <div class="filter-group">
+  <div class="cr-filter-bar">
+    <div class="cr-filter-group">
       <label>狀態</label>
       <select class="select select-bordered select-sm" v-model="crFilter.status">
         <option value="">全部</option>
@@ -27,7 +27,7 @@
         <option value="rejected">已駁回</option>
       </select>
     </div>
-    <div class="filter-group">
+    <div class="cr-filter-group">
       <label>類型</label>
       <select class="select select-bordered select-sm" v-model="crFilter.targetType">
         <option value="">全部</option>
@@ -216,10 +216,33 @@
 </div>
 
 <style>
+/* 篩選器樣式 */
+.cr-filter-bar {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.cr-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.cr-filter-group label {
+  font-size: 0.875rem;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+/* 狀態標籤 */
 .status-tag.pending { background: #fef3c7; color: #d97706; }
 .status-tag.approved { background: #d1fae5; color: #059669; }
 .status-tag.rejected { background: #fee2e2; color: #dc2626; }
+
+/* 按鈕群組 */
 .btn-group-horizontal { display: flex; gap: 0.25rem; }
+
+/* 統計卡片 */
 .stats-row { display: flex; gap: 1rem; flex-wrap: wrap; }
 .stat-card {
   background: #f8fafc;
