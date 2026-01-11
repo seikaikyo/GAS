@@ -4,11 +4,16 @@
 
   const app = createApp({
     setup() {
+      // 雙入口模式：從 window 變數取得（由 GAS 模板傳入）
+      const isAdminMode = ref(window.APP_MODE === 'admin');
+      const userEmail = ref(window.USER_EMAIL || '');
+
       const loading = ref(false);
       const loadingCount = ref(0);
       const loadingMessage = ref('');
       const version = ref('');
-      const currentTab = ref('dashboard');
+      // 作業員端預設「現場派工」，管理端預設「戰情中心」
+      const currentTab = ref(isAdminMode.value ? 'dashboard' : 'dispatches');
       const workOrders = ref([]);
       const woStatusFilter = ref('all');
       const dispatches = ref([]);
@@ -3630,6 +3635,8 @@
       });
 
       return {
+        // 雙入口模式
+        isAdminMode, userEmail,
         loading, loadingMessage, version, currentTab, workOrders, woStatusFilter, filteredWorkOrders, dispatches, reports,
         showCreateWoModal, showDispatchModal, showReportModal, showShareModal,
         shareLoading, shareData, shareCopied, openShareModal, copyShareUrl,
