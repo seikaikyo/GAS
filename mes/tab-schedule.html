@@ -3,7 +3,7 @@
   使用 DaisyUI 元件
 -->
 
-<div v-show="currentTab === 'schedule'" class="schedule-dashboard">
+<div v-show="currentTab === 'schedule'" class="schedule-dashboard w-full max-w-full overflow-hidden">
   <!-- 子頁籤導航 -->
   <div class="schedule-tabs">
     <button class="schedule-tab" :class="{ active: scheduleSubTab === 'overview' }" @click="scheduleSubTab = 'overview'">
@@ -39,10 +39,10 @@
   </div>
 
   <!-- ===== 排程總覽 (S1-S4) ===== -->
-  <div v-show="scheduleSubTab === 'overview'" class="schedule-grid">
+  <div v-show="scheduleSubTab === 'overview'" class="schedule-grid w-full max-w-full">
 
     <!-- S1: 今日產能 -->
-    <div class="schedule-widget">
+    <div class="schedule-widget w-full max-w-full box-border overflow-hidden">
       <div class="widget-header">
         <h3 class="widget-title">
           <i data-lucide="target" class="w-4 h-4"></i>
@@ -52,7 +52,7 @@
           <i data-lucide="info" class="w-4 h-4 info-icon"></i>
         </div>
       </div>
-      <div class="widget-content">
+      <div class="widget-content overflow-x-auto">
         <div class="kpi-grid">
           <div class="kpi-item">
             <span class="schedule-metric-value">{{ scheduleStats.targetQty || 0 }}</span>
@@ -87,7 +87,7 @@
     </div>
 
     <!-- S2: 人力配置 -->
-    <div class="schedule-widget">
+    <div class="schedule-widget w-full max-w-full box-border overflow-hidden">
       <div class="widget-header">
         <h3 class="widget-title">
           <i data-lucide="users" class="w-4 h-4"></i>
@@ -97,7 +97,7 @@
           <i data-lucide="info" class="w-4 h-4 info-icon"></i>
         </div>
       </div>
-      <div class="widget-content">
+      <div class="widget-content overflow-x-auto">
         <div class="shift-summary">
           <div class="shift-card shift-day">
             <div class="shift-icon">
@@ -141,7 +141,7 @@
     </div>
 
     <!-- S3: 設備稼動 -->
-    <div class="schedule-widget">
+    <div class="schedule-widget w-full max-w-full box-border overflow-hidden">
       <div class="widget-header">
         <h3 class="widget-title">
           <i data-lucide="cpu" class="w-4 h-4"></i>
@@ -151,7 +151,7 @@
           <i data-lucide="info" class="w-4 h-4 info-icon"></i>
         </div>
       </div>
-      <div class="widget-content">
+      <div class="widget-content overflow-x-auto">
         <div class="equipment-overview">
           <div class="equipment-ring">
             <svg viewBox="0 0 100 100" class="usage-ring">
@@ -182,7 +182,7 @@
     </div>
 
     <!-- S4: 排程衝突 -->
-    <div class="schedule-widget" :class="{ 'has-warning': conflictStats.total > 0 }">
+    <div class="schedule-widget w-full max-w-full box-border overflow-hidden" :class="{ 'has-warning': conflictStats.total > 0 }">
       <div class="widget-header">
         <h3 class="widget-title">
           <i data-lucide="alert-triangle" class="w-4 h-4"></i>
@@ -192,7 +192,7 @@
           <i data-lucide="info" class="w-4 h-4 info-icon"></i>
         </div>
       </div>
-      <div class="widget-content">
+      <div class="widget-content overflow-x-auto">
         <div class="conflict-summary">
           <div class="conflict-number" :class="{ warning: conflictStats.total > 0 }">
             {{ conflictStats.total || 0 }}
@@ -213,7 +213,7 @@
     </div>
 
     <!-- S5: 今日派工列表 -->
-    <div class="schedule-widget wide">
+    <div class="schedule-widget wide w-full max-w-full box-border overflow-hidden">
       <div class="widget-header">
         <h3 class="widget-title">
           <i data-lucide="list-checks" class="w-4 h-4"></i>
@@ -223,7 +223,7 @@
           <i data-lucide="refresh-cw" class="w-4 h-4"></i>
         </button>
       </div>
-      <div class="widget-content">
+      <div class="widget-content overflow-x-auto">
         <div class="dispatch-list" v-if="todayDispatches.length > 0">
           <div v-for="dispatch in todayDispatches.slice(0, 5)" :key="dispatch.id" class="dispatch-item">
             <div class="dispatch-status" :class="dispatch.status"></div>
@@ -249,14 +249,14 @@
     </div>
 
     <!-- S6: 站點負載 -->
-    <div class="schedule-widget wide">
+    <div class="schedule-widget wide w-full max-w-full box-border overflow-hidden">
       <div class="widget-header">
         <h3 class="widget-title">
           <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
           站點負載
         </h3>
       </div>
-      <div class="widget-content">
+      <div class="widget-content overflow-x-auto">
         <div class="station-load-chart">
           <div v-for="station in stationLoadData" :key="station.name" class="station-bar-wrapper">
             <div class="station-name">{{ station.name }}</div>
@@ -273,10 +273,10 @@
   </div>
 
   <!-- ===== 生產排程 (S7-S10) ===== -->
-  <div v-show="scheduleSubTab === 'production'" class="schedule-grid">
+  <div v-show="scheduleSubTab === 'production'" class="schedule-grid w-full max-w-full">
 
     <!-- S7: 工單排程表 -->
-    <div class="schedule-widget full-width">
+    <div class="schedule-widget full-width w-full max-w-full box-border overflow-hidden">
       <div class="widget-header">
         <h3 class="widget-title">
           <i data-lucide="table" class="w-4 h-4"></i>
@@ -289,7 +289,7 @@
           </button>
         </div>
       </div>
-      <div class="widget-content">
+      <div class="widget-content overflow-x-auto">
         <div class="schedule-table-container">
           <table class="schedule-table">
             <thead>
@@ -333,7 +333,7 @@
     </div>
 
     <!-- S8: 甘特圖 -->
-    <div class="schedule-widget full-width">
+    <div class="schedule-widget full-width w-full max-w-full box-border overflow-hidden">
       <div class="widget-header">
         <h3 class="widget-title">
           <i data-lucide="gantt-chart" class="w-4 h-4"></i>
@@ -346,7 +346,7 @@
           </div>
         </div>
       </div>
-      <div class="widget-content">
+      <div class="widget-content overflow-x-auto">
         <div class="gantt-container">
           <!-- 時間軸標題 -->
           <div class="gantt-header">
@@ -376,10 +376,10 @@
   </div>
 
   <!-- ===== 人員排班 (S9-S12) ===== -->
-  <div v-show="scheduleSubTab === 'workforce'" class="schedule-grid">
+  <div v-show="scheduleSubTab === 'workforce'" class="schedule-grid w-full max-w-full">
 
     <!-- S9: 班次週曆 -->
-    <div class="schedule-widget full-width">
+    <div class="schedule-widget full-width w-full max-w-full box-border overflow-hidden">
       <div class="widget-header">
         <h3 class="widget-title">
           <i data-lucide="calendar" class="w-4 h-4"></i>
@@ -400,7 +400,7 @@
           </button>
         </div>
       </div>
-      <div class="widget-content">
+      <div class="widget-content overflow-x-auto">
         <div class="week-calendar">
           <div class="week-header">
             <div class="week-cell header">人員</div>
@@ -431,7 +431,7 @@
     </div>
 
     <!-- S10: 技能矩陣 -->
-    <div class="schedule-widget full-width">
+    <div class="schedule-widget full-width w-full max-w-full box-border overflow-hidden">
       <div class="widget-header">
         <h3 class="widget-title">
           <i data-lucide="grid-3x3" class="w-4 h-4"></i>
@@ -441,7 +441,7 @@
           <i data-lucide="info" class="w-4 h-4 info-icon"></i>
         </div>
       </div>
-      <div class="widget-content">
+      <div class="widget-content overflow-x-auto">
         <div class="skill-matrix-container">
           <table class="skill-matrix">
             <thead>
@@ -466,10 +466,10 @@
   </div>
 
   <!-- ===== 設備排程 (S13-S16) ===== -->
-  <div v-show="scheduleSubTab === 'equipment'" class="schedule-grid">
+  <div v-show="scheduleSubTab === 'equipment'" class="schedule-grid w-full max-w-full">
 
     <!-- S13: 烘箱排程 -->
-    <div class="schedule-widget full-width">
+    <div class="schedule-widget full-width w-full max-w-full box-border overflow-hidden">
       <div class="widget-header">
         <h3 class="widget-title">
           <i data-lucide="flame" class="w-4 h-4"></i>
@@ -482,7 +482,7 @@
           </button>
         </div>
       </div>
-      <div class="widget-content">
+      <div class="widget-content overflow-x-auto">
         <div class="equipment-timeline">
           <div class="timeline-header">
             <div class="timeline-label">設備</div>
@@ -507,14 +507,14 @@
     </div>
 
     <!-- S14: 站點排程 -->
-    <div class="schedule-widget full-width">
+    <div class="schedule-widget full-width w-full max-w-full box-border overflow-hidden">
       <div class="widget-header">
         <h3 class="widget-title">
           <i data-lucide="layers" class="w-4 h-4"></i>
           站點排程
         </h3>
       </div>
-      <div class="widget-content">
+      <div class="widget-content overflow-x-auto">
         <div class="equipment-timeline">
           <div class="timeline-header">
             <div class="timeline-label">站點</div>
@@ -539,14 +539,14 @@
     </div>
 
     <!-- S15: 設備使用率統計 -->
-    <div class="schedule-widget">
+    <div class="schedule-widget w-full max-w-full box-border overflow-hidden">
       <div class="widget-header">
         <h3 class="widget-title">
           <i data-lucide="pie-chart" class="w-4 h-4"></i>
           設備使用率
         </h3>
       </div>
-      <div class="widget-content">
+      <div class="widget-content overflow-x-auto">
         <div class="usage-stats">
           <div v-for="equip in equipmentUsageStats" :key="equip.name" class="usage-item">
             <div class="usage-header">
@@ -563,14 +563,14 @@
     </div>
 
     <!-- S16: 維護提醒 -->
-    <div class="schedule-widget">
+    <div class="schedule-widget w-full max-w-full box-border overflow-hidden">
       <div class="widget-header">
         <h3 class="widget-title">
           <i data-lucide="wrench" class="w-4 h-4"></i>
           維護提醒
         </h3>
       </div>
-      <div class="widget-content">
+      <div class="widget-content overflow-x-auto">
         <div class="maintenance-list">
           <div v-for="item in maintenanceReminders" :key="item.id" class="maintenance-item" :class="item.urgency">
             <i :data-lucide="getMaintenanceIcon(item.type)" class="w-4 h-4 maint-icon"></i>
