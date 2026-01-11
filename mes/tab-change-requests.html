@@ -1,0 +1,233 @@
+<!-- Tab: 異動作業 -->
+<div v-show="currentTab === 'change-requests'">
+  <div class="section-header">
+    <h2>{{ canSupervise ? '異動審核' : '我的異動' }}</h2>
+    <div class="header-actions" v-if="canSupervise">
+      <span class="badge badge-warning" v-if="pendingChangeRequestsCount > 0" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
+        <i data-lucide="alert-circle" class="w-4 h-4"></i>
+        {{ pendingChangeRequestsCount }} 筆待審核
+      </span>
+    </div>
+  </div>
+
+  <!-- 說明文字 -->
+  <div class="alert alert-info" style="margin-bottom: 1rem;" v-if="!canSupervise">
+    <i data-lucide="info" class="w-5 h-5"></i>
+    <span>如需修改單據資料，請至該單據頁面點擊「申請異動」按鈕提交申請</span>
+  </div>
+
+  <!-- 篩選器 -->
+  <div class="filter-bar" style="margin-bottom: 1rem;">
+    <div class="filter-group">
+      <label>狀態</label>
+      <select class="select select-bordered select-sm" v-model="crFilter.status">
+        <option value="">全部</option>
+        <option value="pending">待審核</option>
+        <option value="approved">已核准</option>
+        <option value="rejected">已駁回</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>類型</label>
+      <select class="select select-bordered select-sm" v-model="crFilter.targetType">
+        <option value="">全部</option>
+        <option value="workOrder">工單</option>
+        <option value="dispatch">派工</option>
+        <option value="report">報工</option>
+        <option value="outgassing">釋氣檢驗</option>
+        <option value="aoi">AOI 檢驗</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- 異動單列表 -->
+  <div class="scrollable">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>單號</th>
+          <th v-if="canSupervise">申請人</th>
+          <th>異動對象</th>
+          <th>欄位</th>
+          <th>原值 → 新值</th>
+          <th>原因</th>
+          <th>狀態</th>
+          <th>申請時間</th>
+          <th v-if="canSupervise">操作</th>
+          <th v-if="!canSupervise">審核結果</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="cr in filteredChangeRequests" :key="cr.id">
+          <td><span class="barcode">{{ cr.requestNumber }}</span></td>
+          <td v-if="canSupervise">{{ cr.requestedBy }}</td>
+          <td>
+            <span class="badge badge-ghost">{{ formatTargetType(cr.targetType) }}</span>
+            <div style="font-size: 0.75rem; color: #64748b;">{{ cr.targetDisplay }}</div>
+          </td>
+          <td>{{ cr.fieldLabel }}</td>
+          <td>
+            <span style="text-decoration: line-through; color: #94a3b8;">{{ cr.oldValue }}</span>
+            <i data-lucide="arrow-right" class="w-3 h-3" style="margin: 0 0.25rem; color: #94a3b8;"></i>
+            <span style="color: #22c55e; font-weight: 500;">{{ cr.newValue }}</span>
+          </td>
+          <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">{{ cr.reason }}</td>
+          <td>
+            <span :class="['status-tag', cr.status]">{{ formatCrStatus(cr.status) }}</span>
+          </td>
+          <td>{{ formatDateTime(cr.requestedAt) }}</td>
+          <!-- 主管：審核操作 -->
+          <td v-if="canSupervise">
+            <div v-if="cr.status === 'pending'" class="btn-group-horizontal">
+              <button class="btn btn-success btn-xs" @click="reviewChangeRequest(cr.id, 'approve')" title="核准">
+                <i data-lucide="check" class="w-3 h-3"></i>
+              </button>
+              <button class="btn btn-error btn-xs" @click="reviewChangeRequest(cr.id, 'reject')" title="駁回">
+                <i data-lucide="x" class="w-3 h-3"></i>
+              </button>
+            </div>
+            <div v-else style="font-size: 0.75rem; color: #64748b;">
+              {{ cr.reviewedBy }}<br>
+              {{ formatDateTime(cr.reviewedAt) }}
+            </div>
+          </td>
+          <!-- 作業員：查看審核結果 -->
+          <td v-if="!canSupervise">
+            <div v-if="cr.status === 'pending'" style="font-size: 0.75rem; color: #d97706;">
+              等待主管審核中...
+            </div>
+            <div v-else style="font-size: 0.75rem; color: #64748b;">
+              {{ cr.reviewedBy }}<br>
+              {{ formatDateTime(cr.reviewedAt) }}
+              <div v-if="cr.reviewNotes" style="margin-top: 0.25rem; font-style: italic;">「{{ cr.reviewNotes }}」</div>
+            </div>
+          </td>
+        </tr>
+        <tr v-if="filteredChangeRequests.length === 0">
+          <td :colspan="canSupervise ? 9 : 9" class="empty-state">
+            <i data-lucide="file-text" class="w-8 h-8" style="margin-bottom: 0.5rem; opacity: 0.3;"></i>
+            <div v-if="canSupervise">尚無異動單</div>
+            <div v-else>您尚未提交任何異動申請</div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 統計資訊 (主管) -->
+  <div v-if="canSupervise && changeRequests.length > 0" class="stats-row" style="margin-top: 1rem;">
+    <div class="stat-card">
+      <div class="stat-value" style="color: #d97706;">{{ changeRequests.filter(c => c.status === 'pending').length }}</div>
+      <div class="stat-label">待審核</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="color: #059669;">{{ changeRequests.filter(c => c.status === 'approved').length }}</div>
+      <div class="stat-label">已核准</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="color: #dc2626;">{{ changeRequests.filter(c => c.status === 'rejected').length }}</div>
+      <div class="stat-label">已駁回</div>
+    </div>
+  </div>
+</div>
+
+<!-- 申請異動 Modal (從單據頁面觸發) -->
+<div v-if="showChangeRequestModal" class="modal-overlay" @click.self="showChangeRequestModal = false">
+  <div class="modal-box" style="max-width: 500px;">
+    <div class="modal-header">
+      <h3>申請異動</h3>
+      <button class="btn btn-sm btn-ghost" @click="showChangeRequestModal = false">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <form @submit.prevent="submitChangeRequest">
+        <!-- 異動對象資訊 (唯讀) -->
+        <div class="alert alert-ghost" style="margin-bottom: 1rem;">
+          <div>
+            <span class="badge badge-primary">{{ formatTargetType(formCr.targetType) }}</span>
+            <strong style="margin-left: 0.5rem;">{{ formCr.targetDisplay }}</strong>
+          </div>
+        </div>
+
+        <!-- 選擇欄位 -->
+        <div class="form-group">
+          <label class="input-label">異動欄位 <span style="color: #ef4444;">*</span></label>
+          <select class="select select-bordered w-full" v-model="formCr.fieldName" required @change="onFieldChange">
+            <option value="">-- 請選擇要修改的欄位 --</option>
+            <option v-for="field in crFieldOptions" :key="field.name" :value="field.name">
+              {{ field.label }}
+            </option>
+          </select>
+        </div>
+
+        <!-- 原值顯示 -->
+        <div class="form-group" v-if="formCr.fieldName">
+          <label class="input-label">原值</label>
+          <input type="text" class="input input-bordered w-full" :value="formCr.oldValue" disabled style="background: #f1f5f9;">
+        </div>
+
+        <!-- 新值輸入 -->
+        <div class="form-group" v-if="formCr.fieldName">
+          <label class="input-label">新值 <span style="color: #ef4444;">*</span></label>
+          <input type="text" class="input input-bordered w-full" v-model="formCr.newValue" required placeholder="請輸入正確的值">
+        </div>
+
+        <!-- 異動原因 -->
+        <div class="form-group" v-if="formCr.fieldName">
+          <label class="input-label">異動原因 <span style="color: #ef4444;">*</span></label>
+          <textarea class="textarea textarea-bordered w-full" v-model="formCr.reason" rows="2" required placeholder="請說明為什麼需要修改（例如：輸入錯誤、資料更正等）"></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" @click="showChangeRequestModal = false">取消</button>
+          <button type="submit" class="btn btn-primary" :disabled="!formCr.fieldName || !formCr.newValue || !formCr.reason">
+            <i data-lucide="send" class="w-4 h-4"></i>
+            送出申請
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- 審核異動單 Modal -->
+<div v-if="showReviewModal" class="modal-overlay" @click.self="showReviewModal = false">
+  <div class="modal-box" style="max-width: 400px;">
+    <div class="modal-header">
+      <h3>{{ reviewAction === 'approve' ? '核准異動單' : '駁回異動單' }}</h3>
+      <button class="btn btn-sm btn-ghost" @click="showReviewModal = false">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="input-label">審核備註（選填）</label>
+        <textarea class="textarea textarea-bordered w-full" v-model="reviewNotes" rows="2" placeholder="可輸入審核說明"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" @click="showReviewModal = false">取消</button>
+        <button :class="['btn', reviewAction === 'approve' ? 'btn-success' : 'btn-error']" @click="confirmReview">
+          {{ reviewAction === 'approve' ? '確認核准' : '確認駁回' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.status-tag.pending { background: #fef3c7; color: #d97706; }
+.status-tag.approved { background: #d1fae5; color: #059669; }
+.status-tag.rejected { background: #fee2e2; color: #dc2626; }
+.btn-group-horizontal { display: flex; gap: 0.25rem; }
+.stats-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+.stat-card {
+  background: #f8fafc;
+  border-radius: 0.5rem;
+  padding: 1rem 1.5rem;
+  text-align: center;
+  min-width: 100px;
+}
+.stat-value { font-size: 1.5rem; font-weight: 700; }
+.stat-label { font-size: 0.75rem; color: #64748b; margin-top: 0.25rem; }
+</style>

@@ -155,6 +155,15 @@ const DB_CONFIG = {
         'id', 'planName', 'planDate', 'planType', 'totalDispatches',
         'completedDispatches', 'status', 'createdBy', 'notes', 'createdAt'
       ]
+    },
+    changeRequests: {
+      name: 'ChangeRequests',
+      headers: [
+        'id', 'requestNumber', 'requestedBy', 'requestedAt',
+        'targetType', 'targetId', 'targetDisplay',
+        'fieldName', 'fieldLabel', 'oldValue', 'newValue',
+        'reason', 'status', 'reviewedBy', 'reviewedAt', 'reviewNotes'
+      ]
     }
   }
 };
@@ -1845,5 +1854,184 @@ function dbGetScheduleStats(date) {
     inProgressDispatches,
     completionRate: totalDispatches > 0 ? Math.round(completedDispatches / totalDispatches * 100) : 0
   };
+}
+
+// ========================================
+// 異動單 (Change Requests) CRUD
+// ========================================
+
+/**
+ * 產生異動單號 CR-YYYYMMDD-XXX
+ */
+function generateChangeRequestNumber() {
+  const today = new Date();
+  const dateStr = Utilities.formatDate(today, Session.getScriptTimeZone(), 'yyyyMMdd');
+  const prefix = `CR-${dateStr}-`;
+
+  const sheet = getOrCreateSheet('changeRequests');
+  const data = sheet.getDataRange().getValues();
+
+  let maxSeq = 0;
+  for (let i = 1; i < data.length; i++) {
+    const reqNum = data[i][1]; // requestNumber column
+    if (reqNum && reqNum.startsWith(prefix)) {
+      const seq = parseInt(reqNum.substring(prefix.length), 10);
+      if (seq > maxSeq) maxSeq = seq;
+    }
+  }
+
+  return prefix + String(maxSeq + 1).padStart(3, '0');
+}
+
+/**
+ * 取得所有異動單
+ */
+function dbGetChangeRequests() {
+  return getSheetData('changeRequests');
+}
+
+/**
+ * 建立異動單
+ * @param {Object} data - { requestedBy, targetType, targetId, targetDisplay, fieldName, fieldLabel, oldValue, newValue, reason }
+ */
+function dbCreateChangeRequest(data) {
+  const id = Utilities.getUuid();
+  const requestNumber = generateChangeRequestNumber();
+  const now = new Date().toISOString();
+
+  const row = [
+    id,
+    requestNumber,
+    data.requestedBy || '',
+    now,
+    data.targetType || '',
+    data.targetId || '',
+    data.targetDisplay || '',
+    data.fieldName || '',
+    data.fieldLabel || '',
+    String(data.oldValue ?? ''),
+    String(data.newValue ?? ''),
+    data.reason || '',
+    'pending',  // status: pending, approved, rejected
+    '',         // reviewedBy
+    '',         // reviewedAt
+    ''          // reviewNotes
+  ];
+
+  const sheet = getOrCreateSheet('changeRequests');
+  sheet.appendRow(row);
+
+  // 記錄稽核日誌
+  logAudit('CREATE', 'ChangeRequest', id, data.requestedBy, {
+    requestNumber,
+    targetType: data.targetType,
+    targetId: data.targetId,
+    fieldName: data.fieldName
+  });
+
+  return { id, requestNumber };
+}
+
+/**
+ * 審核異動單
+ * @param {Object} data - { id, action: 'approve'|'reject', reviewedBy, reviewNotes }
+ */
+function dbReviewChangeRequest(data) {
+  const sheet = getOrCreateSheet('changeRequests');
+  const allData = sheet.getDataRange().getValues();
+  const headers = allData[0];
+
+  const idCol = headers.indexOf('id');
+  const statusCol = headers.indexOf('status');
+  const reviewedByCol = headers.indexOf('reviewedBy');
+  const reviewedAtCol = headers.indexOf('reviewedAt');
+  const reviewNotesCol = headers.indexOf('reviewNotes');
+  const targetTypeCol = headers.indexOf('targetType');
+  const targetIdCol = headers.indexOf('targetId');
+  const fieldNameCol = headers.indexOf('fieldName');
+  const newValueCol = headers.indexOf('newValue');
+
+  for (let i = 1; i < allData.length; i++) {
+    if (allData[i][idCol] === data.id) {
+      const currentStatus = allData[i][statusCol];
+      if (currentStatus !== 'pending') {
+        throw new Error('此異動單已審核完畢');
+      }
+
+      const newStatus = data.action === 'approve' ? 'approved' : 'rejected';
+      const now = new Date().toISOString();
+
+      // 更新異動單狀態
+      sheet.getRange(i + 1, statusCol + 1).setValue(newStatus);
+      sheet.getRange(i + 1, reviewedByCol + 1).setValue(data.reviewedBy || '');
+      sheet.getRange(i + 1, reviewedAtCol + 1).setValue(now);
+      sheet.getRange(i + 1, reviewNotesCol + 1).setValue(data.reviewNotes || '');
+
+      // 如果核准，執行實際修改
+      if (data.action === 'approve') {
+        const targetType = allData[i][targetTypeCol];
+        const targetId = allData[i][targetIdCol];
+        const fieldName = allData[i][fieldNameCol];
+        const newValue = allData[i][newValueCol];
+
+        applyChangeRequest(targetType, targetId, fieldName, newValue);
+      }
+
+      // 記錄稽核日誌
+      logAudit('REVIEW', 'ChangeRequest', data.id, data.reviewedBy, {
+        action: data.action,
+        status: newStatus
+      });
+
+      return { success: true, status: newStatus };
+    }
+  }
+
+  throw new Error('找不到此異動單');
+}
+
+/**
+ * 執行異動單的實際修改
+ */
+function applyChangeRequest(targetType, targetId, fieldName, newValue) {
+  const sheetMap = {
+    'workOrder': 'workOrders',
+    'dispatch': 'dispatches',
+    'report': 'reports',
+    'outgassing': 'outgassingTests',
+    'aoi': 'aoiInspections'
+  };
+
+  const sheetKey = sheetMap[targetType];
+  if (!sheetKey) {
+    throw new Error(`不支援的異動對象類型: ${targetType}`);
+  }
+
+  const sheet = getOrCreateSheet(sheetKey);
+  const allData = sheet.getDataRange().getValues();
+  const headers = allData[0];
+
+  const idCol = headers.indexOf('id');
+  const fieldCol = headers.indexOf(fieldName);
+
+  if (fieldCol === -1) {
+    throw new Error(`找不到欄位: ${fieldName}`);
+  }
+
+  for (let i = 1; i < allData.length; i++) {
+    if (allData[i][idCol] === targetId) {
+      sheet.getRange(i + 1, fieldCol + 1).setValue(newValue);
+
+      // 記錄稽核日誌
+      logAudit('UPDATE_BY_CR', sheetKey, targetId, 'SYSTEM', {
+        fieldName,
+        newValue
+      });
+
+      return true;
+    }
+  }
+
+  throw new Error(`找不到目標記錄: ${targetId}`);
 }
 

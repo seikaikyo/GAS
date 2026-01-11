@@ -137,6 +137,7 @@
               <th>結果</th>
               <th>檢驗員</th>
               <th>時間</th>
+              <th>操作</th>
             </tr>
           </thead>
           <tbody>
@@ -151,9 +152,15 @@
               <td style="font-size: 0.75rem; color: #64748b;">
                 {{ t.testedAt ? new Date(t.testedAt).toLocaleString('zh-TW') : '-' }}
               </td>
+              <td @click.stop>
+                <button class="btn btn-xs btn-ghost" @click="openChangeRequestFromRecord('outgassing', t)" title="申請修改此檢驗紀錄">
+                  <i data-lucide="file-edit" class="w-3 h-3"></i>
+                  異動
+                </button>
+              </td>
             </tr>
             <tr v-if="filteredOutgassingTests.length === 0" class="empty-row">
-              <td colspan="6">
+              <td colspan="7">
                 <div class="empty-state">
                   <i data-lucide="clipboard" class="w-12 h-12 mx-auto mb-4 opacity-50"></i>
                   <div>{{ formOutgassing.workOrderId ? '此工單尚無檢驗紀錄' : '請選擇工單查看紀錄' }}</div>

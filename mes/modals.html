@@ -224,11 +224,11 @@
         </div>
       </div>
 
-      <!-- Operator -->
+      <!-- Operator (只顯示現場作業員) -->
       <div style="margin-bottom: 1rem;">
         <label class="input-label">作業員</label>
-        <div v-if="operators.length > 0 && operators.length <= 12" class="operator-grid">
-          <div v-for="op in operators" :key="op.id"
+        <div v-if="shopFloorOperators.length > 0 && shopFloorOperators.length <= 12" class="operator-grid">
+          <div v-for="op in shopFloorOperators" :key="op.id"
                :class="['operator-chip', formDispatch.operatorName === op.name ? 'selected' : '']"
                @click="formDispatch.operatorName = op.name">
             {{ op.name }}
@@ -236,7 +236,7 @@
         </div>
         <select v-else class="select select-bordered w-full" v-model="formDispatch.operatorName" required>
           <option value="">-- 請選擇 --</option>
-          <option v-for="op in operators" :key="op.id" :value="op.name">{{ op.name }}</option>
+          <option v-for="op in shopFloorOperators" :key="op.id" :value="op.name">{{ op.name }}</option>
         </select>
       </div>
 

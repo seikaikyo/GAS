@@ -15,6 +15,7 @@
           <th>NG</th>
           <th>異常</th>
           <th>時間</th>
+          <th>操作</th>
         </tr>
       </thead>
       <tbody>
@@ -44,9 +45,15 @@
           <td style="font-size: 0.75rem; color: #64748b;">
             {{ r.createdAt ? new Date(r.createdAt).toLocaleString('zh-TW') : '-' }}
           </td>
+          <td>
+            <button class="btn btn-xs btn-ghost" @click="openChangeRequestFromRecord('report', r)" title="申請修改此報工紀錄">
+              <i data-lucide="file-edit" class="w-3 h-3"></i>
+              異動
+            </button>
+          </td>
         </tr>
         <tr v-if="reports.length === 0" class="empty-row">
-          <td colspan="7">
+          <td colspan="8">
             <div class="empty-state">
               <i data-lucide="file-text" class="w-12 h-12 mx-auto mb-4 opacity-50"></i>
               <div>暫無報工紀錄</div>

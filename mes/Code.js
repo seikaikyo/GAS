@@ -98,7 +98,7 @@ function api(action, payload) {
     let result;
     switch (action) {
       case 'getVersion':
-        return { success: true, data: '5.48.9' };
+        return { success: true, data: '5.49.0' };
 
       // 效能優化：單次載入所有資料 (含快取)
       case 'getAllData':
@@ -400,6 +400,17 @@ function api(action, payload) {
         break;
       case 'getScheduleStats':
         result = dbGetScheduleStats(payload.date);
+        break;
+
+      // 異動單
+      case 'getChangeRequests':
+        result = dbGetChangeRequests();
+        break;
+      case 'createChangeRequest':
+        result = dbCreateChangeRequest(payload);
+        break;
+      case 'reviewChangeRequest':
+        result = dbReviewChangeRequest(payload);
         break;
 
       case 'getShortUrl':

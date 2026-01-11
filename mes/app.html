@@ -4,12 +4,12 @@
 
   // 角色權限映射
   const ROLE_PERMISSIONS = {
-    operator: ['work-orders-view', 'dispatches', 'reports', 'schedule'],
-    warehouse: ['work-orders-view', 'wms', 'parts', 'schedule'],
-    qc: ['work-orders-view', 'outgassing', 'aoi', 'r0', 'schedule'],
-    clerk: ['work-orders-view', 'wms', 'parts', 'audit', 'settings'],
-    supervisor: ['dashboard', 'work-orders-view', 'dispatches', 'reports', 'outgassing', 'aoi', 'r0', 'schedule', 'oven', 'wms', 'parts', 'audit'],
-    admin: ['dashboard', 'work-orders', 'dispatches', 'reports', 'outgassing', 'aoi', 'r0', 'label-editor', 'schedule', 'oven', 'wms', 'parts', 'audit', 'settings']
+    operator: ['work-orders-view', 'dispatches', 'reports', 'schedule', 'change-requests'],
+    warehouse: ['work-orders-view', 'wms', 'parts', 'schedule', 'change-requests'],
+    qc: ['work-orders-view', 'outgassing', 'aoi', 'r0', 'schedule', 'change-requests'],
+    clerk: ['work-orders-view', 'wms', 'parts', 'audit', 'settings', 'change-requests'],
+    supervisor: ['dashboard', 'work-orders-view', 'dispatches', 'reports', 'outgassing', 'aoi', 'r0', 'schedule', 'oven', 'wms', 'parts', 'audit', 'change-requests'],
+    admin: ['dashboard', 'work-orders', 'dispatches', 'reports', 'outgassing', 'aoi', 'r0', 'label-editor', 'schedule', 'oven', 'wms', 'parts', 'audit', 'settings', 'change-requests']
   };
 
   // 角色預設頁籤
@@ -35,6 +35,10 @@
       const epcHistory = ref([]);
       const reports = ref([]);
       const operators = ref([]);
+      // 現場作業員（只有 operator 角色，用於派工選擇）
+      const shopFloorOperators = Vue.computed(() =>
+        operators.value.filter(op => !op.role || op.role === 'operator')
+      );
       const customers = ref([]);
       const products = ref([]);
       const parts = ref([]);
@@ -54,6 +58,27 @@
       const auditActionFilter = ref('');
       const auditOperatorFilter = ref('');
       const auditSearch = ref('');
+
+      // Change Requests (異動單)
+      const changeRequests = ref([]);
+      const crFilter = ref({ status: '', targetType: '' });
+      const showChangeRequestModal = ref(false);
+      const showReviewModal = ref(false);
+      const reviewAction = ref('');
+      const reviewCrId = ref('');
+      const reviewNotes = ref('');
+      const formCr = ref({
+        targetType: '',
+        targetId: '',
+        targetDisplay: '',
+        fieldName: '',
+        fieldLabel: '',
+        oldValue: '',
+        newValue: '',
+        reason: ''
+      });
+      const crTargetOptions = ref([]);
+      const crFieldOptions = ref([]);
 
       // Computed
       const filteredWorkOrders = Vue.computed(() => {
@@ -161,6 +186,25 @@
         const today = new Date().toISOString().slice(0, 10);
         return auditLogs.value.filter(l => l.timestamp && l.timestamp.startsWith(today)).length;
       });
+
+      // 異動單 computed
+      const filteredChangeRequests = Vue.computed(() => {
+        let result = changeRequests.value;
+        // 非主管只能看自己的申請
+        if (!canSupervise.value && currentOperator.value) {
+          result = result.filter(cr => cr.requestedBy === currentOperator.value.name);
+        }
+        if (crFilter.value.status) {
+          result = result.filter(cr => cr.status === crFilter.value.status);
+        }
+        if (crFilter.value.targetType) {
+          result = result.filter(cr => cr.targetType === crFilter.value.targetType);
+        }
+        return result.sort((a, b) => new Date(b.requestedAt) - new Date(a.requestedAt));
+      });
+      const pendingChangeRequestsCount = Vue.computed(() =>
+        changeRequests.value.filter(cr => cr.status === 'pending').length
+      );
 
       const r0CodePreview = Vue.computed(() => {
         if (!formR0Generate.value.workOrderId) return '';
@@ -1898,6 +1942,244 @@
           }
         }
         return JSON.stringify(details);
+      };
+
+      // ========== 異動單 (Change Requests) ==========
+
+      const loadChangeRequests = async () => {
+        try {
+          changeRequests.value = await callApi('getChangeRequests', {});
+        } catch (e) {
+          console.error('Load change requests failed:', e);
+        }
+      };
+
+      const formatTargetType = (type) => {
+        const map = { workOrder: '工單', dispatch: '派工', report: '報工', outgassing: '釋氣', aoi: 'AOI' };
+        return map[type] || type;
+      };
+
+      const formatCrStatus = (status) => {
+        const map = { pending: '待審核', approved: '已核准', rejected: '已駁回' };
+        return map[status] || status;
+      };
+
+      const openChangeRequestModal = () => {
+        formCr.value = { targetType: '', targetId: '', targetDisplay: '', fieldName: '', fieldLabel: '', oldValue: '', newValue: '', reason: '' };
+        crTargetOptions.value = [];
+        crFieldOptions.value = [];
+        showChangeRequestModal.value = true;
+      };
+
+      // 從單據頁面直接開啟異動申請
+      const openChangeRequestFromRecord = (targetType, record) => {
+        if (!currentOperator.value) {
+          alert('請先選擇操作人員');
+          return;
+        }
+
+        // 建立 display 文字
+        let display = '';
+        if (targetType === 'workOrder') {
+          display = `${record.orderNumber} - ${record.productName || record.productModel}`;
+        } else if (targetType === 'dispatch') {
+          display = `${record.dispatchNumber || record.workOrderNumber || record.workOrderId?.substring(0,8)} - ${record.stationName}`;
+        } else if (targetType === 'report') {
+          display = `${record.workOrderNumber || record.workOrderId?.substring(0,8)} - ${record.stationName} (${record.operatorName})`;
+        } else if (targetType === 'outgassing') {
+          display = `${record.workOrderNumber || record.workOrderId?.substring(0,8)} - ${record.result}`;
+        } else if (targetType === 'aoi') {
+          display = `${record.workOrderNumber || record.workOrderId?.substring(0,8)} - ${record.result}`;
+        }
+
+        // 初始化表單
+        formCr.value = {
+          targetType: targetType,
+          targetId: record.id,
+          targetDisplay: display,
+          fieldName: '',
+          fieldLabel: '',
+          oldValue: '',
+          newValue: '',
+          reason: ''
+        };
+
+        // 設定可修改的欄位選項
+        if (targetType === 'workOrder') {
+          crFieldOptions.value = [
+            { name: 'quantity', label: '數量' },
+            { name: 'productName', label: '產品名稱' },
+            { name: 'customerName', label: '客戶名稱' },
+            { name: 'deliverySite', label: '交貨站點' }
+          ];
+        } else if (targetType === 'dispatch') {
+          crFieldOptions.value = [
+            { name: 'stationName', label: '站點' },
+            { name: 'operatorName', label: '作業員' }
+          ];
+        } else if (targetType === 'report') {
+          crFieldOptions.value = [
+            { name: 'goodQty', label: '良品數' },
+            { name: 'ngQty', label: 'NG數' },
+            { name: 'stationName', label: '站點' },
+            { name: 'operatorName', label: '作業員' }
+          ];
+        } else if (targetType === 'outgassing') {
+          crFieldOptions.value = [
+            { name: 'result', label: '檢驗結果' },
+            { name: 'outgassingValue', label: '釋氣值' }
+          ];
+        } else if (targetType === 'aoi') {
+          crFieldOptions.value = [
+            { name: 'result', label: '檢驗結果' }
+          ];
+        }
+
+        // 儲存目前記錄供 onFieldChange 使用
+        crTargetOptions.value = [{ id: record.id, display: display, record: record }];
+
+        showChangeRequestModal.value = true;
+        Vue.nextTick(() => { if (window.lucide) lucide.createIcons(); });
+      };
+
+      const onTargetTypeChange = () => {
+        formCr.value.targetId = '';
+        formCr.value.fieldName = '';
+        formCr.value.oldValue = '';
+        formCr.value.newValue = '';
+        crFieldOptions.value = [];
+
+        const type = formCr.value.targetType;
+        if (type === 'workOrder') {
+          crTargetOptions.value = workOrders.value.map(w => ({ id: w.id, display: `${w.orderNumber} - ${w.productName}` }));
+        } else if (type === 'dispatch') {
+          crTargetOptions.value = dispatches.value.map(d => ({ id: d.id, display: `${d.workOrderNumber || d.workOrderId?.substring(0,8)} - ${d.stationName}` }));
+        } else if (type === 'report') {
+          crTargetOptions.value = reports.value.slice(0, 50).map(r => ({ id: r.id, display: `${r.workOrderNumber || r.workOrderId?.substring(0,8)} - ${r.stationName} (${r.operatorName})` }));
+        } else if (type === 'outgassing') {
+          crTargetOptions.value = outgassingTests.value.slice(0, 50).map(o => ({ id: o.id, display: `${o.workOrderNumber || o.workOrderId?.substring(0,8)} - ${o.result}` }));
+        } else if (type === 'aoi') {
+          crTargetOptions.value = aoiInspections.value.slice(0, 50).map(a => ({ id: a.id, display: `${a.workOrderNumber || a.workOrderId?.substring(0,8)} - ${a.result}` }));
+        }
+      };
+
+      const onTargetIdChange = () => {
+        formCr.value.fieldName = '';
+        formCr.value.oldValue = '';
+        formCr.value.newValue = '';
+
+        const type = formCr.value.targetType;
+        const selected = crTargetOptions.value.find(o => o.id === formCr.value.targetId);
+        formCr.value.targetDisplay = selected?.display || '';
+
+        // 設定可修改的欄位
+        if (type === 'workOrder') {
+          crFieldOptions.value = [
+            { name: 'quantity', label: '數量' },
+            { name: 'productName', label: '產品名稱' },
+            { name: 'customerName', label: '客戶名稱' },
+            { name: 'deliverySite', label: '交貨站點' }
+          ];
+        } else if (type === 'dispatch') {
+          crFieldOptions.value = [
+            { name: 'stationName', label: '站點' },
+            { name: 'operatorName', label: '作業員' }
+          ];
+        } else if (type === 'report') {
+          crFieldOptions.value = [
+            { name: 'goodQty', label: '良品數' },
+            { name: 'ngQty', label: 'NG數' },
+            { name: 'stationName', label: '站點' },
+            { name: 'operatorName', label: '作業員' }
+          ];
+        } else if (type === 'outgassing') {
+          crFieldOptions.value = [
+            { name: 'result', label: '檢驗結果' },
+            { name: 'outgassingValue', label: '釋氣值' }
+          ];
+        } else if (type === 'aoi') {
+          crFieldOptions.value = [
+            { name: 'result', label: '檢驗結果' }
+          ];
+        }
+      };
+
+      const onFieldChange = () => {
+        const type = formCr.value.targetType;
+        const targetId = formCr.value.targetId;
+        const fieldName = formCr.value.fieldName;
+
+        // 先檢查是否有從 openChangeRequestFromRecord 傳入的記錄
+        let record = crTargetOptions.value.find(o => o.id === targetId)?.record;
+
+        // 若沒有，則從各資料集中查找
+        if (!record) {
+          if (type === 'workOrder') record = workOrders.value.find(w => w.id === targetId);
+          else if (type === 'dispatch') record = dispatches.value.find(d => d.id === targetId);
+          else if (type === 'report') record = reports.value.find(r => r.id === targetId);
+          else if (type === 'outgassing') record = outgassingTests.value.find(o => o.id === targetId);
+          else if (type === 'aoi') record = aoiInspections.value.find(a => a.id === targetId);
+        }
+
+        formCr.value.oldValue = record ? (record[fieldName] ?? '') : '';
+        formCr.value.fieldLabel = crFieldOptions.value.find(f => f.name === fieldName)?.label || fieldName;
+        formCr.value.newValue = '';
+      };
+
+      const submitChangeRequest = async () => {
+        if (!currentOperator.value) {
+          alert('請先選擇操作人員');
+          return;
+        }
+        try {
+          const result = await callApi('createChangeRequest', {
+            requestedBy: currentOperator.value.name,
+            targetType: formCr.value.targetType,
+            targetId: formCr.value.targetId,
+            targetDisplay: formCr.value.targetDisplay,
+            fieldName: formCr.value.fieldName,
+            fieldLabel: formCr.value.fieldLabel,
+            oldValue: formCr.value.oldValue,
+            newValue: formCr.value.newValue,
+            reason: formCr.value.reason
+          });
+          alert(`異動單已建立: ${result.requestNumber}`);
+          showChangeRequestModal.value = false;
+          loadChangeRequests();
+        } catch (e) {
+          alert('建立失敗: ' + e.message);
+        }
+      };
+
+      const reviewChangeRequest = (id, action) => {
+        reviewCrId.value = id;
+        reviewAction.value = action;
+        reviewNotes.value = '';
+        showReviewModal.value = true;
+      };
+
+      const confirmReview = async () => {
+        if (!currentOperator.value) {
+          alert('請先選擇操作人員');
+          return;
+        }
+        try {
+          await callApi('reviewChangeRequest', {
+            id: reviewCrId.value,
+            action: reviewAction.value,
+            reviewedBy: currentOperator.value.name,
+            reviewNotes: reviewNotes.value
+          });
+          alert(reviewAction.value === 'approve' ? '已核准' : '已駁回');
+          showReviewModal.value = false;
+          loadChangeRequests();
+          // 如果核准，重新載入相關資料
+          if (reviewAction.value === 'approve') {
+            await loadAllData();
+          }
+        } catch (e) {
+          alert('審核失敗: ' + e.message);
+        }
       };
 
       // R0 Management Functions
@@ -3758,7 +4040,7 @@
         currentNgReason, currentNgQty, currentNgBarcodes, currentNgBarcodeInput,
         scanNgBarcode, removeNgBarcode, addNgDetail, removeNgDetail, resetNgDetailForm,
         editingOperatorId, editingCustomerId, editingProductId, editingNgReasonId, editingWorkOrderId,
-        regenerationOrders, completedDeglueOrders, reworkableOrders, aoiPassedOrders, epcHistory, operators, customers, products, customerSites, availableStations, epcCheckStatus, epcCheckInfo,
+        regenerationOrders, completedDeglueOrders, reworkableOrders, aoiPassedOrders, epcHistory, operators, shopFloorOperators, customers, products, customerSites, availableStations, epcCheckStatus, epcCheckInfo,
         refreshData, forceRefresh, openCreateWoModal, submitWorkOrder, openDispatchModal, submitDispatch, openReportModal, submitReport,
         startEditWorkOrder, cancelEditWorkOrder, deleteWorkOrder, deleteDispatch,
         submitEpcChange, onWoSelect, onCustomerSelect, onSourceWorkOrderSelect, checkOldEpc,
@@ -3842,7 +4124,14 @@
         getMaintenanceIcon, formatScheduleDate, formatWoStatus,
         // 班次 CSV 匯入
         showShiftImportModal, shiftImportWeekStart, shiftImportPreview, shiftImportError, importingShifts,
-        downloadShiftTemplate, handleShiftCsvFile, closeShiftImportModal, importShifts
+        downloadShiftTemplate, handleShiftCsvFile, closeShiftImportModal, importShifts,
+        // 異動單管理
+        changeRequests, crFilter, filteredChangeRequests, pendingChangeRequestsCount,
+        showChangeRequestModal, showReviewModal, reviewAction, reviewCrId, reviewNotes,
+        formCr, crTargetOptions, crFieldOptions,
+        loadChangeRequests, formatTargetType, formatCrStatus, openChangeRequestModal,
+        openChangeRequestFromRecord, onTargetTypeChange, onTargetIdChange, onFieldChange,
+        submitChangeRequest, reviewChangeRequest, confirmReview
       };
     }
   });
