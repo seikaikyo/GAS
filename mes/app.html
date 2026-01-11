@@ -1049,8 +1049,10 @@
         try {
           if (editingPartId.value) {
             await callApi('updatePart', { id: editingPartId.value, data: { ...formPart.value } });
+            await logAudit('update', 'parts', 'Part', editingPartId.value, formPart.value.partNumber, { name: formPart.value.name, category: formPart.value.category });
           } else {
-            await callApi('createPart', { ...formPart.value });
+            const result = await callApi('createPart', { ...formPart.value });
+            await logAudit('create', 'parts', 'Part', result?.id || '', formPart.value.partNumber, { name: formPart.value.name, category: formPart.value.category });
           }
           showPartModal.value = false;
           await refreshData();
@@ -1058,7 +1060,12 @@
       };
       const deletePart = async (id) => {
         if (!confirm('確定要刪除此物料嗎？')) return;
-        try { await callApi('deletePart', { id }); await refreshData(); } catch (e) { alert(e); }
+        const part = parts.value.find(p => p.id === id);
+        try {
+          await callApi('deletePart', { id });
+          await logAudit('delete', 'parts', 'Part', id, part?.partNumber || id, { name: part?.name });
+          await refreshData();
+        } catch (e) { alert(e); }
       };
       const partCategoryBadge = (category) => {
         const map = { '原料': 'info', '半成品': 'warning', '成品': 'success', '耗材': 'ghost', '包材': 'ghost' };

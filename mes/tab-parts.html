@@ -29,24 +29,24 @@
     <table class="data-table">
       <thead>
         <tr>
-          <th style="width: 120px;">料號</th>
-          <th>品名</th>
-          <th style="width: 150px;">規格</th>
-          <th style="width: 80px;">單位</th>
-          <th style="width: 100px;">類別</th>
-          <th style="width: 80px; text-align: center;">安全庫存</th>
-          <th style="width: 120px; text-align: right;">操作</th>
+          <th style="width: 100px;">料號</th>
+          <th style="width: 180px;">品名</th>
+          <th style="width: 120px;">規格</th>
+          <th style="width: 60px;">單位</th>
+          <th style="width: 70px;">類別</th>
+          <th style="width: 60px; text-align: center;">安全庫存</th>
+          <th style="width: 100px; text-align: right;">操作</th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="part in filteredParts" :key="part.id">
           <td>
-            <code style="background: #f1f5f9; padding: 0.15rem 0.4rem; border-radius: 0.25rem; font-weight: 600;">
+            <code style="background: #f1f5f9; padding: 0.15rem 0.4rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.8rem;">
               {{ part.partNumber }}
             </code>
           </td>
-          <td style="font-weight: 500;">{{ part.name }}</td>
-          <td style="font-size: 0.875rem; color: #64748b;">{{ part.spec || '-' }}</td>
+          <td style="font-weight: 500; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" :title="part.name">{{ part.name }}</td>
+          <td style="font-size: 0.8rem; color: #64748b; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ part.spec || '-' }}</td>
           <td>
             <span class="badge badge-ghost">{{ part.unit || '件' }}</span>
           </td>
@@ -60,7 +60,7 @@
             <span v-else style="color: #94a3b8;">-</span>
           </td>
           <td style="text-align: right;">
-            <div class="btn-group">
+            <div style="display: flex; gap: 0.25rem; justify-content: flex-end; flex-wrap: nowrap;">
               <button class="btn btn-sm btn-ghost" @click="openPartModal(part)">編輯</button>
               <button class="btn btn-sm btn-error btn-outline" @click="deletePart(part.id)">刪除</button>
             </div>
@@ -150,7 +150,7 @@
                   v-model="formPart.notes" rows="2" placeholder="選填"></textarea>
       </div>
     </form>
-    <div class="modal-action">
+    <div class="modal-action" style="display: flex; gap: 0.5rem; justify-content: flex-end; flex-wrap: nowrap;">
       <button class="btn btn-ghost" @click="showPartModal = false">取消</button>
       <button :class="['btn', editingPartId ? 'btn-warning' : 'btn-primary']"
               @click="submitPart"
