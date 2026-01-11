@@ -21,7 +21,7 @@
         <h1>SMAI - MES</h1>
         <div class="system-info-trigger">
           <span class="trigger-text">Plan B 應急作業模式</span>
-          <span class="version-badge">v{{ version || '...' }}</span>
+          <span class="version-badge" @click="showChangelogModal = true" style="cursor: pointer;" title="點擊查看更新歷程">v{{ version || '...' }}</span>
           <span v-if="currentOperator" class="admin-badge">{{ currentOperator.name }} ({{ currentOperator.role || 'operator' }})</span>
           <span class="trigger-quote">"Because Plan A needs 7 more months"</span>
 
@@ -168,6 +168,55 @@
             <button class="btn btn-ghost flex-1" @click="cancelPinEntry">取消</button>
             <button class="btn btn-primary flex-1" @click="verifyPin">確認</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 更新歷程 Modal -->
+    <div v-if="showChangelogModal" class="modal-overlay" @click.self="showChangelogModal = false">
+      <div class="modal-box" style="max-width: 500px; max-height: 80vh;">
+        <div class="modal-header">
+          <h3>更新歷程</h3>
+          <button class="btn btn-sm btn-ghost" @click="showChangelogModal = false">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+        <div class="modal-body" style="overflow-y: auto; max-height: 60vh;">
+          <div class="changelog-container">
+            <div class="changelog-item" style="border-left: 3px solid #22c55e;">
+              <div class="changelog-version" style="color: #16a34a;">v5.48.3</div>
+              <div class="changelog-date">2026-01-11</div>
+              <ul class="changelog-list">
+                <li><span class="changelog-tag feat">NEW</span>行政角色：人員/客戶/產品/物料/倉儲盤點</li>
+                <li><span class="changelog-tag feat">UX</span>點版本號查看更新歷程</li>
+                <li><span class="changelog-tag refactor">UX</span>操作紀錄欄位名稱優化</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-version">v5.48.2</div>
+              <div class="changelog-date">2026-01-11</div>
+              <ul class="changelog-list">
+                <li><span class="changelog-tag refactor">UX</span>同步資料庫按鈕整合三項功能</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-version">v5.48.1</div>
+              <div class="changelog-date">2026-01-11</div>
+              <ul class="changelog-list">
+                <li><span class="changelog-tag feat">NEW</span>PIN 碼驗證保護帳號切換</li>
+              </ul>
+            </div>
+            <div class="changelog-item">
+              <div class="changelog-version">v5.48.0</div>
+              <div class="changelog-date">2026-01-11</div>
+              <ul class="changelog-list">
+                <li><span class="changelog-tag feat">NEW</span>6 種角色權限系統</li>
+              </ul>
+            </div>
+          </div>
+          <p v-if="hasPermission('settings')" style="margin-top: 1rem; font-size: 0.85rem; color: #64748b; text-align: center;">
+            完整歷程請至「設定」頁籤查看
+          </p>
         </div>
       </div>
     </div>

@@ -7,6 +7,7 @@
     operator: ['work-orders-view', 'dispatches', 'reports'],
     warehouse: ['work-orders-view', 'wms', 'parts'],
     qc: ['work-orders-view', 'outgassing', 'aoi', 'r0'],
+    clerk: ['work-orders-view', 'wms', 'parts', 'settings'],
     supervisor: ['dashboard', 'work-orders-view', 'dispatches', 'reports', 'outgassing', 'aoi', 'r0', 'schedule', 'oven', 'wms', 'parts', 'audit'],
     admin: ['dashboard', 'work-orders', 'dispatches', 'reports', 'outgassing', 'aoi', 'r0', 'label-editor', 'schedule', 'oven', 'wms', 'parts', 'audit', 'settings']
   };
@@ -15,6 +16,7 @@
   const DEFAULT_TABS = {
     admin: 'dashboard',
     supervisor: 'dashboard',
+    clerk: 'settings',
     warehouse: 'wms',
     qc: 'outgassing',
     operator: 'dispatches'
@@ -386,7 +388,7 @@
       });
       const hasPermission = (tab) => visibleTabs.value.includes(tab);
       const canManage = computed(() => (currentOperator.value?.role || 'operator') === 'admin');
-      const canSupervise = computed(() => ['admin', 'supervisor'].includes(currentOperator.value?.role || 'operator'));
+      const canSupervise = computed(() => ['admin', 'supervisor', 'clerk'].includes(currentOperator.value?.role || 'operator'));
 
       // WMS 倉儲管理
       const wmsLoading = ref(false);
@@ -1709,6 +1711,7 @@
       // 全域操作人員選擇 (ISO 27001 Access Control)
       const pendingOperator = ref(null);
       const showPinModal = ref(false);
+      const showChangelogModal = ref(false);
       const pinInput = ref('');
       const pinError = ref('');
 
@@ -3738,7 +3741,7 @@
         adminGenerateTestData, adminSyncDatabase, adminFixColumnOrder, adminFixSignatureData, adminClearCache, confirmResetMes,
         // 操作人員 & PIN 驗證 & Audit Log (ISO 27001)
         currentOperator, showOperatorSelector, selectOperator, clearOperator, requireOperator,
-        showPinModal, pinInput, pinError, pendingOperator, verifyPin, cancelPinEntry,
+        showPinModal, showChangelogModal, pinInput, pinError, pendingOperator, verifyPin, cancelPinEntry,
         auditLogs, auditLoading, loadAuditLogs, logAudit,
         auditModuleFilter, auditActionFilter, auditOperatorFilter, auditSearch,
         filteredAuditLogs, auditTodayCount,
