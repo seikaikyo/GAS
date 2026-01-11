@@ -198,7 +198,7 @@
       const currentNgBarcodes = ref([]);
       const currentNgBarcodeInput = ref('');
       const formEpc = ref({ workOrderId: '', oldEpc: '', newEpc: '', operatorName: '' });
-      const formOperator = ref({ name: '', code: '' });
+      const formOperator = ref({ name: '', code: '', email: '', role: 'operator' });
       const formCustomer = ref({ name: '', code: '', sitesInput: '' });
       const formProduct = ref({ name: '', code: '', type: '10cm' });
 
@@ -830,8 +830,8 @@
       };
 
       // Edit Handlers
-      const startEditOperator = (op) => { editingOperatorId.value = op.id; formOperator.value = { name: op.name, code: op.code }; };
-      const cancelEditOperator = () => { editingOperatorId.value = null; formOperator.value = { name: '', code: '' }; };
+      const startEditOperator = (op) => { editingOperatorId.value = op.id; formOperator.value = { name: op.name, code: op.code, email: op.email || '', role: op.role || 'operator' }; };
+      const cancelEditOperator = () => { editingOperatorId.value = null; formOperator.value = { name: '', code: '', email: '', role: 'operator' }; };
 
       const startEditCustomer = (c) => {
         editingCustomerId.value = c.id;
@@ -1030,10 +1030,10 @@
         try {
           if (editingOperatorId.value) {
             await callApi('updateOperator', { id: editingOperatorId.value, data: { ...formOperator.value } });
-            await logAudit('update', 'operator', 'Operator', editingOperatorId.value, formOperator.value.name, { code: formOperator.value.code });
+            await logAudit('update', 'operator', 'Operator', editingOperatorId.value, formOperator.value.name, { code: formOperator.value.code, role: formOperator.value.role });
           } else {
             const result = await callApi('createOperator', { ...formOperator.value });
-            await logAudit('create', 'operator', 'Operator', result?.id || '', formOperator.value.name, { code: formOperator.value.code });
+            await logAudit('create', 'operator', 'Operator', result?.id || '', formOperator.value.name, { code: formOperator.value.code, role: formOperator.value.role });
           }
           cancelEditOperator();
           await refreshData();

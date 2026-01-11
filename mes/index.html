@@ -161,12 +161,10 @@
         <a href="#" :class="['nav-tab', currentTab === 'aoi' ? 'active' : '']" @click.prevent="currentTab = 'aoi'"><span>AOI 檢驗</span></a>
         <a href="#" :class="['nav-tab', currentTab === 'r0' ? 'active' : '']" @click.prevent="currentTab = 'r0'"><span>標籤管理</span></a>
 
-        <!-- 管理端專屬：樣式設計、排程 -->
+        <!-- 管理端專屬：樣式設計、排程、烘箱監控 -->
         <a v-if="isAdminMode" href="#" :class="['nav-tab', currentTab === 'label-editor' ? 'active' : '']" @click.prevent="currentTab = 'label-editor'"><span>樣式設計</span></a>
         <a v-if="isAdminMode" href="#" :class="['nav-tab', currentTab === 'schedule' ? 'active' : '']" @click.prevent="currentTab = 'schedule'"><span>排程管理</span></a>
-
-        <!-- 共用：烘箱監控 -->
-        <a href="#" :class="['nav-tab', currentTab === 'oven' ? 'active' : '']" @click.prevent="currentTab = 'oven'"><span>烘箱監控</span></a>
+        <a v-if="isAdminMode" href="#" :class="['nav-tab', currentTab === 'oven' ? 'active' : '']" @click.prevent="currentTab = 'oven'"><span>烘箱監控</span></a>
 
         <!-- 倉儲：作業員端顯示「倉儲操作」，管理端顯示「倉儲管理」 -->
         <a href="#" :class="['nav-tab', currentTab === 'wms' ? 'active' : '']" @click.prevent="currentTab = 'wms'"><span>{{ isAdminMode ? '倉儲管理' : '倉儲操作' }}</span></a>

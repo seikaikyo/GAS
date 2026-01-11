@@ -39,7 +39,7 @@ const DB_CONFIG = {
     },
     operators: {
       name: 'Operators',
-      headers: ['id', 'name', 'code', 'role', 'isActive', 'createdAt']
+      headers: ['id', 'name', 'code', 'email', 'role', 'isActive', 'createdAt']
     },
     customers: {
       name: 'Customers',
