@@ -211,7 +211,7 @@
       const currentNgBarcodes = ref([]);
       const currentNgBarcodeInput = ref('');
       const formEpc = ref({ workOrderId: '', oldEpc: '', newEpc: '', operatorName: '' });
-      const formOperator = ref({ name: '', code: '', email: '', role: 'operator' });
+      const formOperator = ref({ name: '', code: '', email: '', role: 'operator', pin: '' });
       const formCustomer = ref({ name: '', code: '', sitesInput: '' });
       const formProduct = ref({ name: '', code: '', type: '10cm' });
 
@@ -852,8 +852,8 @@
       };
 
       // Edit Handlers
-      const startEditOperator = (op) => { editingOperatorId.value = op.id; formOperator.value = { name: op.name, code: op.code, email: op.email || '', role: op.role || 'operator' }; };
-      const cancelEditOperator = () => { editingOperatorId.value = null; formOperator.value = { name: '', code: '', email: '', role: 'operator' }; };
+      const startEditOperator = (op) => { editingOperatorId.value = op.id; formOperator.value = { name: op.name, code: op.code, email: op.email || '', role: op.role || 'operator', pin: op.pin || '' }; };
+      const cancelEditOperator = () => { editingOperatorId.value = null; formOperator.value = { name: '', code: '', email: '', role: 'operator', pin: '' }; };
 
       const startEditCustomer = (c) => {
         editingCustomerId.value = c.id;
@@ -1698,12 +1698,50 @@
       };
 
       // 全域操作人員選擇 (ISO 27001 Access Control)
+      const pendingOperator = ref(null);
+      const showPinModal = ref(false);
+      const pinInput = ref('');
+      const pinError = ref('');
+
       const selectOperator = (op) => {
+        // 如果有設定 PIN，彈出 PIN 輸入框
+        if (op.pin) {
+          pendingOperator.value = op;
+          pinInput.value = '';
+          pinError.value = '';
+          showPinModal.value = true;
+          return;
+        }
+        // 沒有 PIN，直接選擇
+        confirmOperatorSelection(op);
+      };
+
+      const confirmOperatorSelection = (op) => {
         currentOperator.value = op;
         showOperatorSelector.value = false;
+        showPinModal.value = false;
+        pendingOperator.value = null;
+        pinInput.value = '';
         localStorage.setItem('MES_CURRENT_OPERATOR', JSON.stringify(op));
         // 切換到該角色的預設頁籤
         currentTab.value = DEFAULT_TABS[op.role] || 'dispatches';
+      };
+
+      const verifyPin = () => {
+        if (!pendingOperator.value) return;
+        if (pinInput.value === pendingOperator.value.pin) {
+          confirmOperatorSelection(pendingOperator.value);
+        } else {
+          pinError.value = 'PIN 碼錯誤';
+          pinInput.value = '';
+        }
+      };
+
+      const cancelPinEntry = () => {
+        showPinModal.value = false;
+        pendingOperator.value = null;
+        pinInput.value = '';
+        pinError.value = '';
       };
 
       const clearOperator = () => {
@@ -3689,8 +3727,9 @@
         showInspectionDetailModal, selectedInspection, inspectionType, viewInspectionDetail,
         adminLoading, adminMessage, adminMessageType, showAllChangelog,
         adminGenerateTestData, adminSyncDatabase, adminFixColumnOrder, adminFixSignatureData, adminClearCache, confirmResetMes,
-        // 操作人員 & Audit Log (ISO 27001)
+        // 操作人員 & PIN 驗證 & Audit Log (ISO 27001)
         currentOperator, showOperatorSelector, selectOperator, clearOperator, requireOperator,
+        showPinModal, pinInput, pinError, pendingOperator, verifyPin, cancelPinEntry,
         auditLogs, auditLoading, loadAuditLogs, logAudit,
         auditModuleFilter, auditActionFilter, auditOperatorFilter, auditSearch,
         filteredAuditLogs, auditTodayCount,

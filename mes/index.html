@@ -122,7 +122,10 @@
             <div v-for="op in operators" :key="op.id"
                  :class="['operator-item', currentOperator?.id === op.id ? 'selected' : '']"
                  @click="selectOperator(op)">
-              <div class="operator-name">{{ op.name }}</div>
+              <div class="operator-name">
+                {{ op.name }}
+                <i v-if="op.pin" data-lucide="lock" class="w-3 h-3" style="display: inline; vertical-align: middle; margin-left: 0.25rem; color: #94a3b8;"></i>
+              </div>
               <div class="operator-code">{{ op.code || '-' }}</div>
             </div>
             <div v-if="operators.length === 0" class="empty-state" style="padding: 2rem;">
@@ -134,6 +137,36 @@
               <i data-lucide="log-out" class="w-4 h-4"></i>
               登出操作人員
             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PIN 輸入 Modal -->
+    <div v-if="showPinModal" class="modal-overlay">
+      <div class="modal-box" style="max-width: 320px;">
+        <div class="modal-header">
+          <h3>輸入 PIN 碼</h3>
+          <button class="btn btn-sm btn-ghost" @click="cancelPinEntry">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+        <div class="modal-body" style="text-align: center;">
+          <p style="margin-bottom: 1rem; color: #64748b;">
+            切換至 <strong>{{ pendingOperator?.name }}</strong> 需要輸入 PIN 碼
+          </p>
+          <input type="password" class="input input-bordered w-full"
+                 v-model="pinInput"
+                 placeholder="請輸入 4 位數 PIN"
+                 maxlength="4"
+                 pattern="[0-9]*"
+                 inputmode="numeric"
+                 @keyup.enter="verifyPin"
+                 style="text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem;">
+          <p v-if="pinError" style="color: #ef4444; margin-top: 0.5rem; font-size: 0.875rem;">{{ pinError }}</p>
+          <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+            <button class="btn btn-ghost flex-1" @click="cancelPinEntry">取消</button>
+            <button class="btn btn-primary flex-1" @click="verifyPin">確認</button>
           </div>
         </div>
       </div>
