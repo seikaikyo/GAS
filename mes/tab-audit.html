@@ -1,0 +1,107 @@
+<!-- Tab: 操作紀錄 (ISO 27001:2022 A.8.15) -->
+<div v-show="currentTab === 'audit'">
+  <div class="section-header">
+    <h2>操作紀錄</h2>
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+      <span style="font-size: 0.75rem; color: #64748b;">ISO 27001:2022 A.8.15</span>
+      <button class="btn btn-sm btn-ghost" @click="loadAuditLogs">
+        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+        重新整理
+      </button>
+    </div>
+  </div>
+
+  <!-- 篩選器 -->
+  <div class="filter-bar" style="margin-bottom: 1rem;">
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+      <!-- 模組篩選 -->
+      <select class="select select-bordered select-sm" v-model="auditModuleFilter" style="width: 120px;">
+        <option value="">全部模組</option>
+        <option value="workOrder">工單</option>
+        <option value="dispatch">派工</option>
+        <option value="report">報工</option>
+        <option value="wms">倉儲</option>
+        <option value="parts">物料</option>
+        <option value="settings">設定</option>
+      </select>
+      <!-- 動作篩選 -->
+      <select class="select select-bordered select-sm" v-model="auditActionFilter" style="width: 120px;">
+        <option value="">全部動作</option>
+        <option value="create">新增</option>
+        <option value="update">更新</option>
+        <option value="delete">刪除</option>
+        <option value="complete">完成</option>
+        <option value="cancel">取消</option>
+      </select>
+      <!-- 操作人篩選 -->
+      <select class="select select-bordered select-sm" v-model="auditOperatorFilter" style="width: 120px;">
+        <option value="">全部人員</option>
+        <option v-for="op in operators" :key="op.id" :value="op.name">{{ op.name }}</option>
+      </select>
+      <!-- 搜尋 -->
+      <input type="text" class="input input-bordered input-sm" v-model="auditSearch"
+             placeholder="搜尋目標..." style="width: 150px;">
+    </div>
+  </div>
+
+  <!-- 操作紀錄表格 -->
+  <div class="scrollable" style="max-height: calc(100vh - 280px);">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width: 150px;">時間</th>
+          <th style="width: 80px;">操作人</th>
+          <th style="width: 70px;">動作</th>
+          <th style="width: 80px;">模組</th>
+          <th style="width: 150px;">目標</th>
+          <th>詳情</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="log in filteredAuditLogs" :key="log.id">
+          <td style="font-size: 0.8rem; color: #64748b; white-space: nowrap;">
+            {{ formatAuditTime(log.timestamp) }}
+          </td>
+          <td>
+            <span class="badge badge-ghost">{{ log.operatorName || '系統' }}</span>
+          </td>
+          <td>
+            <span :class="'badge badge-' + auditActionBadge(log.action)">
+              {{ formatAuditAction(log.action) }}
+            </span>
+          </td>
+          <td style="font-size: 0.85rem;">{{ formatAuditModule(log.module) }}</td>
+          <td style="font-size: 0.85rem; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+              :title="log.targetName">
+            <code v-if="log.targetName" style="background: #f1f5f9; padding: 0.1rem 0.3rem; border-radius: 0.2rem; font-size: 0.75rem;">
+              {{ log.targetName }}
+            </code>
+            <span v-else style="color: #94a3b8;">-</span>
+          </td>
+          <td style="font-size: 0.75rem; color: #64748b; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+              :title="formatAuditDetails(log.details)">
+            {{ formatAuditDetails(log.details) || '-' }}
+          </td>
+        </tr>
+        <tr v-if="filteredAuditLogs.length === 0" class="empty-row">
+          <td colspan="6" style="text-align: center; padding: 2rem; color: #64748b;">
+            <i data-lucide="file-search" style="width: 48px; height: 48px; margin: 0 auto 0.5rem; opacity: 0.5;"></i>
+            <div v-if="auditSearch || auditModuleFilter || auditActionFilter || auditOperatorFilter">
+              沒有符合條件的紀錄
+            </div>
+            <div v-else>尚無操作紀錄</div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 統計資訊 -->
+  <div style="margin-top: 1rem; padding: 0.75rem; background: #f8fafc; border-radius: 0.5rem; display: flex; gap: 1.5rem; font-size: 0.85rem; flex-wrap: wrap;">
+    <div><span style="color: #64748b;">總紀錄數：</span><strong>{{ auditLogs.length }}</strong></div>
+    <div><span style="color: #64748b;">今日：</span><strong>{{ auditTodayCount }}</strong></div>
+    <div><span style="color: #22c55e;">新增：</span><strong>{{ auditLogs.filter(l => l.action === 'create').length }}</strong></div>
+    <div><span style="color: #f59e0b;">更新：</span><strong>{{ auditLogs.filter(l => l.action === 'update').length }}</strong></div>
+    <div><span style="color: #ef4444;">刪除：</span><strong>{{ auditLogs.filter(l => l.action === 'delete').length }}</strong></div>
+  </div>
+</div>

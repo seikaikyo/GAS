@@ -27,6 +27,14 @@
       const partCategoryFilter = ref('');
       const partCategories = ref(['原料', '半成品', '成品', '耗材', '包材']);
 
+      // Audit Logs (操作紀錄)
+      const auditLogs = ref([]);
+      const auditLoading = ref(false);
+      const auditModuleFilter = ref('');
+      const auditActionFilter = ref('');
+      const auditOperatorFilter = ref('');
+      const auditSearch = ref('');
+
       // Computed
       const filteredWorkOrders = Vue.computed(() => {
         if (woStatusFilter.value === 'all') return workOrders.value;
@@ -106,6 +114,32 @@
           );
         }
         return result;
+      });
+
+      // Audit Logs filtered
+      const filteredAuditLogs = Vue.computed(() => {
+        let result = auditLogs.value;
+        if (auditModuleFilter.value) {
+          result = result.filter(l => l.module === auditModuleFilter.value);
+        }
+        if (auditActionFilter.value) {
+          result = result.filter(l => l.action === auditActionFilter.value);
+        }
+        if (auditOperatorFilter.value) {
+          result = result.filter(l => l.operatorName === auditOperatorFilter.value);
+        }
+        if (auditSearch.value) {
+          const search = auditSearch.value.toLowerCase();
+          result = result.filter(l =>
+            (l.targetName && l.targetName.toLowerCase().includes(search)) ||
+            (l.targetId && l.targetId.toLowerCase().includes(search))
+          );
+        }
+        return result;
+      });
+      const auditTodayCount = Vue.computed(() => {
+        const today = new Date().toISOString().slice(0, 10);
+        return auditLogs.value.filter(l => l.timestamp && l.timestamp.startsWith(today)).length;
       });
 
       const r0CodePreview = Vue.computed(() => {
@@ -326,10 +360,6 @@
       // 全域操作人員 (ISO 27001 Access Control)
       const currentOperator = ref(null);
       const showOperatorSelector = ref(false);
-
-      // Audit Logs (ISO 27001:2022 A.8.15)
-      const auditLogs = ref([]);
-      const auditLoading = ref(false);
 
       // WMS 倉儲管理
       const wmsLoading = ref(false);
@@ -1072,6 +1102,7 @@
         return map[category] || 'ghost';
       };
 
+
       // NG Reasons Submit/Delete
       const submitNgReason = async () => {
         try {
@@ -1643,6 +1674,10 @@
           'logout': '登出'
         };
         return map[action] || action;
+      };
+      const auditActionBadge = (action) => {
+        const map = { create: 'success', update: 'warning', delete: 'error', complete: 'info', cancel: 'ghost', start: 'primary', login: 'ghost', logout: 'ghost' };
+        return map[action] || 'ghost';
       };
 
       const formatAuditModule = (module) => {
@@ -3552,7 +3587,9 @@
         // 操作人員 & Audit Log (ISO 27001)
         currentOperator, showOperatorSelector, selectOperator, clearOperator, requireOperator,
         auditLogs, auditLoading, loadAuditLogs, logAudit,
-        formatAuditTime, formatAuditAction, formatAuditModule, formatAuditDetails,
+        auditModuleFilter, auditActionFilter, auditOperatorFilter, auditSearch,
+        filteredAuditLogs, auditTodayCount,
+        formatAuditTime, formatAuditAction, auditActionBadge, formatAuditModule, formatAuditDetails,
         // Oven Monitoring (10 ovens)
         ovens, ecuConnected, ovenConfig, ovenBindings, ovenBatchQty, ovenAutoReportEnabled,
         ovenEventLogs, showOvenSettingsModal, dispatchDoorStates,

@@ -153,6 +153,7 @@
         <a href="#" :class="['nav-tab', currentTab === 'oven' ? 'active' : '']" @click.prevent="currentTab = 'oven'"><span>烘箱監控</span></a>
         <a href="#" :class="['nav-tab', currentTab === 'wms' ? 'active' : '']" @click.prevent="currentTab = 'wms'"><span>倉儲管理</span></a>
         <a href="#" :class="['nav-tab', currentTab === 'parts' ? 'active' : '']" @click.prevent="currentTab = 'parts'"><span>物料主檔</span></a>
+        <a href="#" :class="['nav-tab', currentTab === 'audit' ? 'active' : '']" @click.prevent="currentTab = 'audit'; loadAuditLogs()"><span>操作紀錄</span></a>
         <a href="#" :class="['nav-tab', currentTab === 'settings' ? 'active' : '']" @click.prevent="currentTab = 'settings'"><span>設定</span></a>
       </div>
 
@@ -169,6 +170,7 @@
         <?!= include('tab-oven'); ?>
         <?!= include('tab-wms'); ?>
         <?!= include('tab-parts'); ?>
+        <?!= include('tab-audit'); ?>
         <?!= include('tab-settings'); ?>
       </div>
     </div>
