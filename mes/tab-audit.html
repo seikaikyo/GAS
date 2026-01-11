@@ -49,12 +49,12 @@
     <table class="data-table">
       <thead>
         <tr>
-          <th style="width: 140px;">時間</th>
-          <th style="width: 100px;">操作人員</th>
-          <th style="width: 80px;">執行動作</th>
-          <th style="width: 80px;">功能模組</th>
-          <th style="width: 180px;">操作對象</th>
-          <th>變更內容</th>
+          <th style="width: 130px;">時間</th>
+          <th style="width: 80px;">操作人員</th>
+          <th style="width: 70px;">動作</th>
+          <th style="width: 70px;">模組</th>
+          <th style="width: 140px;">操作對象</th>
+          <th style="min-width: 200px;">變更內容</th>
         </tr>
       </thead>
       <tbody>
@@ -78,7 +78,7 @@
             </code>
             <span v-else style="color: #94a3b8;">-</span>
           </td>
-          <td style="font-size: 0.75rem; color: #64748b; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+          <td style="font-size: 0.8rem; color: #475569;"
               :title="formatAuditDetails(log.details)">
             {{ formatAuditDetails(log.details) || '-' }}
           </td>

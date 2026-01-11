@@ -1848,12 +1848,36 @@
 
       const formatAuditDetails = (details) => {
         if (!details) return '-';
+        // 欄位中文對照
+        const fieldMap = {
+          name: '名稱', code: '編號', email: '信箱', role: '角色', pin: 'PIN',
+          orderNumber: '單號', productModel: '產品', customerName: '客戶',
+          quantity: '數量', status: '狀態', type: '類型', orderType: '工單類型',
+          operatorName: '操作人', stationName: '站點', goodQty: '良品數', ngQty: 'NG數',
+          locationCode: '儲位', partNumber: '料號', partName: '品名',
+          movementType: '異動類型', reason: '原因', notes: '備註',
+          sites: '站點', sitesInput: '站點',
+          startTime: '開始時間', endTime: '結束時間'
+        };
+        // 值的中文對照
+        const valueMap = {
+          operator: '作業員', warehouse: '倉庫', qc: '品管', clerk: '行政', supervisor: '主管', admin: '管理員',
+          draft: '草稿', pending: '待處理', in_progress: '進行中', completed: '已完成',
+          deglue: '除膠', regeneration: '再生', rework: '重工',
+          inbound: '入庫', outbound: '出庫', transfer: '移轉', adjust: '調整'
+        };
+
         if (typeof details === 'string') {
           try {
             const obj = JSON.parse(details);
             return Object.entries(obj)
-              .map(([k, v]) => `${k}: ${v}`)
-              .join(', ');
+              .filter(([k, v]) => v !== null && v !== undefined && v !== '')
+              .map(([k, v]) => {
+                const label = fieldMap[k] || k;
+                const value = valueMap[v] || v;
+                return `${label}=${value}`;
+              })
+              .join('，');
           } catch {
             return details;
           }
