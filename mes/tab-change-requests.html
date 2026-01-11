@@ -143,43 +143,43 @@
     <div class="modal-body">
       <form @submit.prevent="submitChangeRequest">
         <!-- 異動對象資訊 (唯讀) -->
-        <div class="alert alert-ghost" style="margin-bottom: 1rem;">
-          <div>
-            <span class="badge badge-primary">{{ formatTargetType(formCr.targetType) }}</span>
-            <strong style="margin-left: 0.5rem;">{{ formCr.targetDisplay }}</strong>
+        <div class="cr-info-box">
+          <span class="badge badge-primary">{{ formatTargetType(formCr.targetType) }}</span>
+          <strong>{{ formCr.targetDisplay }}</strong>
+        </div>
+
+        <!-- 選擇欄位 (Button 形式) -->
+        <div class="cr-form-group">
+          <label class="input-label">異動欄位 <span class="required">*</span></label>
+          <div class="cr-field-grid">
+            <button type="button"
+                    v-for="field in crFieldOptions" :key="field.name"
+                    :class="['cr-field-btn', formCr.fieldName === field.name ? 'selected' : '']"
+                    @click="formCr.fieldName = field.name; onFieldChange()">
+              {{ field.label }}
+            </button>
           </div>
         </div>
 
-        <!-- 選擇欄位 -->
-        <div class="form-group">
-          <label class="input-label">異動欄位 <span style="color: #ef4444;">*</span></label>
-          <select class="select select-bordered w-full" v-model="formCr.fieldName" required @change="onFieldChange">
-            <option value="">-- 請選擇要修改的欄位 --</option>
-            <option v-for="field in crFieldOptions" :key="field.name" :value="field.name">
-              {{ field.label }}
-            </option>
-          </select>
-        </div>
-
         <!-- 原值顯示 -->
-        <div class="form-group" v-if="formCr.fieldName">
+        <div class="cr-form-group" v-if="formCr.fieldName">
           <label class="input-label">原值</label>
-          <input type="text" class="input input-bordered w-full" :value="formCr.oldValue" disabled style="background: #f1f5f9;">
+          <div class="cr-old-value">{{ formCr.oldValue || '(空白)' }}</div>
         </div>
 
         <!-- 新值輸入 -->
-        <div class="form-group" v-if="formCr.fieldName">
-          <label class="input-label">新值 <span style="color: #ef4444;">*</span></label>
+        <div class="cr-form-group" v-if="formCr.fieldName">
+          <label class="input-label">新值 <span class="required">*</span></label>
           <input type="text" class="input input-bordered w-full" v-model="formCr.newValue" required placeholder="請輸入正確的值">
         </div>
 
         <!-- 異動原因 -->
-        <div class="form-group" v-if="formCr.fieldName">
-          <label class="input-label">異動原因 <span style="color: #ef4444;">*</span></label>
+        <div class="cr-form-group" v-if="formCr.fieldName">
+          <label class="input-label">異動原因 <span class="required">*</span></label>
           <textarea class="textarea textarea-bordered w-full" v-model="formCr.reason" rows="2" required placeholder="請說明為什麼需要修改（例如：輸入錯誤、資料更正等）"></textarea>
         </div>
 
-        <div class="modal-actions">
+        <div class="cr-modal-actions">
           <button type="button" class="btn btn-ghost" @click="showChangeRequestModal = false">取消</button>
           <button type="submit" class="btn btn-primary" :disabled="!formCr.fieldName || !formCr.newValue || !formCr.reason">
             <i data-lucide="send" class="w-4 h-4"></i>
@@ -230,4 +230,67 @@
 }
 .stat-value { font-size: 1.5rem; font-weight: 700; }
 .stat-label { font-size: 0.75rem; color: #64748b; margin-top: 0.25rem; }
+
+/* 異動單 Modal 樣式 */
+.cr-info-box {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: #f8fafc;
+  border-radius: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+.cr-form-group {
+  margin-bottom: 1.25rem;
+}
+.cr-form-group .input-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #374151;
+}
+.cr-form-group .required {
+  color: #ef4444;
+}
+.cr-field-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.cr-field-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  background: #fff;
+  color: #374151;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.cr-field-btn:hover {
+  border-color: #667eea;
+  background: #f5f3ff;
+}
+.cr-field-btn.selected {
+  border-color: #667eea;
+  background: #667eea;
+  color: #fff;
+}
+.cr-old-value {
+  padding: 0.5rem 0.75rem;
+  background: #f1f5f9;
+  border-radius: 0.375rem;
+  color: #64748b;
+  font-family: monospace;
+  text-decoration: line-through;
+}
+.cr-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
 </style>

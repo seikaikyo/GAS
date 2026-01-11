@@ -37,7 +37,7 @@
       const operators = ref([]);
       // 現場作業員（只有 operator 角色，用於派工選擇）
       const shopFloorOperators = Vue.computed(() =>
-        operators.value.filter(op => !op.role || op.role === 'operator')
+        operators.value.filter(op => op.role === 'operator')
       );
       const customers = ref([]);
       const products = ref([]);
