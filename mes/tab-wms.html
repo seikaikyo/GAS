@@ -1,14 +1,14 @@
 <!-- Tab: WMS 倉儲管理 -->
 <div v-show="currentTab === 'wms'">
   <div class="section-header">
-    <h2>{{ isAdminMode ? '倉儲管理' : '倉儲操作' }}</h2>
+    <h2>{{ canSupervise ? '倉儲管理' : '倉儲操作' }}</h2>
     <div class="wms-actions">
       <button class="btn btn-primary" @click="openWmsModal('inbound')">
         <i data-lucide="package-plus" class="w-4 h-4"></i>
         入庫
       </button>
-      <!-- 盤點：僅管理端顯示 -->
-      <button v-if="isAdminMode" class="btn btn-info" @click="openWmsModal('stocktake')">
+      <!-- 盤點：僅主管/管理員顯示 -->
+      <button v-if="canSupervise" class="btn btn-info" @click="openWmsModal('stocktake')">
         <i data-lucide="clipboard-check" class="w-4 h-4"></i>
         盤點
       </button>
@@ -519,8 +519,8 @@
       </table>
     </div>
     <div class="modal-action" style="justify-content: space-between;">
-      <!-- 快速盤點：僅管理端 -->
-      <button v-if="isAdminMode && wmsInventoryList.length > 0" class="btn btn-info btn-outline" @click="openQuickStockTake">
+      <!-- 快速盤點：僅主管/管理員 -->
+      <button v-if="canSupervise && wmsInventoryList.length > 0" class="btn btn-info btn-outline" @click="openQuickStockTake">
         <i data-lucide="clipboard-check" class="w-4 h-4"></i>
         快速盤點此儲位
       </button>

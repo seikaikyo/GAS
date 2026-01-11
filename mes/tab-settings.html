@@ -22,7 +22,9 @@
           <label class="input-label">角色</label>
           <select class="select select-bordered w-full" v-model="formOperator.role">
             <option value="operator">作業員</option>
+            <option value="warehouse">倉庫</option>
             <option value="qc">品管</option>
+            <option value="supervisor">主管</option>
             <option value="admin">管理員</option>
           </select>
         </div>
@@ -45,8 +47,8 @@
               <td>{{ op.name }}</td>
               <td style="color: #64748b;">{{ op.code }}</td>
               <td>
-                <span :class="['badge', op.role === 'admin' ? 'badge-primary' : op.role === 'qc' ? 'badge-warning' : 'badge-ghost']">
-                  {{ { operator: '作業員', qc: '品管', admin: '管理員' }[op.role] || '作業員' }}
+                <span :class="['badge', { admin: 'badge-primary', supervisor: 'badge-secondary', qc: 'badge-warning', warehouse: 'badge-info', operator: 'badge-ghost' }[op.role] || 'badge-ghost']">
+                  {{ { operator: '作業員', warehouse: '倉庫', qc: '品管', supervisor: '主管', admin: '管理員' }[op.role] || '作業員' }}
                 </span>
               </td>
               <td style="text-align: right;">
@@ -367,7 +369,18 @@
     <div class="changelog-container">
       <!-- 最近 3 個版本永遠顯示 -->
       <div class="changelog-item" style="border-left: 3px solid #22c55e;">
-        <div class="changelog-version" style="color: #16a34a;">v5.47.0</div>
+        <div class="changelog-version" style="color: #16a34a;">v5.48.0</div>
+        <div class="changelog-date">2026-01-11</div>
+        <div class="changelog-effort">1.5h / 1人</div>
+        <ul class="changelog-list">
+          <li><span class="changelog-tag feat">NEW</span>5 種角色權限系統：作業員/倉庫/品管/主管/管理員</li>
+          <li><span class="changelog-tag feat">NEW</span>各角色對應不同頁籤存取權限</li>
+          <li><span class="changelog-tag feat">UX</span>選擇操作人員後自動切換至該角色預設頁籤</li>
+          <li><span class="changelog-tag refactor">REFACTOR</span>移除雙入口架構，統一入口依角色顯示</li>
+        </ul>
+      </div>
+      <div class="changelog-item">
+        <div class="changelog-version">v5.47.0</div>
         <div class="changelog-date">2026-01-11</div>
         <div class="changelog-effort">2h / 1人</div>
         <ul class="changelog-list">

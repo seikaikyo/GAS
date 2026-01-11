@@ -5,11 +5,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <?!= include('styles'); ?>
-  <script>
-    // 從 GAS 模板傳遞的參數
-    window.APP_MODE = '<?= appMode ?>';
-    window.USER_EMAIL = '<?= userEmail ?>';
-  </script>
 </head>
 <body>
   <div id="app">
@@ -23,11 +18,11 @@
     <!-- Header -->
     <header class="header-card">
       <div>
-        <h1>SMAI - MES {{ isAdminMode ? '管理端' : '作業員端' }}</h1>
+        <h1>SMAI - MES</h1>
         <div class="system-info-trigger">
-          <span class="trigger-text">{{ isAdminMode ? '系統管理模式' : 'Plan B 應急作業模式' }}</span>
+          <span class="trigger-text">Plan B 應急作業模式</span>
           <span class="version-badge">v{{ version || '...' }}</span>
-          <span v-if="isAdminMode && userEmail" class="admin-badge">{{ userEmail }}</span>
+          <span v-if="currentOperator" class="admin-badge">{{ currentOperator.name }} ({{ currentOperator.role || 'operator' }})</span>
           <span class="trigger-quote">"Because Plan A needs 7 more months"</span>
 
           <!-- 賽博龐克 Tooltip -->
@@ -146,33 +141,22 @@
 
     <!-- Main Content -->
     <div class="content-card">
-      <!-- Tabs Navigation -->
+      <!-- Tabs Navigation (依角色權限顯示) -->
       <div class="tabs-nav">
-        <!-- 管理端專屬頁籤 -->
-        <a v-if="isAdminMode" href="#" :class="['nav-tab', currentTab === 'dashboard' ? 'active' : '']" @click.prevent="currentTab = 'dashboard'"><span>戰情中心</span></a>
-
-        <!-- 工單：管理端完整功能，作業員端唯讀 -->
-        <a href="#" :class="['nav-tab', currentTab === 'work-orders' ? 'active' : '']" @click.prevent="currentTab = 'work-orders'"><span>{{ isAdminMode ? '工單管理' : '工單查看' }}</span></a>
-
-        <!-- 共用頁籤 -->
-        <a href="#" :class="['nav-tab', currentTab === 'dispatches' ? 'active' : '']" @click.prevent="currentTab = 'dispatches'"><span>現場派工</span></a>
-        <a href="#" :class="['nav-tab', currentTab === 'reports' ? 'active' : '']" @click.prevent="currentTab = 'reports'"><span>報工紀錄</span></a>
-        <a href="#" :class="['nav-tab', currentTab === 'outgassing' ? 'active' : '']" @click.prevent="currentTab = 'outgassing'"><span>釋氣檢驗</span></a>
-        <a href="#" :class="['nav-tab', currentTab === 'aoi' ? 'active' : '']" @click.prevent="currentTab = 'aoi'"><span>AOI 檢驗</span></a>
-        <a href="#" :class="['nav-tab', currentTab === 'r0' ? 'active' : '']" @click.prevent="currentTab = 'r0'"><span>標籤管理</span></a>
-
-        <!-- 管理端專屬：樣式設計、排程、烘箱監控 -->
-        <a v-if="isAdminMode" href="#" :class="['nav-tab', currentTab === 'label-editor' ? 'active' : '']" @click.prevent="currentTab = 'label-editor'"><span>樣式設計</span></a>
-        <a v-if="isAdminMode" href="#" :class="['nav-tab', currentTab === 'schedule' ? 'active' : '']" @click.prevent="currentTab = 'schedule'"><span>排程管理</span></a>
-        <a v-if="isAdminMode" href="#" :class="['nav-tab', currentTab === 'oven' ? 'active' : '']" @click.prevent="currentTab = 'oven'"><span>烘箱監控</span></a>
-
-        <!-- 倉儲：作業員端顯示「倉儲操作」，管理端顯示「倉儲管理」 -->
-        <a href="#" :class="['nav-tab', currentTab === 'wms' ? 'active' : '']" @click.prevent="currentTab = 'wms'"><span>{{ isAdminMode ? '倉儲管理' : '倉儲操作' }}</span></a>
-
-        <!-- 管理端專屬頁籤 -->
-        <a v-if="isAdminMode" href="#" :class="['nav-tab', currentTab === 'parts' ? 'active' : '']" @click.prevent="currentTab = 'parts'"><span>物料主檔</span></a>
-        <a v-if="isAdminMode" href="#" :class="['nav-tab', currentTab === 'audit' ? 'active' : '']" @click.prevent="currentTab = 'audit'; loadAuditLogs()"><span>操作紀錄</span></a>
-        <a v-if="isAdminMode" href="#" :class="['nav-tab', currentTab === 'settings' ? 'active' : '']" @click.prevent="currentTab = 'settings'"><span>設定</span></a>
+        <a v-if="hasPermission('dashboard')" href="#" :class="['nav-tab', currentTab === 'dashboard' ? 'active' : '']" @click.prevent="currentTab = 'dashboard'"><span>戰情中心</span></a>
+        <a v-if="hasPermission('work-orders') || hasPermission('work-orders-view')" href="#" :class="['nav-tab', currentTab === 'work-orders' ? 'active' : '']" @click.prevent="currentTab = 'work-orders'"><span>{{ canManage ? '工單管理' : '工單查看' }}</span></a>
+        <a v-if="hasPermission('dispatches')" href="#" :class="['nav-tab', currentTab === 'dispatches' ? 'active' : '']" @click.prevent="currentTab = 'dispatches'"><span>現場派工</span></a>
+        <a v-if="hasPermission('reports')" href="#" :class="['nav-tab', currentTab === 'reports' ? 'active' : '']" @click.prevent="currentTab = 'reports'"><span>報工紀錄</span></a>
+        <a v-if="hasPermission('outgassing')" href="#" :class="['nav-tab', currentTab === 'outgassing' ? 'active' : '']" @click.prevent="currentTab = 'outgassing'"><span>釋氣檢驗</span></a>
+        <a v-if="hasPermission('aoi')" href="#" :class="['nav-tab', currentTab === 'aoi' ? 'active' : '']" @click.prevent="currentTab = 'aoi'"><span>AOI 檢驗</span></a>
+        <a v-if="hasPermission('r0')" href="#" :class="['nav-tab', currentTab === 'r0' ? 'active' : '']" @click.prevent="currentTab = 'r0'"><span>標籤管理</span></a>
+        <a v-if="hasPermission('label-editor')" href="#" :class="['nav-tab', currentTab === 'label-editor' ? 'active' : '']" @click.prevent="currentTab = 'label-editor'"><span>樣式設計</span></a>
+        <a v-if="hasPermission('schedule')" href="#" :class="['nav-tab', currentTab === 'schedule' ? 'active' : '']" @click.prevent="currentTab = 'schedule'"><span>排程管理</span></a>
+        <a v-if="hasPermission('oven')" href="#" :class="['nav-tab', currentTab === 'oven' ? 'active' : '']" @click.prevent="currentTab = 'oven'"><span>烘箱監控</span></a>
+        <a v-if="hasPermission('wms')" href="#" :class="['nav-tab', currentTab === 'wms' ? 'active' : '']" @click.prevent="currentTab = 'wms'"><span>{{ canSupervise ? '倉儲管理' : '倉儲操作' }}</span></a>
+        <a v-if="hasPermission('parts')" href="#" :class="['nav-tab', currentTab === 'parts' ? 'active' : '']" @click.prevent="currentTab = 'parts'"><span>物料主檔</span></a>
+        <a v-if="hasPermission('audit')" href="#" :class="['nav-tab', currentTab === 'audit' ? 'active' : '']" @click.prevent="currentTab = 'audit'; loadAuditLogs()"><span>操作紀錄</span></a>
+        <a v-if="hasPermission('settings')" href="#" :class="['nav-tab', currentTab === 'settings' ? 'active' : '']" @click.prevent="currentTab = 'settings'"><span>設定</span></a>
       </div>
 
       <!-- Tab Panels -->

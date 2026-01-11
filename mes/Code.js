@@ -1,65 +1,16 @@
 /**
  * Code.js - GAS 後端入口
- * v5.47.0 - 雙入口架構（作業員端/管理端）
+ * v5.48.0 - 角色權限系統（前端依操作人員角色決定權限）
  */
 
 /**
- * 主入口：依 mode 參數決定作業員端或管理端
- * - exec → 作業員端（不需登入）
- * - exec?mode=admin → 管理端（需 Google 帳號 + admin 角色）
+ * 主入口：統一入口，權限由前端根據操作人員角色決定
+ * 角色：operator / warehouse / qc / supervisor / admin
  */
 function doGet(e) {
-  const mode = e?.parameter?.mode || 'operator';
-
-  // 管理端需驗證 Google 帳號
-  if (mode === 'admin') {
-    const user = Session.getActiveUser().getEmail();
-
-    if (!user) {
-      return HtmlService.createHtmlOutput(
-        '<div style="font-family: sans-serif; padding: 2rem; text-align: center;">' +
-        '<h2>請先登入 Google 帳號</h2>' +
-        '<p style="color: #666;">管理端需要 Google 帳號驗證</p>' +
-        '</div>'
-      ).setTitle('MES 管理端 - 需要登入');
-    }
-
-    // 檢查是否為管理員（Operators.role = 'admin'）
-    try {
-      const operators = dbGetOperators();
-      const isAdmin = operators.some(op =>
-        op.role === 'admin' &&
-        op.isActive !== false &&
-        op.isActive !== 'FALSE' &&
-        (op.email === user || op.code === user.split('@')[0])
-      );
-
-      if (!isAdmin) {
-        return HtmlService.createHtmlOutput(
-          '<div style="font-family: sans-serif; padding: 2rem; text-align: center;">' +
-          '<h2>權限不足</h2>' +
-          '<p style="color: #666;">帳號 ' + user + ' 沒有管理員權限</p>' +
-          '<p style="margin-top: 1rem;"><a href="' + ScriptApp.getService().getUrl() + '">返回作業員端</a></p>' +
-          '</div>'
-        ).setTitle('MES 管理端 - 權限不足');
-      }
-    } catch (err) {
-      return HtmlService.createHtmlOutput(
-        '<div style="font-family: sans-serif; padding: 2rem; text-align: center;">' +
-        '<h2>系統錯誤</h2>' +
-        '<p style="color: #666;">' + err.toString() + '</p>' +
-        '</div>'
-      ).setTitle('MES 管理端 - 錯誤');
-    }
-  }
-
-  // 建立模板並傳遞參數
   const template = HtmlService.createTemplateFromFile('index');
-  template.appMode = mode;
-  template.userEmail = mode === 'admin' ? Session.getActiveUser().getEmail() : '';
-
   return template.evaluate()
-      .setTitle(mode === 'admin' ? 'MES 管理端' : 'MES 作業員端')
+      .setTitle('SMAI - MES')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -147,7 +98,7 @@ function api(action, payload) {
     let result;
     switch (action) {
       case 'getVersion':
-        return { success: true, data: '5.47.1' };
+        return { success: true, data: '5.48.0' };
 
       // 效能優化：單次載入所有資料 (含快取)
       case 'getAllData':

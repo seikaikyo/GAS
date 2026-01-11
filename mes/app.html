@@ -1,19 +1,32 @@
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 <script>
-  const { createApp, ref, onMounted, nextTick, watch } = Vue;
+  const { createApp, ref, computed, onMounted, nextTick, watch } = Vue;
+
+  // 角色權限映射
+  const ROLE_PERMISSIONS = {
+    operator: ['work-orders-view', 'dispatches', 'reports'],
+    warehouse: ['work-orders-view', 'wms', 'parts'],
+    qc: ['work-orders-view', 'outgassing', 'aoi', 'r0'],
+    supervisor: ['dashboard', 'work-orders-view', 'dispatches', 'reports', 'outgassing', 'aoi', 'r0', 'schedule', 'oven', 'wms', 'parts', 'audit'],
+    admin: ['dashboard', 'work-orders', 'dispatches', 'reports', 'outgassing', 'aoi', 'r0', 'label-editor', 'schedule', 'oven', 'wms', 'parts', 'audit', 'settings']
+  };
+
+  // 角色預設頁籤
+  const DEFAULT_TABS = {
+    admin: 'dashboard',
+    supervisor: 'dashboard',
+    warehouse: 'wms',
+    qc: 'outgassing',
+    operator: 'dispatches'
+  };
 
   const app = createApp({
     setup() {
-      // 雙入口模式：從 window 變數取得（由 GAS 模板傳入）
-      const isAdminMode = ref(window.APP_MODE === 'admin');
-      const userEmail = ref(window.USER_EMAIL || '');
-
       const loading = ref(false);
       const loadingCount = ref(0);
       const loadingMessage = ref('');
       const version = ref('');
-      // 作業員端預設「現場派工」，管理端預設「戰情中心」
-      const currentTab = ref(isAdminMode.value ? 'dashboard' : 'dispatches');
+      const currentTab = ref('dispatches');
       const workOrders = ref([]);
       const woStatusFilter = ref('all');
       const dispatches = ref([]);
@@ -365,6 +378,15 @@
       // 全域操作人員 (ISO 27001 Access Control)
       const currentOperator = ref(null);
       const showOperatorSelector = ref(false);
+
+      // 角色權限計算屬性
+      const visibleTabs = computed(() => {
+        const role = currentOperator.value?.role || 'operator';
+        return ROLE_PERMISSIONS[role] || ROLE_PERMISSIONS.operator;
+      });
+      const hasPermission = (tab) => visibleTabs.value.includes(tab);
+      const canManage = computed(() => (currentOperator.value?.role || 'operator') === 'admin');
+      const canSupervise = computed(() => ['admin', 'supervisor'].includes(currentOperator.value?.role || 'operator'));
 
       // WMS 倉儲管理
       const wmsLoading = ref(false);
@@ -1680,6 +1702,8 @@
         currentOperator.value = op;
         showOperatorSelector.value = false;
         localStorage.setItem('MES_CURRENT_OPERATOR', JSON.stringify(op));
+        // 切換到該角色的預設頁籤
+        currentTab.value = DEFAULT_TABS[op.role] || 'dispatches';
       };
 
       const clearOperator = () => {
@@ -3635,8 +3659,8 @@
       });
 
       return {
-        // 雙入口模式
-        isAdminMode, userEmail,
+        // 角色權限系統
+        visibleTabs, hasPermission, canManage, canSupervise,
         loading, loadingMessage, version, currentTab, workOrders, woStatusFilter, filteredWorkOrders, dispatches, reports,
         showCreateWoModal, showDispatchModal, showReportModal, showShareModal,
         shareLoading, shareData, shareCopied, openShareModal, copyShareUrl,

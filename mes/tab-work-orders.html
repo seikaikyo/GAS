@@ -1,9 +1,9 @@
 <!-- Tab: Work Orders -->
 <div v-show="currentTab === 'work-orders'">
   <div class="section-header">
-    <h2>{{ isAdminMode ? '工單管理' : '工單查看' }}</h2>
-    <!-- 建立按鈕：僅管理端顯示 -->
-    <div v-if="isAdminMode" class="wo-create-buttons">
+    <h2>{{ canManage ? '工單管理' : '工單查看' }}</h2>
+    <!-- 建立按鈕：僅管理員顯示 -->
+    <div v-if="canManage" class="wo-create-buttons">
       <button class="btn btn-primary" @click="openCreateWoModal('deglue')">
         <i data-lucide="droplets" class="w-4 h-4"></i>
         除膠
@@ -81,11 +81,11 @@
               <button v-if="wo.status !== 'completed'" class="btn btn-sm btn-primary" @click="openDispatchModal(wo)">
                 派工
               </button>
-              <!-- 編輯/取消：僅管理端 -->
-              <button v-if="isAdminMode && wo.status === 'draft'" class="btn btn-sm btn-ghost" @click="startEditWorkOrder(wo)">
+              <!-- 編輯/取消：僅管理員 -->
+              <button v-if="canManage && wo.status === 'draft'" class="btn btn-sm btn-ghost" @click="startEditWorkOrder(wo)">
                 編輯
               </button>
-              <button v-if="isAdminMode && (wo.status === 'draft' || wo.status === 'pending')" class="btn btn-sm btn-outline btn-error" @click="deleteWorkOrder(wo.id)">
+              <button v-if="canManage && (wo.status === 'draft' || wo.status === 'pending')" class="btn btn-sm btn-outline btn-error" @click="deleteWorkOrder(wo.id)">
                 取消
               </button>
               <span v-if="wo.status === 'completed'" class="badge badge-success">已完成</span>
